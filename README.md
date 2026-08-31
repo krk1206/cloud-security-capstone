@@ -1,23 +1,27 @@
-# Cloud Security Capstone Project
+#  Cloud Security Capstone Project Proposals
 
-> **AWS 및 Docker 기반 구역(Zone) 분리 및 AI 연동 통합 보안 관제 시스템**
-
----
-
-## 프로젝트 개요
-본 프로젝트는 클라우드/컨테이너 인프라 환경에서 네트워크 구역(Zone)을 분리 구축하고, 오픈소스 보안 스캐너와 AI(LLM)를 연동하여 보안 취약점 감지 및 자동 조치 리포팅을 수행하는 통합 보안 관제 시스템입니다.
+본 저장소는 **클라우드 인프라, 컨테이너, 보안, AI**를 결합한 캡스톤 디자인 기획안 5종을 관리하는 공간입니다.
 
 ---
 
-## 핵심 아키텍처 및 기능
-- **네트워크 구역 격리:** External, DMZ, Management 등 구역별 Subnet/Security Group 설정
-- **컨테이너 보안 스캐닝:** Trivy 기반의 Docker 이미지 및 인프라 취약점 실시간 감지
-- **AI 기반 보안 분석:** 감지된 보안 위험 로그를 AI API로 전달하여 한글 요약 리포트 자동 생성
-- **관제 대시보드 시각화:** 실시간 보안 이벤트 및 시스템 상태 모니터링
+##  캡스톤 디자인 기획안 목록 (Topic Proposals)
+
+교수님 면담 및 인프라 방향성에 따라 아래 5가지 제안서 중 최종 채택하여 진행합니다.
+
+1. **[A안] AWS/도커 기반 구역(Zone) 분리 및 AI 연동 통합 보안 관제 시스템**
+   -  [기획서 상세 보기](docs/01-option-A-ai-soc.md)
+2. **[B안] 도커/쿠버네티스 CI/CD 환경에서의 AI 기반 보안 취약점 자동 진단 파이프라인**
+   -  [기획서 상세 보기](docs/02-option-B-devsecops.md)
+3. **[C안] 클라우드 인프라 보안 설정 오류(Misconfiguration) 실시간 탐지 및 자동 조치 시스템**
+   - m[기획서 상세 보기](docs/03-option-C-cloud-compliance.md)
+4. **[D안] 쿠버네티스/도커 기반 AI 모델 자동 배포 및 컨테이너 보안 경량화 플랫폼**
+   -  [기획서 상세 보기](docs/04-option-D-container-sec.md)
+5. **[E안] 하이브리드 클라우드(온프레미스 ↔ AWS) 연동 및 통합 보안 모니터링 구축**
+   -  [기획서 상세 보기](docs/05-option-E-hybrid-cloud.md)
 
 ---
 
-## 기술 스택 (Tech Stack)
-- **Infra / Cloud:** AWS (VPC, EC2, IAM), Docker, Linux
-- **Security & Analysis:** Trivy, Python, LLM API
-- **Monitoring:** Grafana
+##  공통 기술 스택 (Tech Stack)
+- **Infra:** AWS, Docker, Kubernetes, Linux
+- **Security:** Trivy, Security Group, IAM
+- **Dev & Monitoring:** Python, Shell Script, LLM API, Grafana
