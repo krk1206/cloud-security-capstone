@@ -1,0 +1,106 @@
+# 사전 학습 자료 가이드 (9월 2일 ~ 9월 7일)
+
+각 항목은 "어디서 볼지 + 뭘 하면 되는지"로 정리했습니다. 링크는 모두 공식 문서·공식 튜토리얼 위주로 골랐습니다.
+
+---
+
+## 9/2 (화) — 공통: DevSecOps·Git 기초
+
+**CI/CD 개념 (30분~1시간)**
+- Atlassian, "What is CI/CD?" — https://www.atlassian.com/continuous-delivery/continuous-integration
+  - 빌드-테스트-배포 파이프라인의 기본 구조를 그림으로 설명. Shift-Left 개념도 함께 다룸
+- GitHub Docs, "About continuous integration" — https://docs.github.com/actions/about-github-actions/about-continuous-integration
+  - GitHub Actions 관점에서 CI가 왜 필요한지 짧게 정리
+
+**Git 기초 (1~2시간, 실습 위주)**
+- Learn Git Branching — https://learngitbranching.js.org/?locale=ko
+  - 브라우저에서 바로 실습하는 인터랙티브 Git 학습. 한국어 지원. "커밋/브랜치" 기본 챕터만 해도 충분
+- GitHub Docs Quickstart — https://docs.github.com/get-started/quickstart
+  - 저장소 생성, 커밋, PR까지 한 번 손으로 따라 해보기
+
+**할 일:** 실제로 GitHub에 테스트 저장소 하나 만들어서 커밋 1개, 브랜치 1개, PR 1개를 직접 만들어본다.
+
+---
+
+## 9/3 (수) — 공통: 컨테이너·Actions 기초
+
+**Docker 기초 (1~2시간)**
+- Docker 공식 "Get Started" — https://docs.docker.com/get-started/
+  - 이미지, 컨테이너, Dockerfile 개념을 공식 튜토리얼로 실습
+
+**GitHub Actions 문법 (1~2시간)**
+- GitHub Actions Quickstart — https://docs.github.com/actions/quickstart
+- "Workflow syntax for GitHub Actions" — https://docs.github.com/actions/using-workflows/workflow-syntax-for-github-actions
+  - trigger(on), job, step이 yml에서 어떻게 구성되는지
+
+**할 일:** 어제 만든 저장소에 `.github/workflows/hello.yml`을 만들어서 커밋 시 `echo "hello"` 한 줄이 자동 실행되는 것까지 직접 확인한다. 이게 되면 이후 스캐너 연동은 이 파일을 확장하는 것뿐이다.
+
+---
+
+## 9/4 (목) — 역할별 착수
+
+### A — 클라우드 인프라: AWS 기초
+- AWS Skill Builder (무료 회원가입) — https://skillbuilder.aws
+  - "AWS Cloud Practitioner Essentials" 코스 수강 (무료, 약 6시간 분량이지만 하루에 다 볼 필요 없음 — IAM·EC2·S3·VPC 파트 위주로)
+- AWS 프리티어 계정 생성 후, 콘솔에서 IAM(사용자/역할/정책), EC2, S3, VPC 화면을 한 번씩 눈으로 확인
+
+### B — AI Agent: Python/LLM API
+- Anthropic API 문서 Quickstart — https://docs.claude.com (Get Started 섹션)
+  - API 키 발급 후 첫 메시지 호출까지 직접 실행
+- 구조화된 JSON 출력 유도 방법 — Anthropic 문서의 "Increase output consistency" / JSON 출력 관련 가이드
+- (참고용) OpenAI Quickstart — https://platform.openai.com/docs/quickstart
+
+### C — 파이프라인·평가: GitHub Actions 심화 + REST API
+- GitHub Docs, "Using secrets in GitHub Actions" — https://docs.github.com/actions/security-guides/using-secrets-in-github-actions
+- GitHub Docs, "Events that trigger workflows" (pull_request 등) — https://docs.github.com/actions/using-workflows/events-that-trigger-workflows
+- REST API 기본 개념 — MDN "HTTP request methods" 또는 freeCodeCamp REST API 입문 아무 글이나 30분
+
+---
+
+## 9/5 (금) — 역할별 심화 ①
+
+### A — Terraform 기초
+- HashiCorp Developer, Terraform "Get Started" 튜토리얼 — https://developer.hashicorp.com/terraform/tutorials/aws-get-started
+  - HCL 문법(resource/variable/provider), `plan`과 `apply`의 차이를 실습으로 익힘
+- **할 일:** 튜토리얼을 따라 EC2 인스턴스(또는 S3 버킷) 하나를 실제로 만들었다가 `terraform destroy`로 지워본다
+
+### B — LangChain/LangGraph
+- LangChain Academy (무료 구조화 코스) — https://academy.langchain.com
+- LangGraph 공식 문서 — https://docs.langchain.com (LangGraph → Quickstart, Graph API 섹션)
+  - Node/Edge/State 개념과 간단한 그래프 하나 만들어보기
+
+### C — GitHub API + Trivy 설치
+- GitHub REST API 문서, Pulls(“PR 생성”) 엔드포인트 — https://docs.github.com/rest/pulls/pulls
+- Trivy 공식 문서, 설치 및 시작하기 — https://trivy.dev/latest/getting-started/
+- **할 일:** Trivy 설치 후 아무 공개 이미지(`trivy image nginx`)나 한 번 스캔해서 결과 형태 확인
+
+---
+
+## 9/6 (토) — 역할별 심화 ②
+
+### A — CIS AWS Benchmark + Trivy IaC 모드
+- CIS(Center for Internet Security) 공식 사이트 — https://www.cisecurity.org (무료 회원가입 후 "CIS Amazon Web Services Foundations Benchmark" PDF 다운로드)
+  - 전체를 다 읽을 필요 없이, IAM·보안그룹·S3 관련 항목만 훑어보고 "대표 위반 유형이 뭔지" 감을 잡는 정도
+- Trivy 공식 문서, IaC/설정 오류 스캔(`trivy config`) — https://trivy.dev/latest/docs/ (Misconfiguration/IaC Scanning 섹션)
+
+### B — Function Calling / Prompt Engineering
+- Anthropic 공식 "Tool use (function calling)" 가이드 — docs.claude.com 내 Tool Use 섹션
+- Anthropic Prompt Engineering 가이드 — docs.claude.com 내 Prompt Engineering 섹션 (구조화된 출력, XML 태그 활용법 등)
+
+### C — Trivy 컨테이너 모드 + 평가지표 기초
+- Trivy 공식 문서, 컨테이너 이미지 스캔(`trivy image`) — https://trivy.dev/latest/docs/target/container_image/
+- 평가지표(MTTR, 정확도 등)는 별도 강의보다 위키피디아 "Mean time to repair" 항목이나 관련 블로그 글 1~2개로 용어 감만 잡아도 충분
+
+---
+
+## 9/7 (일) — 공통: 통합 리뷰
+
+외부 학습 자료는 없음. 3인이 모여서:
+1. 각자 배운 내용을 서로에게 3분씩 설명 (다음 미팅부터 이어질 방식의 예행연습)
+2. Evidence Bundle 스키마 초안 논의
+3. 9/8 착수 계획 최종 점검
+
+---
+
+## 참고 — 자료를 고른 기준
+가능한 한 유료 강의나 서드파티 블로그보다 **공식 문서·공식 튜토리얼**을 우선했습니다. 실제로 이 도구들을 팀 프로젝트에서 쓸 때 막히면 결국 공식 문서로 돌아오게 되어 있어서, 처음부터 공식 문서에 익숙해지는 게 장기적으로 더 빠릅니다. 링크가 열리지 않거나 UI가 바뀌어 있으면(특히 AWS/LangChain 쪽은 업데이트가 잦음), 사이트 검색창에 문서 제목 그대로 검색하면 대부분 최신 페이지로 연결됩니다.
