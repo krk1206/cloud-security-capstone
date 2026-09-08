@@ -1,0 +1,9 @@
+# Terraform
+**/.terraform/
+**/.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.tfplan
+
+# 로컬 실행물
+cases/01b-control/
