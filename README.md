@@ -1,5 +1,8 @@
 # 졸업작품 통합 개발 계획
 
+> **처음 보신다면 [`한장요약.md`](한장요약.md)부터 읽어주세요.** (3분)
+
+
 ## AWS IaC 보안 패치 검증 파이프라인
 ### Verification Pipeline for AWS IaC Security Patches
 
