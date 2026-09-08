@@ -1,6 +1,6 @@
 # 졸업작품 통합 개발 계획
 
-## 신뢰도 기반 클라우드 인프라 자율 보안 패치 파이프라인
+## 클라우드 인프라 자율 보안 패치 파이프라인
 ### Confidence-Gated Cloud Infrastructure Auto-Remediation
 
 > AWS 클라우드 인프라(Terraform)의 설정 오류를 1차 대상으로, 컨테이너 이미지 취약점(Trivy)을 보조 대상으로 자동 탐지하고, AI Agent가 패치의 확신도(confidence)를 스스로 평가해 자율성 수준을 조절하며 패치 코드를 작성·PR까지 자율 생성하는 클라우드 네이티브 DevSecOps 파이프라인
