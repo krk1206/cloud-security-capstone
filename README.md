@@ -1,9 +1,9 @@
 # 졸업작품 통합 개발 계획
 
 ## AWS IaC 보안 패치 검증 파이프라인
-### Risk-Gated Verification Pipeline for AWS IaC Auto-Remediation
+### Verification Pipeline for AWS IaC Security Patches
 
-> **제목 정정 (2026-09-08)** — 이전 제목은 "확신도 기반 클라우드 인프라 자율 보안 패치 파이프라인"이었다. 자체 실측 결과 게이트가 실제로 사용하는 판정 기준은 AI의 확신도가 아니라 **변경의 위험도**(리소스 종류, 영향 범위, 롤백 난이도)임이 확인되어 정정했다. AI의 확신도는 등급을 낮추는 방향으로만 반영되는 부수 입력이다. 또한 운영 경로에서 사람 승인이 필수이므로 "자율 패치"라는 표현도 정확하지 않다. 상세는 [`criticism and rebuttal.md`](criticism%20and%20rebuttal.md) 비판 6 참조.
+> **문서 표기 정리 (2026-09-08)** — 팀 내부 문서에서 게이팅 기준을 "확신도"로 표기해 왔으나, 실제 판정 기준은 AI의 확신도가 아니라 **변경의 위험도**(리소스 종류, 영향 범위, 롤백 난이도)이므로 정리했다. AI의 확신도는 등급을 낮추는 방향으로만 반영되는 부수 입력이다. 상세는 [`criticism and rebuttal.md`](criticism%20and%20rebuttal.md) 비판 6 참조.
 
 > Terraform으로 작성한 AWS 인프라 코드의 설정 오류(misconfiguration)를 Trivy로 탐지하고, LLM이 패치 후보를 생성하면, **결정론적 검증 스택이 그 패치가 실제로 보안 상태를 개선했는지 판정하고** Risk Rubric이 자동화 수준을 결정하는 DevSecOps 파이프라인. **스캐너 통과만으로 성공을 판정하지 않는다.**
 >
