@@ -3,9 +3,11 @@
 ## 클라우드 인프라 자율 보안 패치 파이프라인
 ### Confidence-Gated Cloud Infrastructure Auto-Remediation
 
-> AWS 클라우드 인프라(Terraform)의 설정 오류를 1차 대상으로, 컨테이너 이미지 취약점(Trivy)을 보조 대상으로 자동 탐지하고, AI Agent가 패치의 확신도(confidence)를 스스로 평가해 자율성 수준을 조절하며 패치 코드를 작성·PR까지 자율 생성하는 클라우드 네이티브 DevSecOps 파이프라인
+> Terraform으로 작성한 AWS 인프라 코드의 설정 오류(misconfiguration)를 1차 대상으로, 컨테이너 이미지 취약점(CVE)을 보조 대상으로 Trivy로 자동 탐지하고, AI Agent가 패치의 확신도(confidence)를 평가해 자율성 수준을 조절하며 패치 코드를 작성·PR까지 자율 생성하는 클라우드 네이티브 DevSecOps 파이프라인
+>
+> **점검 대상은 AWS 자체가 아니라 우리가 작성한 인프라 코드다.** 공동 책임 모델(Shared Responsibility Model)상 AWS 플랫폼의 보안은 AWS가 책임지고, 그 위에 올리는 설정은 사용자 책임이다. 따라서 이 프로젝트는 "AWS 취약점 점검"이 아니라 "Terraform 설정이 CIS AWS Benchmark를 준수하는지 점검"하는 프로젝트다.
 
-- **사전 학습:** 2026년 9월 2일(화) ~ 9월 7일(일)
+- **사전 학습:** 2026년 9월 2일(수) ~ 9월 7일(월)
 - **본 개발:** 2026년 9월 8일(화) ~ 11월 24일(화) — 이 기간 안에 전체 파이프라인이 테스트를 통과하고 완전히 동작하는 것이 목표
 - **발표 준비:** 12월 초중순
 - **인원:** 3명
@@ -16,7 +18,9 @@
 
 ## 1. 프로젝트 최종 정의와 핵심 3축
 
-이 프로젝트는 모든 클라우드 보안 문제를 다루지 않는다. Terraform으로 관리되는 AWS 인프라의 설정 오류를 1차 연구 대상으로 삼고, 컨테이너 이미지 취약점은 보조 대상으로 다룬다. AI Agent는 탐지된 문제를 그대로 자동 수정하지 않고, 패치의 위험도(confidence)를 스스로 평가해 자율성 수준을 세 단계로 조절한다.
+이 프로젝트는 모든 클라우드 보안 문제를 다루지 않는다. Terraform으로 관리되는 AWS 인프라의 설정 오류를 1차 연구 대상으로 삼고, 컨테이너 이미지 취약점은 보조 대상으로 다룬다. AI Agent는 탐지된 문제를 그대로 자동 수정하지 않고, 패치의 확신도(confidence)를 평가해 자율성 수준을 세 단계로 조절한다.
+
+**확신도 판정의 주체:** AI Agent(LLM)는 패치안과 함께 자신의 확신도 등급과 근거를 *제안*하고, Confidence Scorer가 사전 정의된 위험도 기준(변경 리소스 종류, 영향 범위, 되돌리기 난이도)으로 등급 상한을 강제한다. 즉 AI는 등급을 낮출 수는 있어도 Scorer가 허용한 상한 위로 올릴 수는 없다. "AI가 스스로 평가한다"는 표현은 이 구조 안에서의 제안 권한을 뜻한다.
 
 ### 1.1 핵심 3축
 
@@ -60,8 +64,8 @@ AI Agent: 패치 방향 분석 + confidence 등급 판정
 | 구성요소 | 신뢰 수준 | 원칙 |
 |---|---|---|
 | Trivy(IaC 모드) / Trivy(컨테이너 모드) | 관측 데이터 신뢰 | 원본 스캔 결과를 변경 없이 보존 |
-| AI Analyzer (LLM) | 불신 판단기 | 패치안과 confidence 등급만 제안, 직접 실행 권한 없음 |
-| Confidence Scorer | 신뢰 경계 | 사전 정의된 위험도 기준(변경 리소스 종류, blast radius)으로 등급 산정, AI가 임의로 등급을 올릴 수 없음 |
+| AI Analyzer (LLM) | 비신뢰(untrusted) 판단기 | 패치안과 confidence 등급만 제안, 직접 실행 권한 없음 |
+| Confidence Scorer | 신뢰 경계 | 사전 정의된 위험도 기준(변경 리소스 종류, blast radius)으로 등급 상한 산정, AI가 제안한 등급이 상한을 넘으면 강제 하향 |
 | Policy Validator | 신뢰 경계 | 패치 diff가 화이트리스트를 벗어나면 등급과 무관하게 거부 |
 | Executor (GitHub Actions bot) | 최소 권한 신뢰 | 승인된 PR만 생성, `terraform apply`는 별도 승인 없이 자동 실행 금지 |
 | 사람 승인자 | 최종 결정권 | Medium/Low 등급의 최종 승인자, High 등급도 병합 전 최소 확인 필요 |
@@ -111,7 +115,7 @@ AI Agent: 패치 방향 분석 + confidence 등급 판정
 └─────────────────────┬─────────────────────────┘
                        ▼
 ┌──────────────────── Ops ────────────────────┐
-│ AWS 샌드박스 계정 / EKS 반영                    │
+│ AWS 샌드박스 계정 반영 (컨테이너: EC2+K3s 또는 로컬) │
 └───────────────────────────────────────────────┘
 ```
 
@@ -129,8 +133,8 @@ GitHub Repository
 └─ data/sessions/           # 세션별 스캔 리포트, confidence 판정, PR 기록
 ```
 
-- **AWS 샌드박스 계정**: 실습·평가 전용으로 별도 분리, 프로덕션 자원과 격리
-- **Trivy(IaC 모드, `trivy config`)**: IAM, 보안그룹, S3, EKS RBAC 등 CIS AWS Benchmark 매핑 대상 룰 우선 사용. *(tfsec은 2023년 Aqua Security가 개발을 중단하고 Trivy로 룰셋을 통합했으므로, 별도 도구 대신 Trivy의 IaC 스캔 모드를 사용한다. 룰 ID(`AVD-AWS-*`)는 그대로 유지되어 CIS 매핑 작업을 그대로 재사용할 수 있다.)*
+- **AWS 샌드박스 계정**: 실습·평가 전용으로 별도 분리, 프로덕션 자원과 격리. AWS 무료 플랜(6개월, 크레딧 기반) 사용을 전제로 하며, EKS·NAT Gateway 등 상시 과금 자원은 사용하지 않는다. 테스트 후 `terraform destroy`를 원칙으로 하고, Budgets 알림·루트 MFA·작업용 IAM 사용자 분리를 1주차에 완료한다. GitHub Actions의 AWS 접근은 액세스 키 대신 OIDC 연동을 사용한다.
+- **Trivy(IaC 모드, `trivy config`)**: IAM, 보안그룹, S3 등 CIS AWS Benchmark 매핑 대상 룰 우선 사용 (Kubernetes 매니페스트 스캔은 선택). *(tfsec은 2023년 Aqua Security가 개발을 중단하고 Trivy로 룰셋을 통합했으므로, 별도 도구 대신 Trivy의 IaC 스캔 모드를 사용한다. 룰 ID(`AVD-AWS-*`)는 그대로 유지되어 CIS 매핑 작업을 그대로 재사용할 수 있다.)*
 - **Trivy(컨테이너 모드, `trivy image`)**: 컨테이너 이미지 OS·라이브러리 취약점 보조 스캔
 - **AI Agent 프레임워크**: LangChain/LangGraph 기반 Reasoning-Action 루프
 
@@ -146,34 +150,34 @@ GitHub Repository
 
 ---
 
-## 6. 사전 학습 기간 (9월 2일 화 ~ 9월 7일 일)
+## 6. 사전 학습 기간 (9월 2일 수 ~ 9월 7일 월)
 
 이 기간에는 코드를 짜지 않는다. 9월 8일부터 바로 실습에 들어갈 수 있도록, 3인 모두 기초 개념부터 숙지하는 게 목표다. 첫 이틀은 공통, 이후는 역할별로 나눠서 각자 담당 영역을 예습한다.
 
-### 9/2 (화) — 공통: DevSecOps·Git 기초
+### 9/2 (수) — 공통: DevSecOps·Git 기초
 - CI/CD 파이프라인의 기본 구조 (빌드-테스트-배포), Shift-Left 보안이 왜 필요한지
 - Git 기초 (커밋, 브랜치, PR 개념), GitHub 저장소 구조 익히기
 
-### 9/3 (수) — 공통: 컨테이너·Actions 기초
+### 9/3 (목) — 공통: 컨테이너·Actions 기초
 - Docker/컨테이너 기본 개념 (이미지, 컨테이너, Dockerfile)
 - GitHub Actions 워크플로우 문법 (trigger, job, step) — 공식 문서로 간단한 workflow 하나 직접 작성해보기
 
-### 9/4 (목) — 역할별 착수
+### 9/4 (금) — 역할별 착수
 - **A**: AWS 기초 — IAM, EC2, S3, 보안그룹, VPC 개념. AWS 콘솔/CLI 한 번씩 실습
 - **B**: Python 기초 점검, LLM API(OpenAI/Claude API) 호출 방법과 JSON 구조화 출력 개념
 - **C**: GitHub Actions 심화 (secrets 관리, PR 이벤트 트리거), REST API 기본 개념
 
-### 9/5 (금) — 역할별 심화 ①
+### 9/5 (토) — 역할별 심화 ①
 - **A**: Terraform 기초 — HCL 문법, `resource`/`variable`/`provider` 구조, `plan`과 `apply`의 차이. 튜토리얼로 리소스 하나 직접 만들어보기
 - **B**: LangChain/LangGraph 개념 — Agent, Tool, Chain, Node/Edge. 공식 튜토리얼 실습
 - **C**: GitHub API로 PR 생성·댓글 작성 연습, Trivy 설치 및 기본 사용법
 
-### 9/6 (토) — 역할별 심화 ②
+### 9/6 (일) — 역할별 심화 ②
 - **A**: CIS AWS Benchmark 개념과 대표 위반 항목(과다 IAM 권한, 퍼블릭 S3, 과다 개방 보안그룹) 조사, Trivy IaC 모드(`trivy config`) 사용법
 - **B**: Function Calling/Tool Calling 개념, Prompt Engineering 기초(구조화된 JSON 출력 유도), Reasoning-Action 패턴 이해
 - **C**: Trivy 컨테이너 모드(`trivy image`) 사용법, 평가지표 기초 조사(정확도, MTTR이 무엇인지)
 
-### 9/7 (일) — 공통: 통합 리뷰
+### 9/7 (월) — 공통: 통합 리뷰
 - 3인 전체 아키텍처 리뷰 회의
 - Evidence Bundle 스키마 초안을 함께 논의 (A/B/C 사이의 데이터 인터페이스 합의)
 - confidence 등급 개념 공유, 9월 8일 착수 계획 최종 점검
@@ -205,7 +209,7 @@ GitHub Repository
 ## 8. 9월 개발 일정 (1~4주차)
 
 ### 1주차 (9/8~9/14) — 환경 구축
-- **A**: AWS 샌드박스 계정 준비, 의도적 오류를 포함한 Terraform 인프라 작성
+- **A**: AWS 샌드박스 계정 준비(무료 플랜 가입, Budgets 알림, 루트 MFA, 작업용 IAM 사용자, GitHub OIDC 연동), 의도적 설정 오류를 포함한 Terraform 인프라 작성
 - **B**: LangChain/LangGraph 개발환경 세팅, LLM API 연동 테스트 (간단한 프롬프트-응답 확인)
 - **C**: GitHub 저장소 생성, 취약한 의존성을 포함한 샘플 애플리케이션 준비, 기본 GitHub Actions 빌드 워크플로우 구현
 - **완료 기준:** 3인 각자 기본 환경이 개별적으로 동작한다
@@ -242,7 +246,7 @@ GitHub Repository
 - **B**: High-confidence 시나리오에 대해 실제 Terraform 코드 수정 + 브랜치 생성 구현
 - **A**: `terraform plan` 자동 실행으로 변경 사항 사전 확인
 - **C**: GitHub API PR 생성 연동
-- **완료 기준(게이트 A):** High-confidence 취약점 1개 시나리오가 탐지→패치→PR까지 자동 동작하며 3회 재현된다
+- **완료 기준(게이트 A):** High-confidence 설정 오류 1개 시나리오가 탐지→패치→PR까지 자동 동작하며 3회 재현된다
 
 ### 6주차 (10/13~10/19) — Medium-confidence 처리 + 유형 확장①
 - **B**: Medium-confidence 케이스 — 회귀 테스트 결과 첨부, 승인 필수 표시 로직 구현
