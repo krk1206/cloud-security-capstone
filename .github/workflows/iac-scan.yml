@@ -1,0 +1,56 @@
+name: IaC Security Scan
+
+on:
+  pull_request:
+    paths:
+      - 'infrastructure/**'
+  push:
+    branches: [main]
+    paths:
+      - 'infrastructure/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  trivy-config:
+    name: Trivy IaC Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Trivy
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget gnupg
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key \
+            | gpg --dearmor | sudo tee /usr/share/keyrings/trivy.gpg > /dev/null
+          echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb generic main" \
+            | sudo tee /etc/apt/sources.list.d/trivy.list
+          sudo apt-get update
+          sudo apt-get install -y trivy
+          trivy --version
+
+      - name: Scan (human readable)
+        run: |
+          trivy config infrastructure/sg-baseline \
+            --tf-vars infrastructure/sg-baseline/terraform.tfvars.example
+
+      - name: Scan (JSON artifact)
+        run: |
+          mkdir -p scan-results
+          trivy config infrastructure/sg-baseline \
+            --tf-vars infrastructure/sg-baseline/terraform.tfvars.example \
+            --format json \
+            --output scan-results/sg-baseline.json
+
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-scan-results
+          path: scan-results/
+          retention-days: 14
