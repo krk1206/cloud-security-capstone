@@ -104,7 +104,7 @@ AI가 들어가는 곳은 **수정**이다. CIS는 "SSH를 0.0.0.0/0에 열지 �
 
 ### 인정하고 설계에 반영한 것
 
-초안에서 이미 인정했듯, **"퍼블릭 S3 차단"은 수정도 정해져 있다.** `block_public_acls = true` 한 줄이면 끝난다. 이런 유형은 Rule-based가 AI보다 낫고, 실험하면 baseline이 이길 것이다.
+초안에서 이미 인정했듯, **"퍼블릭 S3 차단"은 수정 형태가 비교적 정형화돼 있다.** `aws_s3_bucket_public_access_block` 리소스의 플래그 4개(`block_public_acls`, `block_public_policy`, `ignore_public_acls`, `restrict_public_buckets`)를 켜는 것이 기본형이며, 버킷 정책·ACL·정적 웹 호스팅이 얽히면 그만큼 더 손봐야 한다. 이런 유형은 Rule-based가 AI보다 나을 것으로 예상하며, 이는 실험으로 확인할 가설이다.
 
 **그래서 필수 유형에서 S3를 제외했다.** 현재 README의 필수 유형은 보안그룹 CIDR과 IAM 최소 권한 두 가지이며, 둘 다 맥락 의존적이다. S3와 컨테이너 CVE는 선택 확장으로 내렸다.
 

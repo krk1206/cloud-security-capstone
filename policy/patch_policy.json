@@ -1,0 +1,71 @@
+{
+  "policy_version": "sg-v1 (2026-09-13)",
+  "_comment": "Policy Validator / V5 / V2 가 읽는 결정론적 정책. LLM 은 이 파일을 수정할 수 없다 (protected_paths).",
+  "supported_target_rules": [
+    "AVD-AWS-0107"
+  ],
+  "_supported_target_rules_note": "현재 파이프라인이 끝까지(V6 포함) 검증할 수 있는 finding 룰. IAM 등 다른 룰은 UNSUPPORTED_RULE 로 종료한다 (docs/IAM_SCOPE.md).",
+  "editable_file_globs": [
+    "*.tf"
+  ],
+  "protected_paths": [
+    "policy/",
+    "tests/",
+    "src/",
+    ".github/",
+    "scripts/",
+    "docs/",
+    "experiments/",
+    "data/"
+  ],
+  "protected_file_names": [
+    "provider.tf",
+    "versions.tf",
+    "backend.tf"
+  ],
+  "forbidden_tokens": [
+    "provisioner",
+    "local-exec",
+    "remote-exec",
+    "backend \"",
+    "null_resource",
+    "data \"external\"",
+    "data \"http\"",
+    "terraform_remote_state"
+  ],
+  "forbidden_block_changes": [
+    "terraform",
+    "provider"
+  ],
+  "allowed_change_resource_types": [
+    "aws_security_group",
+    "aws_vpc_security_group_ingress_rule",
+    "aws_vpc_security_group_egress_rule",
+    "aws_security_group_rule"
+  ],
+  "allowed_create_resource_types": [
+    "aws_vpc_security_group_ingress_rule",
+    "aws_vpc_security_group_egress_rule",
+    "aws_security_group_rule"
+  ],
+  "allowed_attribute_changes": {
+    "aws_security_group": [
+      "ingress",
+      "egress",
+      "description",
+      "tags",
+      "tags_all"
+    ]
+  },
+  "allow_delete": false,
+  "allow_replace": false,
+  "max_changed_resources": 3,
+  "provider_config_change_allowed": false,
+  "v2_block_severities": [
+    "CRITICAL",
+    "HIGH"
+  ],
+  "v2_ignore_rules": [],
+  "max_patch_files": 2,
+  "max_file_bytes": 65536
+}

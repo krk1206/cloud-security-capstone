@@ -1,0 +1,32 @@
+{
+  "rubric_version": "risk-v1 (2026-09-13, 4주차 고정 예정 — 이후 결과를 보고 바꾸지 않는다)",
+  "_comment": "결정론적 위험도 기준표. 점수 합계로 위험도(LOW/MEDIUM/HIGH)를 정하고, 위험도가 자율성 상한(HIGH/MEDIUM/LOW)을 결정한다. hard_flags 는 점수와 무관하게 HIGH.",
+
+  "thresholds": { "low_max": 2, "medium_max": 5 },
+
+  "hard_high_conditions": {
+    "iam_resource_touched": true,
+    "resource_deleted": true,
+    "resource_replaced": true,
+    "provider_config_changed": true
+  },
+
+  "iam_type_prefixes": ["aws_iam_", "aws_organizations_", "aws_sso_", "aws_identitystore_"],
+  "network_types": ["aws_security_group", "aws_vpc_security_group_ingress_rule", "aws_vpc_security_group_egress_rule", "aws_security_group_rule"],
+
+  "points": {
+    "non_network_resource_touched": 2,
+    "resources_touched_2_to_3": 1,
+    "resources_touched_over_3": 3,
+    "new_resource_created_each": 1,
+    "new_resource_created_cap": 2,
+    "attachment_points_1": 1,
+    "attachment_points_2_or_more": 2,
+    "attachment_has_external_or_unknown_sg": 2,
+    "egress_changed": 1,
+    "non_rule_attribute_changed": 1,
+    "oracle_partial_rules_or_caveats": 1,
+    "patch_lines_over_40": 1,
+    "multiple_files_changed": 1
+  }
+}

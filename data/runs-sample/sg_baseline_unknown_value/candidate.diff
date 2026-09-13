@@ -1,0 +1,19 @@
+--- a/infrastructure/sg-baseline/main.tf
++++ b/infrastructure/sg-baseline/main.tf
+@@ -8,7 +8,7 @@
+     from_port   = 22
+     to_port     = 22
+     protocol    = "tcp"
+-    cidr_blocks = ["0.0.0.0/0"]
++    cidr_blocks = ["${aws_eip.admin.public_ip}/32"]
+   }
+ 
+   egress {
+@@ -19,3 +19,7 @@
+     cidr_blocks = ["0.0.0.0/0"]
+   }
+ }
++
++resource "aws_eip" "admin" {
++  domain = "vpc"
++}

@@ -1,0 +1,28 @@
+{
+  "_comment": "Trivy 룰 ↔ CIS AWS Foundations Benchmark 직접 대응 항목. verified=false 인 항목은 벤치마크 원문으로 번호/문구를 확인해야 한다 (추측으로 채우지 않는다). 모든 Trivy 룰이 CIS 와 1:1 대응한다고 가정하지 않는다.",
+  "rules": {
+    "AVD-AWS-0107": {
+      "trivy_title": "Security groups should not allow unrestricted ingress to SSH or RDP from any IP address.",
+      "trivy_references": [
+        "https://docs.aws.amazon.com/securityhub/latest/userguide/ec2-controls.html#ec2-13",
+        "https://docs.aws.amazon.com/securityhub/latest/userguide/ec2-controls.html#ec2-14"
+      ],
+      "aws_security_hub_controls": ["EC2.13 (SSH 0.0.0.0/0)", "EC2.14 (RDP 0.0.0.0/0)"],
+      "cis_candidates": [
+        {"benchmark": "CIS AWS Foundations Benchmark v2.0.0", "section": "5.2", "title": "Ensure no security groups allow ingress from 0.0.0.0/0 to remote server administration ports", "verified": false},
+        {"benchmark": "CIS AWS Foundations Benchmark v2.0.0", "section": "5.3", "title": "Ensure no security groups allow ingress from ::/0 to remote server administration ports", "verified": false}
+      ],
+      "mapping_status": "direct-candidate (원문 확인 전)"
+    },
+    "AVD-AWS-0104": {
+      "trivy_title": "A security group rule should not allow unrestricted egress to any IP address.",
+      "cis_candidates": [],
+      "mapping_status": "no direct CIS item known — Trivy 자체 기준. 이 파이프라인의 대상 finding 이 아니며 V2 에서 '기존 finding' 으로만 취급된다."
+    },
+    "AVD-AWS-0124": {
+      "trivy_title": "Missing description for security group rule.",
+      "cis_candidates": [],
+      "mapping_status": "no direct CIS item — 문서화 권고 (LOW). V2 차단 대상 아님."
+    }
+  }
+}

@@ -1,0 +1,259 @@
+{
+ "format_version": "1.2",
+ "terraform_version": "1.10.6",
+ "planned_values": {
+  "root_module": {
+   "resources": [
+    {
+     "address": "aws_eip.admin",
+     "mode": "managed",
+     "type": "aws_eip",
+     "name": "admin",
+     "provider_name": "registry.opentofu.org/hashicorp/aws",
+     "schema_version": 0,
+     "values": {
+      "address": null,
+      "associate_with_private_ip": null,
+      "customer_owned_ipv4_pool": null,
+      "domain": "vpc",
+      "tags": null,
+      "timeouts": null
+     },
+     "sensitive_values": {
+      "tags_all": {}
+     }
+    },
+    {
+     "address": "aws_security_group.eip_sg",
+     "mode": "managed",
+     "type": "aws_security_group",
+     "name": "eip_sg",
+     "provider_name": "registry.opentofu.org/hashicorp/aws",
+     "schema_version": 1,
+     "values": {
+      "description": "ssh from an eip allocated at apply time",
+      "ingress": [
+       {
+        "description": "",
+        "from_port": 22,
+        "ipv6_cidr_blocks": [],
+        "prefix_list_ids": [],
+        "protocol": "tcp",
+        "security_groups": [],
+        "self": false,
+        "to_port": 22
+       }
+      ],
+      "name": "eip-sg",
+      "revoke_rules_on_delete": false,
+      "tags": null,
+      "timeouts": null
+     },
+     "sensitive_values": {
+      "egress": [],
+      "ingress": [
+       {
+        "cidr_blocks": [],
+        "ipv6_cidr_blocks": [],
+        "prefix_list_ids": [],
+        "security_groups": []
+       }
+      ],
+      "tags_all": {}
+     }
+    }
+   ]
+  }
+ },
+ "resource_changes": [
+  {
+   "address": "aws_eip.admin",
+   "mode": "managed",
+   "type": "aws_eip",
+   "name": "admin",
+   "provider_name": "registry.opentofu.org/hashicorp/aws",
+   "change": {
+    "actions": [
+     "create"
+    ],
+    "before": null,
+    "after": {
+     "address": null,
+     "associate_with_private_ip": null,
+     "customer_owned_ipv4_pool": null,
+     "domain": "vpc",
+     "tags": null,
+     "timeouts": null
+    },
+    "after_unknown": {
+     "allocation_id": true,
+     "arn": true,
+     "association_id": true,
+     "carrier_ip": true,
+     "customer_owned_ip": true,
+     "id": true,
+     "instance": true,
+     "ipam_pool_id": true,
+     "network_border_group": true,
+     "network_interface": true,
+     "private_dns": true,
+     "private_ip": true,
+     "ptr_record": true,
+     "public_dns": true,
+     "public_ip": true,
+     "public_ipv4_pool": true,
+     "tags_all": true,
+     "vpc": true
+    },
+    "before_sensitive": false,
+    "after_sensitive": {
+     "tags_all": {}
+    }
+   }
+  },
+  {
+   "address": "aws_security_group.eip_sg",
+   "mode": "managed",
+   "type": "aws_security_group",
+   "name": "eip_sg",
+   "provider_name": "registry.opentofu.org/hashicorp/aws",
+   "change": {
+    "actions": [
+     "create"
+    ],
+    "before": null,
+    "after": {
+     "description": "ssh from an eip allocated at apply time",
+     "ingress": [
+      {
+       "description": "",
+       "from_port": 22,
+       "ipv6_cidr_blocks": [],
+       "prefix_list_ids": [],
+       "protocol": "tcp",
+       "security_groups": [],
+       "self": false,
+       "to_port": 22
+      }
+     ],
+     "name": "eip-sg",
+     "revoke_rules_on_delete": false,
+     "tags": null,
+     "timeouts": null
+    },
+    "after_unknown": {
+     "arn": true,
+     "egress": true,
+     "id": true,
+     "ingress": [
+      {
+       "cidr_blocks": true,
+       "ipv6_cidr_blocks": [],
+       "prefix_list_ids": [],
+       "security_groups": []
+      }
+     ],
+     "name_prefix": true,
+     "owner_id": true,
+     "tags_all": true,
+     "vpc_id": true
+    },
+    "before_sensitive": false,
+    "after_sensitive": {
+     "egress": [],
+     "ingress": [
+      {
+       "cidr_blocks": [],
+       "ipv6_cidr_blocks": [],
+       "prefix_list_ids": [],
+       "security_groups": []
+      }
+     ],
+     "tags_all": {}
+    }
+   }
+  }
+ ],
+ "configuration": {
+  "provider_config": {
+   "aws": {
+    "name": "aws",
+    "full_name": "registry.opentofu.org/hashicorp/aws",
+    "expressions": {
+     "access_key": {
+      "constant_value": "offline-plan-fake"
+     },
+     "profile": {
+      "constant_value": null
+     },
+     "region": {
+      "constant_value": "ap-northeast-2"
+     },
+     "secret_key": {
+      "constant_value": "offline-plan-fake"
+     },
+     "skip_credentials_validation": {
+      "constant_value": true
+     },
+     "skip_metadata_api_check": {
+      "constant_value": true
+     },
+     "skip_region_validation": {
+      "constant_value": true
+     },
+     "skip_requesting_account_id": {
+      "constant_value": true
+     }
+    }
+   }
+  },
+  "root_module": {
+   "resources": [
+    {
+     "address": "aws_eip.admin",
+     "mode": "managed",
+     "type": "aws_eip",
+     "name": "admin",
+     "provider_config_key": "aws",
+     "expressions": {
+      "domain": {
+       "constant_value": "vpc"
+      }
+     },
+     "schema_version": 0
+    },
+    {
+     "address": "aws_security_group.eip_sg",
+     "mode": "managed",
+     "type": "aws_security_group",
+     "name": "eip_sg",
+     "provider_config_key": "aws",
+     "expressions": {
+      "description": {
+       "constant_value": "ssh from an eip allocated at apply time"
+      },
+      "ingress": {
+       "references": [
+        "aws_eip.admin.public_ip",
+        "aws_eip.admin"
+       ]
+      },
+      "name": {
+       "constant_value": "eip-sg"
+      }
+     },
+     "schema_version": 1
+    }
+   ]
+  }
+ },
+ "relevant_attributes": [
+  {
+   "resource": "aws_eip.admin",
+   "attribute": [
+    "public_ip"
+   ]
+  }
+ ],
+ "errored": false
+}
