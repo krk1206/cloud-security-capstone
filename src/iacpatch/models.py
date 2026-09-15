@@ -28,13 +28,44 @@ class Verdict(str, Enum):
     UNKNOWN = "UNKNOWN"    # 판정 불가 (미확정 값, 해석 불가 출처 등) → 자동 승인 금지
     SKIPPED = "SKIPPED"    # 도구 없음/전제 미충족으로 실행하지 않음 → PASS 로 간주하지 않음
     ERROR = "ERROR"        # 계층 실행 자체가 실패 (도구 오류 등) → PASS 로 간주하지 않음
+    NOT_RUN = "NOT_RUN"    # 아직 아무 결과도 없음 (검증 대기). 리포트에 "검증 대기" 로 표시된다
 
 
 class Validity(str, Enum):
     """검증 축(Validity)의 종합 판정."""
     PASS = "PASS"              # 필수 계층 전부 PASS(또는 WARN)
     FAIL = "FAIL"              # 하나라도 FAIL
-    INCOMPLETE = "INCOMPLETE"  # FAIL 은 없지만 UNKNOWN/SKIPPED/ERROR 가 있어 통과라고 말할 수 없음
+    INCOMPLETE = "INCOMPLETE"  # FAIL 은 없지만 UNKNOWN/SKIPPED/ERROR/NOT_RUN 이 있어 통과라고 말할 수 없음
+
+
+class ReviewState(str, Enum):
+    """B·C 로컬 검토 흐름의 상태 (docs/IO_SPEC_A_B_C.md).
+
+    정상 경로:  INPUT_READY → CANDIDATE_READY → VALIDATION_PENDING → REVIEW_REQUIRED
+    오류/중단:  INPUT_ERROR, NO_FINDING, AMBIGUOUS_FINDING, CANDIDATE_INVALID, INFO_INSUFFICIENT,
+               POLICY_BLOCKED, VALIDATION_FAILED
+    REVIEW_REQUIRED 는 "사람이 검토할 자료가 준비됐다" 는 뜻이지 "패치가 검증됐다" 는 뜻이 아니다.
+    """
+    INPUT_READY = "INPUT_READY"                # Trivy JSON + 원본 읽기 성공, 대상 finding 확정
+    CANDIDATE_READY = "CANDIDATE_READY"        # 후보 형식·필수 정보 확인, 원본/후보/diff 기록 완료
+    VALIDATION_PENDING = "VALIDATION_PENDING"  # 필수 검증 중 결과가 없는(NOT_RUN/UNKNOWN) 계층이 있음
+    REVIEW_REQUIRED = "REVIEW_REQUIRED"        # 검토 자료 생성 완료 (검증 결과가 전부 있든 없든 사람 검토 필요)
+    INPUT_ERROR = "INPUT_ERROR"                # Trivy JSON 손상, 원본 없음, 스캔-원본 불일치 등
+    NO_FINDING = "NO_FINDING"                  # 조건에 맞는 finding 없음
+    AMBIGUOUS_FINDING = "AMBIGUOUS_FINDING"    # 조건에 맞는 finding 이 여러 개 (임의 선택하지 않음)
+    CANDIDATE_INVALID = "CANDIDATE_INVALID"    # 후보 없음/빈 파일/원본과 동일/형식 오류/읽기 불가
+    INFO_INSUFFICIENT = "INFO_INSUFFICIENT"    # 후보가 정보 부족을 선언했거나 필수 정보(수정 이유 등) 누락
+    POLICY_BLOCKED = "POLICY_BLOCKED"          # 정책 위반 (보호 파일, 금지 토큰 등)
+    VALIDATION_FAILED = "VALIDATION_FAILED"    # 연결된 검증 결과에 FAIL 이 있음
+
+
+class ReviewLevel(str, Enum):
+    """검토 수준. '자동 반영 가능' 이라는 단계는 이 버전에 존재하지 않는다."""
+    PENDING = "PENDING"            # 검증 대기 — 검증 결과가 없거나 UNKNOWN 이라 검토 수준을 정할 수 없음
+    LIGHT_REVIEW = "LIGHT_REVIEW"  # 검증 전부 PASS + 위험도 LOW → 사람 1인 경량 확인 후 진행
+    FULL_REVIEW = "FULL_REVIEW"    # 검증 전부 PASS + 위험도 MEDIUM → 승인자가 diff·검증·위험도 근거를 읽고 판단
+    REPORT_ONLY = "REPORT_ONLY"    # 위험도 HIGH 또는 근거 부족 → 패치 반영 금지, 리포트만
+    BLOCKED = "BLOCKED"            # 검증 FAIL 또는 정책 위반 → 후보 폐기
 
 
 class RiskLevel(str, Enum):
@@ -179,6 +210,8 @@ class PatchCandidate(_Jsonable):
     model: str = ""
     raw_response_path: str = ""            # 원문 응답 저장 위치 (run record 안)
     attempt: int = 1
+    provenance: str = ""                   # 후보가 어디서 왔는지 사람이 적은 설명 (예: "개발 중 작성한 예제", "팀원이 수동 작성")
+    needs_info: List[str] = field(default_factory=list)   # 검토 전에 사람이 채워야 하는 정보 (예: 수정 이유 미기재)
 
 
 # ---------------------------------------------------------------------------

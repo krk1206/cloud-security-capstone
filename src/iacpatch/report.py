@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional
 
 from .models import GateDecision, PatchCandidate, PolicyResult, RiskDecision, ValidityReport, Verdict
 
-_ICON = {"PASS": "✅", "WARN": "⚠️", "FAIL": "❌", "UNKNOWN": "❓", "SKIPPED": "⏭️", "ERROR": "💥"}
+_ICON = {"PASS": "✅", "WARN": "⚠️", "FAIL": "❌", "UNKNOWN": "❓", "SKIPPED": "⏭️", "ERROR": "💥", "NOT_RUN": "⏳"}
 
 
 def unified_diff(baseline_files: Dict[str, str], candidate_files: Dict[str, str], target_dir: str) -> str:

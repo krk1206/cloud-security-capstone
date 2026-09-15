@@ -1,0 +1,40 @@
+name: B/C unit tests (no network, no tools)
+
+# B·C 3~4주차 테스트. 외부 도구(terraform/trivy/aws)·API 키·네트워크가 필요 없다 (checkout 과 Python 설치 제외).
+# 통합 테스트(test_pipeline_integration.py)는 도구가 없으면 자동 skip 된다.
+# 기존 A 워크플로(iac-scan.yml)는 건드리지 않는다.
+# 주의: 이 파일은 작성만 됐고 GitHub Actions 에서 아직 실행되지 않았다 (docs/BC_WEEK3-4_STATUS.md).
+
+on:
+  pull_request:
+    paths: ['src/**', 'tests/**', 'policy/**', 'examples/**', 'scenarios/**', '.github/workflows/bc-unit-tests.yml']
+  push:
+    branches: [main]
+    paths: ['src/**', 'tests/**', 'policy/**', 'examples/**', 'scenarios/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Unit + review-flow tests (stdlib only)
+        run: |
+          cd tests/unit
+          PYTHONPATH=../../src python -m unittest discover -s . -p "test_*.py" -v
+      - name: Review flow smoke (mock candidate, no verification → PENDING)
+        run: |
+          PYTHONPATH=src python -m iacpatch review --tf-dir infrastructure/sg-baseline \
+            --trivy-json infrastructure/sg-baseline/baseline-scan.json --candidate mock:sg_baseline_ok --scenario ci-smoke --out data/reviews
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: review-records
+          path: data/reviews/
+          retention-days: 7

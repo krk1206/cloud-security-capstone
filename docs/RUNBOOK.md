@@ -17,6 +17,33 @@
 
 **자동으로 절대 하지 않는 것:** `terraform apply`, `git push`, PR 생성, PR 병합. 전부 `--execute` 를 붙인 사람의 명령으로만.
 
+## 0-1. B·C 로컬 검토 흐름 (3~4주차) — 도구·API·AWS·네트워크 전부 불필요
+
+A 가 넘긴 **Terraform 원본 + Trivy JSON** 만 있으면 된다. trivy/terraform 을 실행하지 않고 파일만 읽는다.
+
+```bash
+# WSL
+export PYTHONPATH=$PWD/src
+python3 -m iacpatch findings --trivy-json infrastructure/sg-baseline/baseline-scan.json           # finding 목록 보기
+python3 -m iacpatch review --tf-dir infrastructure/sg-baseline --trivy-json infrastructure/sg-baseline/baseline-scan.json \
+  --rule AVD-AWS-0107 --candidate manual:<내가 만든 main.tf 또는 폴더 또는 응답.json> --candidate-note "누가 어떻게 만들었는지" --scenario s1
+#   → data/reviews/<id>/review.md, pr_body.md, state.json
+python3 -m iacpatch review ... --verification <A 의 결과.json>            # A 결과가 오면 붙여서 다시 실행
+python3 -m iacpatch review ... --baseline-plan a.json --candidate-plan b.json --intent policy/intent/sg-baseline.json   # plan 있으면 V5/V6 로컬 계산
+python3 -m iacpatch metrics                                             # 기록 집계
+```
+```powershell
+# Windows PowerShell
+$env:PYTHONPATH = "$PWD\src"
+python -m iacpatch review --tf-dir infrastructure/sg-baseline --trivy-json infrastructure/sg-baseline/baseline-scan.json --candidate mock:sg_baseline_ok --scenario s1
+scripts\review_demo.bat manual      # 더블클릭도 됨 (manual | mock | split)
+```
+
+- 후보 지정: `mock:<tests/fixtures/mock_llm 의 이름>` 또는 `manual:<경로>` (.json = 응답 계약, .tf = 대상 파일 전체 대체, 폴더 = *.tf + candidate.json)
+- 같은 룰의 finding 이 여러 개면 멈춘다 → `--resource aws_security_group.xxx` 또는 `--line N` 으로 지정
+- 결과 읽는 법: `state.json.state` (REVIEW_REQUIRED 는 "검토 자료 준비됨" 이지 "검증 통과" 아님), `verification_status`, review.md 4절 표
+- 예제와 재현 명령: `examples/bc/README.md`. 입출력 형식: `docs/IO_SPEC_A_B_C.md`
+
 ## 1. WSL (Ubuntu) — 권장
 
 ```bash

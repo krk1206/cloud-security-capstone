@@ -17,3 +17,5 @@ iacpatch.config.json
 __pycache__/
 *.pyc
 .iacpatch-work/
+data/reviews/*
+!data/reviews/README.md

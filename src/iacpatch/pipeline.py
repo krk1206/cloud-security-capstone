@@ -47,11 +47,20 @@ class PipelineResult:
         return console_summary(self.run_id, self.status, self.gate, self.validity, self.candidate, self.note)
 
 
+class AmbiguousTarget(ValueError):
+    def __init__(self, matches: List[Finding]):
+        super().__init__(f"{len(matches)} findings match; specify --resource (and --line if needed)")
+        self.matches = matches
+
+
 def select_target(findings: List[Finding], rule_id: str, resource: Optional[str] = None) -> Optional[Finding]:
+    """대상 finding 1개. 여러 개면 임의로 첫 항목을 고르지 않고 AmbiguousTarget 을 던진다."""
     cands = [f for f in findings if f.rule_id == rule_id and f.status == "FAIL"]
     if resource:
         cands = [f for f in cands if f.resource == resource]
     cands.sort(key=lambda f: (f.filename, f.start_line))
+    if len(cands) > 1:
+        raise AmbiguousTarget(cands)
     return cands[0] if cands else None
 
 
@@ -118,7 +127,12 @@ def run_predeploy(settings: Settings, target_dir: str, intent_path: str, scenari
             rec.finish("UNSUPPORTED_RULE", note=f"{settings.target_rule} is not in supported_target_rules {supported}")
             return PipelineResult(rec.run_id, rec.dir, "UNSUPPORTED_RULE",
                                   note=f"{settings.target_rule} cannot be verified end-to-end by this pipeline yet (supported: {supported}); see docs/IAM_SCOPE.md")
-        target = select_target(before.findings, settings.target_rule, target_resource)
+        try:
+            target = select_target(before.findings, settings.target_rule, target_resource)
+        except AmbiguousTarget as e:
+            rec.finish("AMBIGUOUS_FINDING", note=str(e), matches=[f.to_dict() for f in e.matches])
+            return PipelineResult(rec.run_id, rec.dir, "AMBIGUOUS_FINDING",
+                                  note=str(e) + ": " + "; ".join(f"{f.resource}:{f.start_line}" for f in e.matches))
         if target is None:
             rec.finish("NO_FINDING", note=f"{settings.target_rule} not found in {target_dir}")
             return PipelineResult(rec.run_id, rec.dir, "NO_FINDING", note=f"{settings.target_rule} not reported for {target_dir}; nothing to patch")

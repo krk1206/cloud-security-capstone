@@ -7,6 +7,11 @@
   postdeploy  V7(AWS 실측) + V8(통신 확인). --execute 없으면 실행할 명령만 출력
   recover     배포 후 실패 복구 절차 (revert → plan → apply(승인) → V7 재확인)
   selfcheck   도구 존재/버전 확인
+
+B·C 3~4주차 (외부 도구·API 없이 파일 입력만으로):
+  findings    Trivy JSON 의 finding 목록 조회 (대상 선택 조건 확인용)
+  review      원본 + Trivy JSON + 후보(mock/manual) → 기록·검증 연결·위험도·review.md/pr_body.md
+  metrics     data/reviews (또는 data/runs) 기록을 집계해 수치 표 출력
 """
 from __future__ import annotations
 
@@ -114,6 +119,50 @@ def cmd_recover(args: argparse.Namespace) -> int:
     return run_recover(s, args.run, execute=args.execute, tf_dir=args.tf_dir)
 
 
+def cmd_findings(args: argparse.Namespace) -> int:
+    from .review.inputs import FindingSelector, TrivyInputError, list_findings, load_trivy_report, select_findings
+    s = _settings(args)
+    try:
+        report = load_trivy_report(s.path(args.trivy_json))
+    except TrivyInputError as e:
+        print(f"입력 오류: {e}")
+        return 2
+    findings = list_findings(report)
+    sel = FindingSelector(args.rule, args.file, args.resource, args.line)
+    matches = select_findings(findings, sel)
+    print(f"Trivy {(report.get('Trivy') or {}).get('Version', '?')} · 스캔 시각 {report.get('CreatedAt', '?')} · FAIL finding {len(findings)}건, 조건({sel.describe()}) 일치 {len(matches)}건")
+    for f in findings:
+        mark = "→" if f in matches else " "
+        print(f" {mark} {f.rule_id:14s} {f.severity:8s} {f.filename}:{f.start_line:<4d} {f.resource:45s} {f.title[:60]}")
+    if len(matches) > 1:
+        print("여러 개가 일치한다. review 에서는 --resource / --line 으로 하나를 지정해야 한다.")
+    return 0
+
+
+def cmd_review(args: argparse.Namespace) -> int:
+    from .review.flow import ReviewOptions, run_review
+    s = _settings(args)
+    opt = ReviewOptions(tf_dir=args.tf_dir, trivy_json=args.trivy_json, candidate=args.candidate, scenario=args.scenario,
+                        rule=args.rule, filename=args.file, resource=args.resource, line=args.line, candidate_note=args.candidate_note or "",
+                        verification=args.verification, baseline_plan=args.baseline_plan, candidate_plan=args.candidate_plan,
+                        intent=args.intent, out_dir=args.out, mock_dir=args.mock_dir)
+    res = run_review(s, opt)
+    print(res.console())
+    return 0 if res.state.value in ("REVIEW_REQUIRED",) else 1
+
+
+def cmd_metrics(args: argparse.Namespace) -> int:
+    from .metrics import collect, render_table
+    s = _settings(args)
+    rows = collect([s.path(d) for d in (args.dirs or ["data/reviews"])])
+    print(render_table(rows, title=args.title))
+    if args.out:
+        from pathlib import Path as _P
+        _P(args.out).write_text(render_table(rows, title=args.title), encoding="utf-8")
+        print(f"→ {args.out}")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="iacpatch", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--repo-root", dest="repo_root", help="저장소 루트 (기본: 현재 위치에서 탐색)")
@@ -156,6 +205,28 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--v8-checks", help="V8 체크 정의 JSON"); sp.add_argument("--run", help="연결할 run id")
     sp.add_argument("--execute", action="store_true", help="실제 AWS 조회/통신 시도 실행")
     sp.set_defaults(fn=cmd_postdeploy)
+
+    sp = sub.add_parser("findings", parents=[common], help="Trivy JSON 의 finding 목록")
+    sp.add_argument("--trivy-json", required=True); sp.add_argument("--rule"); sp.add_argument("--file"); sp.add_argument("--resource"); sp.add_argument("--line", type=int)
+    sp.set_defaults(fn=cmd_findings)
+
+    sp = sub.add_parser("review", parents=[common], help="B·C 로컬 검토 흐름 (도구/API 없이)")
+    sp.add_argument("--tf-dir", required=True, help="원본 Terraform 디렉터리 (예: infrastructure/sg-baseline)")
+    sp.add_argument("--trivy-json", required=True, help="A 의 Trivy JSON (예: infrastructure/sg-baseline/baseline-scan.json)")
+    sp.add_argument("--candidate", required=True, help="mock:<fixture> | manual:<path(.json|.tf|dir)>")
+    sp.add_argument("--scenario", required=True)
+    sp.add_argument("--rule", default="AVD-AWS-0107"); sp.add_argument("--file"); sp.add_argument("--resource"); sp.add_argument("--line", type=int)
+    sp.add_argument("--candidate-note", dest="candidate_note", help="후보 출처 설명 (예: '팀원 B 가 수동 작성', '개발 중 작성한 예제')")
+    sp.add_argument("--verification", help="A 의 검증 결과 JSON (verification-v1). 없으면 NOT_RUN")
+    sp.add_argument("--baseline-plan", dest="baseline_plan", help="원본 plan JSON (있으면 V5 로컬 계산)")
+    sp.add_argument("--candidate-plan", dest="candidate_plan", help="후보 plan JSON (있으면 V5/V6 로컬 계산)")
+    sp.add_argument("--intent", help="intent JSON (후보 plan 과 함께 주면 V6 로컬 계산)")
+    sp.add_argument("--out", help="기록 루트 (기본 data/reviews)"); sp.add_argument("--mock-dir", dest="mock_dir")
+    sp.set_defaults(fn=cmd_review)
+
+    sp = sub.add_parser("metrics", parents=[common], help="기록 집계")
+    sp.add_argument("--dirs", nargs="*", help="집계할 기록 루트 (기본 data/reviews)"); sp.add_argument("--out"); sp.add_argument("--title", default="집계")
+    sp.set_defaults(fn=cmd_metrics)
 
     sp = sub.add_parser("recover", parents=[common])
     sp.add_argument("--run", required=True); sp.add_argument("--tf-dir", required=True); sp.add_argument("--execute", action="store_true")
