@@ -25,7 +25,7 @@
 - **최종 완성 기준:** 설정 오류 2개 유형(과다 개방 보안그룹, IAM 과다권한) 필수 + 검증 스택 8계층 + 자율성 3등급 동작, Rule-based baseline 대비 정량 비교까지 테스트 완료된 상태. 퍼블릭 S3와 컨테이너 CVE는 여유가 있을 때만 추가한다.
 
 **관련 문서**
-- [`docs/BC_WEEK3-4_STATUS.md`](docs/BC_WEEK3-4_STATUS.md) — **B·C 3~4주차 현황**, [`docs/CODE_TOUR.md`](docs/CODE_TOUR.md) — 코드 투어, [`docs/IO_SPEC_A_B_C.md`](docs/IO_SPEC_A_B_C.md) — A→B→C 입출력 명세, [`docs/RISK_RUBRIC_DRAFT.md`](docs/RISK_RUBRIC_DRAFT.md) — 잠정 위험도 기준표, [`docs/INTENT_ORACLE_PLAN.md`](docs/INTENT_ORACLE_PLAN.md) — Intent Oracle 명세·테스트 계획
+- [`docs/BC_WEEK3-4_STATUS.md`](docs/BC_WEEK3-4_STATUS.md) — **B·C 3~4주차 현황**, [`docs/CODE_TOUR.md`](docs/CODE_TOUR.md) — 코드 투어, [`docs/IO_SPEC_A_B_C.md`](docs/IO_SPEC_A_B_C.md) — A→B→C 입출력 명세, [`docs/RISK_RUBRIC_DRAFT.md`](docs/RISK_RUBRIC_DRAFT.md) — 잠정 위험도 기준표, [`docs/INTENT_ORACLE_PLAN.md`](docs/INTENT_ORACLE_PLAN.md) — Intent Oracle 명세·테스트 계획, [`docs/EXPERIMENT_GUIDE.md`](docs/EXPERIMENT_GUIDE.md) — **실험 방법(쉬운 버전)**
 - [`docs/STATUS.md`](docs/STATUS.md) — 전체 구현 현황 (2026-09-13 기준), [`docs/RUNBOOK.md`](docs/RUNBOOK.md) — 실행 방법, [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — 코드 구조, [`docs/DOC_CORRECTIONS.md`](docs/DOC_CORRECTIONS.md) — 문서 정정 기록
 - [`criticism and rebuttal.md`](criticism%20and%20rebuttal.md) — 받은 비판과 답변
 - [`RoadMap.md`](RoadMap.md) — 동작 시나리오와 용어집

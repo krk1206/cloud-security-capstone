@@ -3,6 +3,7 @@
 후보 출처 지정 문자열:
     mock:<fixture>      tests/fixtures/mock_llm/<fixture>.json (사람이 미리 만든 고정 응답). origin="mock"
     manual:<path>       사람이 준비한 파일. origin="manual"
+    rule_based          규칙 기반 baseline 생성기(generator/rule_based.py)가 그 자리에서 만든다. origin="rule_based". intent 필요
                           - *.json : LLM 응답 계약과 같은 형식 {"status","files":[{"path","content"}],"rationale",...}
                           - *.tf   : 대상 finding 이 가리키는 파일의 **전체 내용**으로 사용 (파일 하나만 바꾸는 경우)
                           - 디렉터리: 안의 *.tf 를 같은 이름의 원본 파일 대체본으로 사용
@@ -45,12 +46,14 @@ class CandidateSpec:
 
     @classmethod
     def parse(cls, spec: str, note: str = "") -> "CandidateSpec":
+        if spec.strip().lower() in ("rule_based", "rule-based", "rule_based:"):
+            return cls("rule_based", "rule-v1", note)
         if ":" not in spec:
-            raise CandidateSourceError("후보 지정 형식은 mock:<fixture> 또는 manual:<path> 이다")
+            raise CandidateSourceError("후보 지정 형식은 mock:<fixture> | manual:<path> | rule_based 이다")
         kind, ref = spec.split(":", 1)
         kind = kind.strip().lower()
         if kind not in ("mock", "manual") or not ref.strip():
-            raise CandidateSourceError(f"알 수 없는 후보 출처 {spec!r} (mock:<fixture> | manual:<path>)")
+            raise CandidateSourceError(f"알 수 없는 후보 출처 {spec!r} (mock:<fixture> | manual:<path> | rule_based)")
         return cls(kind, ref.strip(), note)
 
 
@@ -128,9 +131,25 @@ def _from_response(resp: LLMResponse, base: dict) -> PatchCandidate:
                           proposed_autonomy=parsed["proposed_autonomy"], assumptions=parsed["assumptions"], **base)
 
 
-def load_candidate(spec: CandidateSpec, target: Finding, original_files: Dict[str, str], mock_dir: Optional[Path] = None) -> PatchCandidate:
+def load_rule_based_candidate(target: Finding, original_files: Dict[str, str], intent_raw: Optional[Dict], policy: Dict, note: str = "") -> PatchCandidate:
+    """규칙 기반 baseline. LLM 이 아니라 리터럴 CIDR 치환 코드다 (비교 실험의 기준선)."""
+    from ..evidence import build_bundle
+    from ..generator.rule_based import RuleBasedGenerator
+    if not intent_raw:
+        return PatchCandidate(candidate_id=_new_id(), origin="rule_based", generator="rule_based:rule-v1", status="INSUFFICIENT_INFO", files={},
+                              rationale="intent(승인 출처) 없이는 규칙 기반 치환을 할 수 없다 (--intent 필요)", provenance=note or "규칙 기반 생성기")
+    bundle = build_bundle("review", "", target, [target], original_files, intent_raw, policy, {}, {})
+    cand = RuleBasedGenerator().generate(bundle)
+    cand.provenance = note or "규칙 기반 생성기(generator/rule_based.py)가 리터럴 CIDR 을 승인 출처로 치환 — LLM 아님"
+    return cand
+
+
+def load_candidate(spec: CandidateSpec, target: Finding, original_files: Dict[str, str], mock_dir: Optional[Path] = None,
+                   intent_raw: Optional[Dict] = None, policy: Optional[Dict] = None) -> PatchCandidate:
     if spec.kind == "mock":
         return load_mock_candidate(spec.ref, spec.note, mock_dir)
+    if spec.kind == "rule_based":
+        return load_rule_based_candidate(target, original_files, intent_raw, policy or {}, spec.note)
     return load_manual_candidate(spec.ref, target, original_files, spec.note)
 
 

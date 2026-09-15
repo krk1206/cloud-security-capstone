@@ -58,7 +58,8 @@
 | fixture PASS 출처 표시 | 완료 | 계층마다 `details.result_source`, 리포트 '결과 출처' 열 |
 | 로컬 테스트 명령 | 완료 | `scripts/run_tests.sh` / `.bat` (137 테스트, 도구 없으면 7 skip) |
 | 네트워크·키 없는 CI 워크플로 | 부분 | `.github/workflows/bc-unit-tests.yml` 작성. **GitHub 에서 미실행** (push 안 함). A 의 iac-scan.yml 유지 |
-| 집계 (`iacpatch metrics`) | 완료 | `metrics.py`, 라벨 파일 있을 때만 일치율 계산 |
+| 집계 (`iacpatch metrics --labels`) | 완료 | `metrics.py`: 출처별(E1)·오라클 유무(E2) 수치, 라벨 있을 때만 일치율 |
+| 후보 세트 일괄 실행 + 규칙 기반 후보 출처 | 완료 | `scripts/run_candidate_set.py`, `--candidate rule_based`, `experiments/candidate-sets/example-dev/` (개발용 예제), `docs/EXPERIMENT_GUIDE.md` |
 | V5·V8 완전 연결 / 비교 실험 | 미완료(명세) | `docs/IO_SPEC_A_B_C.md` 4절 |
 
 ## 실제로 실행한 것 / 하지 않은 것

@@ -152,13 +152,15 @@ def cmd_review(args: argparse.Namespace) -> int:
 
 
 def cmd_metrics(args: argparse.Namespace) -> int:
-    from .metrics import collect, render_table
+    from .metrics import collect, load_labels, render_table
     s = _settings(args)
     rows = collect([s.path(d) for d in (args.dirs or ["data/reviews"])])
-    print(render_table(rows, title=args.title))
+    labels = load_labels(str(s.path(args.labels))) if args.labels else None
+    table = render_table(rows, title=args.title, labels=labels)
+    print(table)
     if args.out:
         from pathlib import Path as _P
-        _P(args.out).write_text(render_table(rows, title=args.title), encoding="utf-8")
+        _P(args.out).write_text(table, encoding="utf-8")
         print(f"→ {args.out}")
     return 0
 
@@ -213,7 +215,7 @@ def build_parser() -> argparse.ArgumentParser:
     sp = sub.add_parser("review", parents=[common], help="B·C 로컬 검토 흐름 (도구/API 없이)")
     sp.add_argument("--tf-dir", required=True, help="원본 Terraform 디렉터리 (예: infrastructure/sg-baseline)")
     sp.add_argument("--trivy-json", required=True, help="A 의 Trivy JSON (예: infrastructure/sg-baseline/baseline-scan.json)")
-    sp.add_argument("--candidate", required=True, help="mock:<fixture> | manual:<path(.json|.tf|dir)>")
+    sp.add_argument("--candidate", required=True, help="mock:<fixture> | manual:<path(.json|.tf|dir)> | rule_based (intent 필요)")
     sp.add_argument("--scenario", required=True)
     sp.add_argument("--rule", default="AVD-AWS-0107"); sp.add_argument("--file"); sp.add_argument("--resource"); sp.add_argument("--line", type=int)
     sp.add_argument("--candidate-note", dest="candidate_note", help="후보 출처 설명 (예: '팀원 B 가 수동 작성', '개발 중 작성한 예제')")
@@ -226,6 +228,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     sp = sub.add_parser("metrics", parents=[common], help="기록 집계")
     sp.add_argument("--dirs", nargs="*", help="집계할 기록 루트 (기본 data/reviews)"); sp.add_argument("--out"); sp.add_argument("--title", default="집계")
+    sp.add_argument("--labels", help="라벨 JSON {scenario: {expected, source}} — 있을 때만 기대 대비 일치율을 계산")
     sp.set_defaults(fn=cmd_metrics)
 
     sp = sub.add_parser("recover", parents=[common])

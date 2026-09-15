@@ -19,7 +19,7 @@ _LEVEL_KO = {
     ReviewLevel.BLOCKED: "차단 — 후보 폐기",
 }
 _ORIGIN_KO = {"mock": "mock fixture (사람이 미리 작성한 고정 응답 — LLM 출력 아님)", "manual": "수동 입력 (사람이 준비한 파일 — 프로그램이 생성하지 않음)",
-              "rule_based": "규칙 기반 생성기", "llm": "LLM 응답", "seeded": "seeded 예제"}
+              "rule_based": "규칙 기반 생성기 (리터럴 CIDR 치환 코드 — LLM 아님, 비교 실험의 기준선)", "llm": "LLM 응답", "seeded": "seeded 예제"}
 
 
 def _v(lr) -> str:

@@ -75,7 +75,23 @@ def collect(roots: Iterable[Path]) -> List[Dict[str, Any]]:
     return rows
 
 
-def summarize(rows: List[Dict[str, Any]], labels: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
+def _norm_labels(labels: Optional[Dict[str, Any]]) -> Dict[str, Dict[str, str]]:
+    """labels.json: {scenario: "correct"} 또는 {scenario: {"expected": "...", "source": "claude-code|rule_based|seeded|human"}}"""
+    out: Dict[str, Dict[str, str]] = {}
+    for k, v in (labels or {}).items():
+        if isinstance(v, str):
+            out[k] = {"expected": v, "source": ""}
+        elif isinstance(v, dict):
+            out[k] = {"expected": str(v.get("expected", "")), "source": str(v.get("source", ""))}
+    return out
+
+
+def load_labels(path: str) -> Dict[str, Any]:
+    return json.loads(Path(path).read_text(encoding="utf-8"))
+
+
+def summarize(rows: List[Dict[str, Any]], labels: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    labels = _norm_labels(labels)
     out: Dict[str, Any] = {"runs": len(rows)}
     out["by_origin"] = dict(Counter(r["origin"] for r in rows))
     out["by_state"] = dict(Counter(str(r["state"]) for r in rows))
@@ -89,15 +105,24 @@ def summarize(rows: List[Dict[str, Any]], labels: Optional[Dict[str, str]] = Non
     out["layer_verdicts"] = {L: dict(dist[L]) for L in LAYERS if dist[L]}
     out["scanner_pass_oracle_fail"] = sum(1 for r in rows if r["layers"].get("V1") == "PASS" and r["layers"].get("V6") == "FAIL")
     out["oracle_unknown"] = sum(1 for r in rows if r["layers"].get("V6") == "UNKNOWN")
+    # 오라클 유무 비교 (E2): V1 만으로 게이트를 열었다면 통과했을 건수 vs V1+V6 로 통과한 건수
+    out["gate_v1_only_pass"] = sum(1 for r in rows if r["layers"].get("V1") == "PASS")
+    out["gate_v1_and_v6_pass"] = sum(1 for r in rows if r["layers"].get("V1") == "PASS" and r["layers"].get("V6") == "PASS")
     if labels:
         agree = total = 0
         detail: Dict[str, Dict[str, int]] = defaultdict(lambda: {"total": 0, "as_expected": 0})
+        by_source: Dict[str, Dict[str, int]] = defaultdict(lambda: {"total": 0, "as_expected": 0, "candidate_produced": 0})
         for r in rows:
-            exp = labels.get(str(r["scenario"]))
-            if not exp:
+            lab = labels.get(str(r["scenario"]))
+            if not lab or not lab.get("expected"):
                 continue
+            exp = lab["expected"]
+            src = lab.get("source") or r["origin"]
             total += 1
             detail[exp]["total"] += 1
+            by_source[src]["total"] += 1
+            if str(r["state"]) not in ("CANDIDATE_INVALID", "INFO_INSUFFICIENT", "NOT_SUPPORTED", "GENERATION_FAILED", "INSUFFICIENT_INFO", "NO_FINDING", "AMBIGUOUS_FINDING", "INPUT_ERROR"):
+                by_source[src]["candidate_produced"] += 1
             v6 = r["layers"].get("V6")
             st = str(r["state"])
             ok = False
@@ -112,11 +137,12 @@ def summarize(rows: List[Dict[str, Any]], labels: Optional[Dict[str, str]] = Non
             if ok:
                 agree += 1
                 detail[exp]["as_expected"] += 1
-        out["labeled"] = {"total": total, "as_expected": agree, "by_label": dict(detail)}
+                by_source[src]["as_expected"] += 1
+        out["labeled"] = {"total": total, "as_expected": agree, "by_label": dict(detail), "by_source": dict(by_source)}
     return out
 
 
-def render_table(rows: List[Dict[str, Any]], title: str = "집계", labels: Optional[Dict[str, str]] = None) -> str:
+def render_table(rows: List[Dict[str, Any]], title: str = "집계", labels: Optional[Dict[str, Any]] = None) -> str:
     s = summarize(rows, labels)
     L: List[str] = [f"# {title}", "", f"- 실행 수: {s['runs']}", f"- 후보 출처: {s['by_origin']}  (mock/manual/예제는 LLM 출력이 아님)",
                     f"- 최종 상태: {s['by_state']}", f"- 검토 수준/게이트: {s['by_review_level']}", f"- 검증 상태: {s['by_verification_status']}",
@@ -126,11 +152,20 @@ def render_table(rows: List[Dict[str, Any]], title: str = "집계", labels: Opti
         for k, v in s["layer_verdicts"].items():
             L.append(f"| {k} | {v} |")
         L.append("")
+    L.append(f"- 오라클 유무 비교: V1 만으로 통과시켰을 건수 {s['gate_v1_only_pass']} vs V1+V6 통과 {s['gate_v1_and_v6_pass']} (차이 = V6 가 추가로 막은 건수)")
+    L.append("")
     if "labeled" in s:
         lb = s["labeled"]
         L.append(f"- 라벨 있는 실행 {lb['total']}건 중 기대대로 판정 {lb['as_expected']}건")
         for k, v in lb["by_label"].items():
-            L.append(f"  - {k}: {v['as_expected']}/{v['total']}")
+            L.append(f"  - 기대={k}: {v['as_expected']}/{v['total']}")
+        if lb.get("by_source"):
+            L.append("- 후보 출처별 (E1 비교):")
+            L.append("")
+            L.append("| 출처 | 케이스 | 후보 생성됨 | 기대대로 판정 |")
+            L.append("|---|---|---|---|")
+            for k, v in lb["by_source"].items():
+                L.append(f"| {k} | {v['total']} | {v['candidate_produced']} | {v['as_expected']} |")
         L.append("")
     L += ["| run | 시나리오 | 출처 | 상태 | 검토수준 | 검증 | 위험도 | V1 | V2 | V3 | V4 | V5 | V6 |", "|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
     for r in rows:
