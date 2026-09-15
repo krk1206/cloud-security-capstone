@@ -19,10 +19,15 @@
 
 1. **원본 + Trivy JSON** (A): `infrastructure/sg-baseline/` 처럼 결함이 있는 Terraform 과 그 스캔 결과. 변형 케이스는 `experiments/trivy-sg-probe/cases/` 9종을 `scenarios/eval/` 로 복사해 쓰면 된다 (각각 Trivy JSON 필요).
 2. **intent** (팀): 승인 CIDR·필수 접근을 적은 `policy/intent/<시나리오>.json`. 이게 없으면 V6 도 규칙 기반도 못 돈다.
-3. **plan JSON** (A): 원본 plan 1개 + 후보마다 plan 1개 (`terraform show -json`). 없으면 V5/V6 는 검증 대기로 남는다 → 숫자가 안 나온다. **plan 이 핵심 재료다.**
+3. **plan JSON** (A 또는 terraform 있는 사람 누구나): 원본 plan 1개 + 후보마다 plan 1개. 없으면 V5/V6 는 검증 대기로 남는다 → 숫자가 안 나온다. **plan 이 핵심 재료다.**
+   ```bash
+   scripts/make_plan.sh scenarios/eval/case00 plans/case00-baseline.json                       # 원본
+   scripts/make_plan.sh scenarios/eval/case00 plans/cc-01.json candidates/cc-01.tf main.tf     # 후보
+   ```
+   오프라인 plan 이라 AWS 계정·요금이 없다 (`terraform init` 의 provider 다운로드만 네트워크). 옆에 `.meta.txt` 로 도구 버전·후보 sha256 이 남는다. 이 스크립트는 작성 세션에 terraform 이 없어 **실행 확인을 못 했다** — 첫 실행 때 오류 나면 `scripts/generate_fixtures.sh` 와 같은 명령이니 그 절차대로 손으로 해도 된다.
 4. **검증 결과** (A): V1~V4 를 돌린 결과를 `docs/IO_SPEC_A_B_C.md` 1-3 형식 JSON 으로.
 5. **후보** (B): 아래 세 종류. 파일로 저장한다.
-   - `claude-code`: 지도교수 지시대로 Claude Code 대화에서 "이 finding 을 고쳐줘" 하고 받은 파일 (프롬프트를 고정해 두고 케이스마다 N번 반복). **저장할 때 어느 대화에서 받았는지 note 에 적는다.**
+   - `claude-code`: 지도교수 지시대로 Claude Code 대화에서 "이 finding 을 고쳐줘" 하고 받은 파일 (프롬프트를 고정해 두고 케이스마다 N번 반복). **저장할 때 어느 대화에서 받았는지 note 에 적는다.** 프롬프트 원문은 세트 폴더에 `prompt.md` 로 같이 둔다 (규칙 기반과 같은 정보 — finding 위치 + intent 의 승인 CIDR — 를 주고, 그 이상은 주지 않는다. 그래야 E1 이 공정한 비교가 된다).
    - `rule_based`: `--candidate rule_based` 로 자동 (LLM 아님)
    - `seeded`: 우리가 손으로 만든 기만적 패치(CIDR 분할, prefix list, IPv6, 필요 접근 삭제 …). **탐지기 능력 측정용이지 자연 발생률이 아니다.**
 
@@ -36,7 +41,10 @@
 ```
 experiments/candidate-sets/eval-sg-01/
   manifest.json        ← 어떤 원본·Trivy·intent·plan 을 쓰고, 후보가 뭐고, 기대 결과(expected)가 뭔지
+  prompt.md            ← Claude Code 에 준 프롬프트 원문 (고정본)
   candidates/          ← 후보 파일들 (cc-01.tf, cc-02.tf, seeded-split.tf ...)
+  plans/               ← make_plan.sh 로 만든 plan JSON (원본 1 + 후보마다 1) + .meta.txt
+  verification/        ← A 가 준 V1~V4 결과 JSON (후보마다)
 ```
 
 1. manifest 작성 (형식은 `experiments/candidate-sets/example-dev/manifest.json` 복사). 후보마다:
