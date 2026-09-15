@@ -3,8 +3,10 @@
 > **처음 보신다면 [`한장요약.md`](한장요약.md)부터 읽어주세요.** (3분)
 
 
-## AWS IaC 보안 패치 검증 파이프라인
-### Verification Pipeline for AWS IaC Security Patches
+## AWS IaC 보안 설정 오류의 탐지, LLM 기반 자동 수정, 실효성 검증 및 위험도 기반 배포 승인 파이프라인 구현
+### Implementation of a Risk-Gated Pipeline for Detection, LLM-Based Remediation, and Effectiveness Verification of AWS IaC Misconfigurations
+
+> **제목 변경 (2026-09-15)** — 제안서 발표 후 지도교수 지시: "프로젝트가 하는 일이 다 드러나고, 동사로 끝나게". 이전 제목 "AWS IaC 보안 패치 검증 파이프라인"은 검증만 드러나고 탐지·수정·승인 흐름이 빠져 있었다. 새 제목의 각 항은 본문과 이렇게 대응한다: 탐지=Trivy(1.2절), LLM 기반 자동 수정=패치 후보 생성(1.1절, AI가 관여하는 유일한 단계), 실효성 검증=검증 스택 V1~V8·Intent Oracle(2.2절), 위험도 기반 배포 승인=Risk Rubric·자율성 등급·사람 승인(2.3절). 본문의 "패치"는 설정 오류를 고치는 Terraform 수정 코드를 뜻한다(용어집 참조).
 
 > **문서 표기 정리 (2026-09-08)** — 팀 내부 문서에서 게이팅 기준을 "확신도"로 표기해 왔으나, 실제 판정 기준은 AI의 확신도가 아니라 **변경의 위험도**(리소스 종류, 영향 범위, 롤백 난이도)이므로 정리했다. AI의 확신도는 등급을 낮추는 방향으로만 반영되는 부수 입력이다. 상세는 [`criticism and rebuttal.md`](criticism%20and%20rebuttal.md) 비판 6 참조.
 

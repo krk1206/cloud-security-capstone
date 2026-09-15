@@ -59,5 +59,5 @@
 
 1. WSL 에서 `scripts/run_tests.sh` → 116 테스트 통과 확인 (Terraform 1.16.1 로 통합 테스트 7종 포함)
 2. `policy/intent/sg-baseline.json` 작성 (승인 CIDR 은 팀 결정)
-3. LLM 제공업체 결정 → 키를 환경변수로 → `predeploy --generator llm` 첫 실행 → `llm_meta.json`/원문 확인
+3. (2026-09-15 지도교수 지시) 유료 LLM API 대신 **Claude Code** 로 패치 후보를 만든다 → 렌더링된 프롬프트(bundle)를 Claude Code 에 주고 응답 JSON 을 파일로 받는 `file` 제공자 + `prompt` 덤프 명령 추가가 다음 구현 항목. API 제공자 코드(anthropic/openai)는 유지하되 기본 경로가 아니다
 4. 샌드박스 apply(사람) → `postdeploy --execute` 로 V7 첫 실측 → 06-prefix-list 배포 후 확인(부록 A 항목)
