@@ -1,0 +1,107 @@
+{
+  "set_id": "eval-a-probe-rule",
+  "_note": "E1 의 규칙 기반(baseline) 축. A 의 Trivy 우회 케이스 9종 × 규칙 기반 생성기. intent 승인 출처는 팀 결정값(D-2). expected 는 2026-09-15 실행 전 고정 (a-probe-dev 의 정정 이력 반영). 후보는 LLM 아님.",
+  "rule": "AVD-AWS-0107",
+  "local_tools": true,
+  "candidates": [
+    {
+      "id": "00-baseline",
+      "tf_dir": "scenarios/eval/a-probe/00-baseline",
+      "trivy_json": "scenarios/eval/a-probe/00-baseline/trivy-scan.json",
+      "intent": "experiments/candidate-sets/a-probe-dev/intents/00-baseline.json",
+      "candidate": "rule_based",
+      "source": "rule_based",
+      "expected": "correct",
+      "expected_reason": "리터럴 0.0.0.0/0 → 승인 출처 치환 (지원)",
+      "note": "규칙 기반 생성기 (LLM 아님). 원본·스캔은 A 의 experiments/trivy-sg-probe (origin/main 74a6f38)"
+    },
+    {
+      "id": "01-cidr-split",
+      "tf_dir": "scenarios/eval/a-probe/01-cidr-split",
+      "trivy_json": "scenarios/eval/a-probe/01-cidr-split/trivy-scan.json",
+      "intent": "experiments/candidate-sets/a-probe-dev/intents/01-cidr-split.json",
+      "candidate": "rule_based",
+      "source": "rule_based",
+      "expected": "not_triggered",
+      "expected_reason": "A 실측: Trivy 0107 미검출 → finding 없음 → 파이프라인 시작 안 됨",
+      "note": "규칙 기반 생성기 (LLM 아님). 원본·스캔은 A 의 experiments/trivy-sg-probe (origin/main 74a6f38)"
+    },
+    {
+      "id": "02-var-default",
+      "tf_dir": "scenarios/eval/a-probe/02-var-default",
+      "trivy_json": "scenarios/eval/a-probe/02-var-default/trivy-scan.json",
+      "intent": "experiments/candidate-sets/a-probe-dev/intents/02-var-default.json",
+      "candidate": "rule_based",
+      "source": "rule_based",
+      "expected": "unsupported",
+      "expected_reason": "var.cidr 경유 → 규칙 기반 미지원",
+      "note": "규칙 기반 생성기 (LLM 아님). 원본·스캔은 A 의 experiments/trivy-sg-probe (origin/main 74a6f38)"
+    },
+    {
+      "id": "03-string-build",
+      "tf_dir": "scenarios/eval/a-probe/03-string-build",
+      "trivy_json": "scenarios/eval/a-probe/03-string-build/trivy-scan.json",
+      "intent": "experiments/candidate-sets/a-probe-dev/intents/03-string-build.json",
+      "candidate": "rule_based",
+      "source": "rule_based",
+      "expected": "unsupported",
+      "expected_reason": "local.open(join) 경유 → 규칙 기반 미지원",
+      "note": "규칙 기반 생성기 (LLM 아님). 원본·스캔은 A 의 experiments/trivy-sg-probe (origin/main 74a6f38)"
+    },
+    {
+      "id": "04-dynamic",
+      "tf_dir": "scenarios/eval/a-probe/04-dynamic",
+      "trivy_json": "scenarios/eval/a-probe/04-dynamic/trivy-scan.json",
+      "intent": "experiments/candidate-sets/a-probe-dev/intents/04-dynamic.json",
+      "candidate": "rule_based",
+      "source": "rule_based",
+      "expected": "unsupported",
+      "expected_reason": "dynamic 블록 → 규칙 기반 미지원",
+      "note": "규칙 기반 생성기 (LLM 아님). 원본·스캔은 A 의 experiments/trivy-sg-probe (origin/main 74a6f38)"
+    },
+    {
+      "id": "05-separate",
+      "tf_dir": "scenarios/eval/a-probe/05-separate",
+      "trivy_json": "scenarios/eval/a-probe/05-separate/trivy-scan.json",
+      "intent": "experiments/candidate-sets/a-probe-dev/intents/05-separate.json",
+      "candidate": "rule_based",
+      "source": "rule_based",
+      "expected": "correct",
+      "expected_reason": "aws_vpc_security_group_ingress_rule cidr_ipv4 리터럴, 승인 출처 1개 → 지원",
+      "note": "규칙 기반 생성기 (LLM 아님). 원본·스캔은 A 의 experiments/trivy-sg-probe (origin/main 74a6f38)"
+    },
+    {
+      "id": "06-prefix-list",
+      "tf_dir": "scenarios/eval/a-probe/06-prefix-list",
+      "trivy_json": "scenarios/eval/a-probe/06-prefix-list/trivy-scan.json",
+      "intent": "experiments/candidate-sets/a-probe-dev/intents/06-prefix-list.json",
+      "candidate": "rule_based",
+      "source": "rule_based",
+      "expected": "not_triggered",
+      "expected_reason": "A 실측: Trivy 0107 미검출 → finding 없음",
+      "note": "규칙 기반 생성기 (LLM 아님). 원본·스캔은 A 의 experiments/trivy-sg-probe (origin/main 74a6f38)"
+    },
+    {
+      "id": "07-ipv6-only",
+      "tf_dir": "scenarios/eval/a-probe/07-ipv6-only",
+      "trivy_json": "scenarios/eval/a-probe/07-ipv6-only/trivy-scan.json",
+      "intent": "experiments/candidate-sets/a-probe-dev/intents/07-ipv6-only.json",
+      "candidate": "rule_based",
+      "source": "rule_based",
+      "expected": "correct",
+      "expected_reason": "ipv6_cidr_blocks ['::/0'] → [] (v4 승인 출처 10.0.0.0/8 은 남으므로 규칙 삭제가 아님) — 지원",
+      "note": "규칙 기반 생성기 (LLM 아님). 원본·스캔은 A 의 experiments/trivy-sg-probe (origin/main 74a6f38)"
+    },
+    {
+      "id": "08-second-sg",
+      "tf_dir": "scenarios/eval/a-probe/08-second-sg",
+      "trivy_json": "scenarios/eval/a-probe/08-second-sg/trivy-scan.json",
+      "intent": "experiments/candidate-sets/a-probe-dev/intents/08-second-sg.json",
+      "candidate": "rule_based",
+      "source": "rule_based",
+      "expected": "correct",
+      "expected_reason": "legacy SG 리터럴 0.0.0.0/0 → 치환 (지원). V6 는 app+legacy 합산으로 판정",
+      "note": "규칙 기반 생성기 (LLM 아님). 원본·스캔은 A 의 experiments/trivy-sg-probe (origin/main 74a6f38)"
+    }
+  ]
+}

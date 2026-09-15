@@ -1,12 +1,12 @@
 {
   "intent_version": "1",
-  "intent_id": "a-probe-dev-01-cidr-split",
+  "intent_id": "sg-baseline",
   "status": "active",
-  "description": "A 의 trivy-sg-probe 케이스 01-cidr-split 용 intent. 승인 출처 ['10.0.0.0/8'] 는 2026-09-15 팀 결정값(평가용 고정값, docs/DECISIONS.md D-2).",
-  "target_dir": "scenarios/eval/a-probe/01-cidr-split",
+  "description": "infrastructure/sg-baseline: SSH(22) 는 승인 출처 10.0.0.0/8 에서만, RDP(3389) 는 승인 출처 없음(규칙이 있으면 안 됨). 승인 출처 10.0.0.0/8 은 2026-09-15 팀 결정값(B 가 위임받아 확정, docs/DECISIONS.md D-2). 실제 조직 IP 가 아니라 평가용 고정값이다. 배포 후 접속 검증(V8) 을 할 때는 접속 테스트를 할 실제 공인 IP /32 로 sg-baseline.sandbox.json 을 따로 만든다.",
+  "target_dir": "infrastructure/sg-baseline",
   "targets": {
     "security_groups": [
-      "aws_security_group.cidr_split"
+      "aws_security_group.vulnerable_ssh"
     ],
     "attachment_points": []
   },

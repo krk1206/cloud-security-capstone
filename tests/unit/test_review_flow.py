@@ -209,12 +209,17 @@ class ReviewFlowTests(unittest.TestCase):
         res = run_review(self.settings, self._opt(f"manual:{broken}", verification=v,
                                                   baseline_plan=str(ROOT / "tests/fixtures/plans/00-baseline/plan.json"),
                                                   candidate_plan=str(ROOT / "tests/fixtures/plans/00-baseline/plan.json")))
-        # V5 는 두 plan 이 같아 WARN(변경 없음), V6 는 intent 없어 NOT_RUN → PENDING 이 우선. 근거 부족은 위험도 표에 남는다
+        # 깨진 HCL 은 resource 블록이 하나도 안 잡혀 "전부 삭제" 로 보이므로 텍스트 정책이 먼저 막는다 (allow_delete=false).
+        # 차단돼도 텍스트 근거 위험도는 계산되어 근거 부족이 표에 남는다
+        self.assertEqual(res.state, ReviewState.POLICY_BLOCKED, res.message)
         self.assertTrue(any(f["factor"] in ("insufficient_basis", "hcl_unparsable") for f in res.risk.factors))
         self.assertEqual(res.risk.risk_level.value, "HIGH")
 
     def test_risk_deleted_resource_is_hard_high(self):
         res = run_review(self.settings, self._opt("mock:sg_baseline_deletes_sg"))
+        # 리소스 삭제는 plan 없이도 텍스트 정책(allow_delete=false)이 먼저 막는다. 위험도도 HIGH 로 기록된다
+        self.assertEqual(res.state, ReviewState.POLICY_BLOCKED, res.message)
+        self.assertIn("resource_delete:", res.message)
         self.assertEqual(res.risk.risk_level.value, "HIGH")
         self.assertTrue(any("removed" in f["factor"] for f in res.risk.factors))
         self.assertIn("잠정", res.risk.rubric_version)
@@ -242,8 +247,9 @@ class ReviewFlowTests(unittest.TestCase):
         self.assertEqual(r.state, ReviewState.AMBIGUOUS_FINDING)
         self.assertEqual(sorted(f.resource for f in r.ambiguous), ["aws_security_group.vulnerable_rdp", "aws_security_group.vulnerable_ssh"])
         r2 = run_review(self.settings, self._opt(f"manual:{EX / 'manual_candidate_ok_main.tf'}", tf_dir=tf, trivy_json=tj, resource="aws_security_group.vulnerable_ssh"))
-        # 후보는 sg-baseline 원본 기준이라 rdp 블록이 사라진다 → 텍스트 근거로 '삭제 의심' HIGH, 리포트는 생성된다
-        self.assertEqual(r2.state, ReviewState.REVIEW_REQUIRED, r2.message)
+        # 후보는 sg-baseline 원본 기준이라 rdp 블록이 사라진다 → 텍스트 정책이 리소스 삭제로 차단(POLICY_BLOCKED), 위험도 HIGH, 리포트는 생성된다
+        self.assertEqual(r2.state, ReviewState.POLICY_BLOCKED, r2.message)
+        self.assertIn("aws_security_group.vulnerable_rdp", r2.message)
         self.assertEqual(r2.risk.risk_level.value, "HIGH")
         self.assertIn("aws_security_group.vulnerable_rdp", json.loads((r2.run_dir / "risk.json").read_text(encoding="utf-8"))["hcl_change"]["removed_resources"])
 
@@ -351,6 +357,24 @@ class ReviewFlowTests(unittest.TestCase):
         self.assertIn("INFO_INSUFFICIENT", r.stdout)
         self.assertEqual(len(list((self.out / "runs").iterdir())), 9)
 
+
+    def test_text_policy_blocks_new_resource_type_and_allows_listed_type(self):
+        """plan 없이도 텍스트 정책이 허용 밖 리소스 생성을 막는다 (seeded prefix-list 패치). 허용 목록의 타입 생성은 통과."""
+        base = "scenarios/eval/a-probe/00-baseline"
+        seeded = ROOT / "experiments/candidate-sets/eval-seeded-sg/candidates/deceptive-prefix-list.tf"
+        r = run_review(self.settings, ReviewOptions(tf_dir=base, trivy_json=f"{base}/trivy-scan.json", candidate=f"manual:{seeded}",
+                                                    scenario="pl", rule="AVD-AWS-0107", out_dir=str(self.out)))
+        self.assertEqual(r.state, ReviewState.POLICY_BLOCKED, r.message)
+        self.assertIn("resource_create:aws_ec2_managed_prefix_list.world", r.message)
+        self.assertIsNotNone(r.risk)                     # 차단돼도 텍스트 근거 위험도는 남는다
+        # 허용 목록 타입(aws_vpc_security_group_ingress_rule) 추가는 텍스트 정책 통과
+        ok_tf = self.out / "rule_added.tf"
+        ok_tf.write_text((ROOT / base / "main.tf").read_text(encoding="utf-8").replace('cidr_blocks = ["0.0.0.0/0"]', 'cidr_blocks = ["10.0.0.0/8"]')
+                         + '\nresource "aws_vpc_security_group_ingress_rule" "extra" {\n  security_group_id = aws_security_group.baseline.id\n'
+                           '  cidr_ipv4 = "10.0.0.0/8"\n  from_port = 22\n  to_port = 22\n  ip_protocol = "tcp"\n}\n', encoding="utf-8")
+        r2 = run_review(self.settings, ReviewOptions(tf_dir=base, trivy_json=f"{base}/trivy-scan.json", candidate=f"manual:{ok_tf}",
+                                                     scenario="ok", rule="AVD-AWS-0107", out_dir=str(self.out)))
+        self.assertEqual(r2.state, ReviewState.REVIEW_REQUIRED, r2.message)
 
 
 class MetricsTests(unittest.TestCase):

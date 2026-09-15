@@ -88,8 +88,18 @@ experiments/candidate-sets/eval-sg-01/
 ## 6. 지금 당장 돌려볼 수 있는 것
 
 ```bash
-python3 scripts/run_candidate_set.py experiments/candidate-sets/example-dev/manifest.json      # 예제 4건 (도구 없이)
-python3 experiments/candidate-sets/a-probe-dev/check_a_results.py                              # A 의 9 케이스 결과 재현 확인
-python3 scripts/run_candidate_set.py experiments/candidate-sets/a-probe-dev/manifest.json      # A 의 9 케이스 × 규칙 기반 (--local-tools 는 manifest 에 켜져 있음)
+python3 scripts/run_candidate_set.py experiments/candidate-sets/example-dev/manifest.json        # 예제 4건 (도구 없이, 형식 확인용)
+python3 experiments/candidate-sets/a-probe-dev/check_a_results.py                                # A 의 9 케이스 결과 재현 확인
+python3 scripts/run_candidate_set.py experiments/candidate-sets/eval-a-probe-rule/manifest.json  # E1 규칙 기반 축: A 의 9 케이스 × rule_based
+python3 scripts/run_candidate_set.py experiments/candidate-sets/eval-seeded-sg/manifest.json     # E2 재료: 00-baseline × seeded 11건
+python3 scripts/run_candidate_set.py experiments/candidate-sets/eval-claude-code/manifest.json   # E1 LLM 축 (후보 파일을 채워야 돈다)
 ```
-example-dev 는 형식 확인용, a-probe-dev 는 A 의 실제 케이스·스캔을 쓴 개발용 세트다 (`experiments/candidate-sets/a-probe-dev/README.md` 에 2026-09-15 결과 해석). 둘 다 승인 CIDR 이 예제값이라 발표 수치는 아니지만, **형식과 명령은 실제 실험과 똑같다.**
+
+| 세트 | 용도 | expected 고정 | 승인 출처 |
+|---|---|---|---|
+| `example-dev`, `a-probe-dev` | 개발용. 발표 수치 아님 | — | 팀 결정값(D-2)과 같은 값이지만 개발용 |
+| `eval-a-probe-rule` | E1 규칙 기반 축 (A 의 9 케이스) | 2026-09-15 | 팀 결정값 (D-2) |
+| `eval-seeded-sg` | E2 (오라클 유무) 재료. seeded 11건 — 탐지 능력 측정용, 자연 발생률 아님 | 2026-09-15 | 팀 결정값 (D-2) |
+| `eval-claude-code` | E1 LLM 축. **비어 있음** — B 가 Claude Code 로 채운다 (`prompt.md`) | 항목 추가 시 | 팀 결정값 (D-2) |
+
+실행 결과는 세트 폴더 `results.md`(최신) 와 `results-history/<시각>-<호스트>.md`(환경별 누적) 에 남는다. 2026-09-15 샌드박스 실행은 Trivy 만 있어 V1/V2 까지 실측이고 V3~V6 는 ERROR/NOT_RUN 이다 — **팀 WSL 에서 같은 명령을 돌린 이력이 붙어야 표가 완성된다.**

@@ -1,0 +1,38 @@
+{
+  "eval-a-probe-rule/00-baseline": {
+    "expected": "correct",
+    "source": "rule_based"
+  },
+  "eval-a-probe-rule/01-cidr-split": {
+    "expected": "not_triggered",
+    "source": "rule_based"
+  },
+  "eval-a-probe-rule/02-var-default": {
+    "expected": "unsupported",
+    "source": "rule_based"
+  },
+  "eval-a-probe-rule/03-string-build": {
+    "expected": "unsupported",
+    "source": "rule_based"
+  },
+  "eval-a-probe-rule/04-dynamic": {
+    "expected": "unsupported",
+    "source": "rule_based"
+  },
+  "eval-a-probe-rule/05-separate": {
+    "expected": "correct",
+    "source": "rule_based"
+  },
+  "eval-a-probe-rule/06-prefix-list": {
+    "expected": "not_triggered",
+    "source": "rule_based"
+  },
+  "eval-a-probe-rule/07-ipv6-only": {
+    "expected": "correct",
+    "source": "rule_based"
+  },
+  "eval-a-probe-rule/08-second-sg": {
+    "expected": "correct",
+    "source": "rule_based"
+  }
+}

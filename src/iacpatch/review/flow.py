@@ -222,12 +222,16 @@ def run_review(settings: Settings, opt: ReviewOptions) -> ReviewResult:
         run.error("정책 위반: " + "; ".join(pol.violations))
         run.transition(ReviewState.POLICY_BLOCKED, "; ".join(pol.violations[:3]))
         validity = ValidityReport("pre_deploy", [], Validity.INCOMPLETE, "정책 위반으로 검증 연결을 진행하지 않음")
-        level, lreasons = decide_review_level(validity, pol, None, cand.needs_info)
-        ctx = _ctx(opt, run, target, others, cand, pol, validity, None, level, lreasons, src_check, [], {}, None, [])
+        # 차단돼도 텍스트 근거 위험도는 계산해 둔다 (왜 위험한 변경인지 리포트에 남기기 위함). 검증은 진행하지 않는다
+        change = diff_hcl(original, cand.files)
+        risk_blocked = score_risk_text(rubric, change)
+        run.write_json("risk.json", {"decision": risk_blocked.to_dict(), "hcl_change": change.__dict__, "plan_based": None})
+        level, lreasons = decide_review_level(validity, pol, risk_blocked, cand.needs_info)
+        ctx = _ctx(opt, run, target, others, cand, pol, validity, risk_blocked, level, lreasons, src_check, [], change.__dict__, None, [])
         run.write_text("review.md", render_review(ctx))
         run.write_text("pr_body.md", render_pr_body(ctx, diff_text))
         run.set(review_level=level.value, finished_at=_now())
-        return ReviewResult(run.run_id, run.dir, ReviewState.POLICY_BLOCKED, level, "; ".join(pol.violations[:3]), validity, cand)
+        return ReviewResult(run.run_id, run.dir, ReviewState.POLICY_BLOCKED, level, "; ".join(pol.violations[:3]), validity, cand, risk_blocked)
 
     # ------------------------------------------------------------------ 3. 검증 결과 연결
     cand_sources = dict(original)

@@ -140,4 +140,52 @@ def validate_candidate(candidate: PatchCandidate, baseline_files: Dict[str, str]
 
     checks.append({"check": "diff_stats", "ok": True, "note": f"+{total_added} -{total_removed}",
                    "added_lines": total_added, "removed_lines": total_removed, "files": len(candidate.files)})
+
+    # 리소스 블록 단위 (텍스트 근거). plan 이 없어도 "허용 밖 타입 생성 / 삭제 / 허용 밖 타입 변경" 은 여기서 막는다. V5 가 plan 으로 다시 확인한다
+    for name, ok, note in _resource_block_checks(candidate, baseline_files, policy):
+        check(name, ok, note)
     return PolicyResult(not violations, violations, checks, version)
+
+
+_RES_HEADER_RE = re.compile(r'^resource\s+"([^"]+)"\s+"([^"]+)"')
+
+
+def _resource_blocks(text: str) -> Dict[str, Tuple[str, str]]:
+    """{address: (type, normalized body)} — 최상위 resource 블록만."""
+    out: Dict[str, Tuple[str, str]] = {}
+    for header, body in extract_top_level_blocks(text):
+        m = _RES_HEADER_RE.match(header.strip())
+        if m:
+            out[f"{m.group(1)}.{m.group(2)}"] = (m.group(1), _norm(body))
+    return out
+
+
+def _resource_block_checks(candidate: PatchCandidate, baseline_files: Dict[str, str], policy: Dict[str, Any]) -> List[Tuple[str, bool, str]]:
+    """패치에 포함된 파일들의 합집합에서 resource 블록을 비교한다 (패치 밖 파일은 그대로이므로 제외).
+    - 생성: allowed_create_resource_types 밖이면 위반
+    - 삭제: allow_delete=false 면 위반 (같은 패치 안 다른 파일로 옮긴 것은 삭제가 아님)
+    - 변경: allowed_change_resource_types 밖이면 위반
+    """
+    allowed_create = set(policy.get("allowed_create_resource_types") or [])
+    allowed_change = set(policy.get("allowed_change_resource_types") or [])
+    allow_delete = bool(policy.get("allow_delete", False))
+    before: Dict[str, Tuple[str, str]] = {}
+    after: Dict[str, Tuple[str, str]] = {}
+    for rel, content in candidate.files.items():
+        if not isinstance(content, str):
+            continue
+        before.update(_resource_blocks(baseline_files.get(rel, "")))
+        after.update(_resource_blocks(content))
+    results: List[Tuple[str, bool, str]] = []
+    for addr in sorted(set(after) - set(before)):
+        rtype = after[addr][0]
+        ok = rtype in allowed_create
+        results.append((f"resource_create:{addr}", ok, "" if ok else f"new resource type {rtype!r} not in allowed_create_resource_types (text-level; V5 re-checks with plan)"))
+    for addr in sorted(set(before) - set(after)):
+        results.append((f"resource_delete:{addr}", allow_delete, "" if allow_delete else "resource block removed from the patch (allow_delete=false; text-level, V5 re-checks with plan)"))
+    for addr in sorted(set(before) & set(after)):
+        if before[addr][1] != after[addr][1]:
+            rtype = after[addr][0]
+            ok = rtype in allowed_change
+            results.append((f"resource_change:{addr}", ok, "" if ok else f"changed resource type {rtype!r} not in allowed_change_resource_types"))
+    return results
