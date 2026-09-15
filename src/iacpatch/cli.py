@@ -145,7 +145,7 @@ def cmd_review(args: argparse.Namespace) -> int:
     opt = ReviewOptions(tf_dir=args.tf_dir, trivy_json=args.trivy_json, candidate=args.candidate, scenario=args.scenario,
                         rule=args.rule, filename=args.file, resource=args.resource, line=args.line, candidate_note=args.candidate_note or "",
                         verification=args.verification, baseline_plan=args.baseline_plan, candidate_plan=args.candidate_plan,
-                        intent=args.intent, out_dir=args.out, mock_dir=args.mock_dir)
+                        intent=args.intent, out_dir=args.out, mock_dir=args.mock_dir, local_tools=bool(args.local_tools))
     res = run_review(s, opt)
     print(res.console())
     return 0 if res.state.value in ("REVIEW_REQUIRED",) else 1
@@ -224,6 +224,8 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--candidate-plan", dest="candidate_plan", help="후보 plan JSON (있으면 V5/V6 로컬 계산)")
     sp.add_argument("--intent", help="intent JSON (후보 plan 과 함께 주면 V6 로컬 계산)")
     sp.add_argument("--out", help="기록 루트 (기본 data/reviews)"); sp.add_argument("--mock-dir", dest="mock_dir")
+    sp.add_argument("--local-tools", dest="local_tools", action="store_true",
+                    help="trivy/terraform 이 있으면 V1~V4 를 로컬에서 실행 (없는 계층은 NOT_RUN). AWS/LLM 은 호출하지 않음")
     sp.set_defaults(fn=cmd_review)
 
     sp = sub.add_parser("metrics", parents=[common], help="기록 집계")

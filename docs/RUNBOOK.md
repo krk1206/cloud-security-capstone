@@ -44,6 +44,22 @@ scripts\review_demo.bat manual      # 더블클릭도 됨 (manual | mock | split
 - 결과 읽는 법: `state.json.state` (REVIEW_REQUIRED 는 "검토 자료 준비됨" 이지 "검증 통과" 아님), `verification_status`, review.md 4절 표
 - 예제와 재현 명령: `examples/bc/README.md`. 입출력 형식: `docs/IO_SPEC_A_B_C.md`
 
+## 0-2. 검토 흐름에서 V1~V4 까지 로컬 실행 (`--local-tools`)
+
+WSL 에 trivy 와 terraform 이 있으면 A 가 결과 파일을 따로 만들지 않아도 된다.
+
+```bash
+export PYTHONPATH=src
+export TF_PLUGIN_CACHE_DIR=$HOME/.terraform.d/plugin-cache; mkdir -p "$TF_PLUGIN_CACHE_DIR"   # provider 를 후보마다 다시 받지 않게
+python3 -m iacpatch review --tf-dir scenarios/eval/a-probe/00-baseline --trivy-json scenarios/eval/a-probe/00-baseline/trivy-scan.json \
+  --candidate rule_based --intent experiments/candidate-sets/a-probe-dev/intents/00-baseline.json --scenario a00 --local-tools
+```
+
+- V1/V2: 원본·후보를 로컬 trivy 로 다시 스캔해 비교 (입력 스캔과 FAIL 키 집합이 다르면 리포트 '검증 메모' 에 표시)
+- V3/V4: 오프라인 plan (AWS 접속 없음). 성공하면 `data/reviews/<id>/local_verify/plan_*.json` 이 생기고 V5/V6 도 같이 계산된다
+- 도구가 없으면 그 계층은 NOT_RUN. `--verification` 파일을 주면 로컬 실행은 하지 않는다
+- 세트 단위: `python3 scripts/run_candidate_set.py <manifest> --local-tools`
+
 ## 1. WSL (Ubuntu) — 권장
 
 ```bash

@@ -4,7 +4,7 @@
   - 실행 수, 후보 출처(origin) 별 수, 최종 상태 별 수, 검토 수준 별 수
   - 계층별 판정 분포 (V1~V8: PASS/FAIL/UNKNOWN/NOT_RUN ...)
   - "스캐너는 통과, 오라클은 실패" (V1 PASS ∧ V6 FAIL) 건수 — 기만적 패치 탐지의 원자료
-  - 라벨 파일(labels.json: {scenario: "correct"|"deceptive"|"breaks_required"|...}) 이 있으면
+  - 라벨 파일(labels.json: {scenario: "correct"|"deceptive"|"breaks_required"|"unapproved"|"unknown"|"invalid"|"not_triggered"|"unsupported"}) 이 있으면
     기대 결과 대비 일치율을 계산한다. 라벨이 없으면 비율을 만들지 않는다.
 
 주의: mock/manual/예제 후보를 센 수치는 "검증 계층이 정의된 케이스에서 어떻게 판정했는가" 이지
@@ -40,7 +40,7 @@ def _row_from_review(d: Path) -> Optional[Dict[str, Any]]:
     return {
         "kind": "review", "run_id": st.get("run_id"), "scenario": st.get("scenario"), "state": st.get("state"),
         "review_level": st.get("review_level"), "origin": cand.get("origin") or st.get("candidate_origin") or "-",
-        "generator": cand.get("generator") or "-", "verification_status": st.get("verification_status"),
+        "generator": cand.get("generator") or "-", "candidate_status": cand.get("status") or "-", "verification_status": st.get("verification_status"),
         "verification_source": st.get("verification_source") or ver.get("source"), "risk": risk.get("risk_level"), "layers": layers,
     }
 
@@ -108,6 +108,7 @@ def summarize(rows: List[Dict[str, Any]], labels: Optional[Dict[str, Any]] = Non
     # 오라클 유무 비교 (E2): V1 만으로 게이트를 열었다면 통과했을 건수 vs V1+V6 로 통과한 건수
     out["gate_v1_only_pass"] = sum(1 for r in rows if r["layers"].get("V1") == "PASS")
     out["gate_v1_and_v6_pass"] = sum(1 for r in rows if r["layers"].get("V1") == "PASS" and r["layers"].get("V6") == "PASS")
+    out["gate_v6_not_run"] = sum(1 for r in rows if r["layers"].get("V1") == "PASS" and r["layers"].get("V6") in ("NOT_RUN", "SKIPPED", None))
     if labels:
         agree = total = 0
         detail: Dict[str, Dict[str, int]] = defaultdict(lambda: {"total": 0, "as_expected": 0})
@@ -134,6 +135,10 @@ def summarize(rows: List[Dict[str, Any]], labels: Optional[Dict[str, Any]] = Non
                 ok = (v6 == "UNKNOWN") or str(r["review_level"]) in ("PENDING", "HOLD_FOR_HUMAN")
             elif exp == "invalid":
                 ok = st in ("CANDIDATE_INVALID", "INFO_INSUFFICIENT", "POLICY_BLOCKED", "GENERATION_FAILED", "INSUFFICIENT_INFO")
+            elif exp == "not_triggered":      # 스캐너가 지목하지 않아 시작되지 않는 것이 정답 (A 의 우회 케이스 01/06)
+                ok = st == "NO_FINDING"
+            elif exp == "unsupported":        # 생성기가 지원 범위 밖이라 후보를 내지 않는 것이 정답 (규칙 기반 baseline 의 한계)
+                ok = st in ("INFO_INSUFFICIENT", "CANDIDATE_INVALID") and str(r.get("candidate_status")) in ("NOT_SUPPORTED", "INSUFFICIENT_INFO", "ABSTAIN")
             if ok:
                 agree += 1
                 detail[exp]["as_expected"] += 1
@@ -152,7 +157,8 @@ def render_table(rows: List[Dict[str, Any]], title: str = "집계", labels: Opti
         for k, v in s["layer_verdicts"].items():
             L.append(f"| {k} | {v} |")
         L.append("")
-    L.append(f"- 오라클 유무 비교: V1 만으로 통과시켰을 건수 {s['gate_v1_only_pass']} vs V1+V6 통과 {s['gate_v1_and_v6_pass']} (차이 = V6 가 추가로 막은 건수)")
+    L.append(f"- 오라클 유무 비교: V1 만으로 통과시켰을 건수 {s['gate_v1_only_pass']} vs V1+V6 통과 {s['gate_v1_and_v6_pass']}"
+             + (f" — 단, V1 통과 중 V6 미실행 {s['gate_v6_not_run']}건 (plan 없음) 은 어느 쪽으로도 세지 않는다" if s["gate_v6_not_run"] else " (차이 = V6 가 추가로 막은 건수)"))
     L.append("")
     if "labeled" in s:
         lb = s["labeled"]

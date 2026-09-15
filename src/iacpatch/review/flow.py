@@ -7,7 +7,8 @@
     INPUT_READY → CANDIDATE_READY → VALIDATION_PENDING → REVIEW_REQUIRED
     오류/중단:  INPUT_ERROR / NO_FINDING / AMBIGUOUS_FINDING / CANDIDATE_INVALID / INFO_INSUFFICIENT / POLICY_BLOCKED / VALIDATION_FAILED
 
-이 흐름은 외부 도구(trivy/terraform/aws/LLM API)를 실행하지 않는다. 모든 입력은 파일이다.
+이 흐름은 기본적으로 외부 도구(trivy/terraform/aws/LLM API)를 실행하지 않는다. 모든 입력은 파일이다.
+예외: --local-tools 를 주면 trivy/terraform 이 **있을 때만** V1~V4 를 로컬에서 실행한다 (review/local_verify.py). AWS·LLM 은 여전히 호출하지 않는다.
 원본은 절대 덮어쓰지 않는다. 실행마다 data/reviews/<id>/ 를 새로 만든다.
 """
 from __future__ import annotations
@@ -58,6 +59,7 @@ class ReviewOptions:
     intent: Optional[str] = None
     out_dir: Optional[str] = None       # 기본 data/reviews
     mock_dir: Optional[str] = None
+    local_tools: bool = False           # trivy/terraform 이 있으면 V1~V4 를 로컬에서 실행 (없으면 NOT_RUN). --verification 이 있으면 그쪽 우선
 
 
 @dataclass
@@ -230,13 +232,27 @@ def run_review(settings: Settings, opt: ReviewOptions) -> ReviewResult:
     # ------------------------------------------------------------------ 3. 검증 결과 연결
     cand_sources = dict(original)
     cand_sources.update(cand.files)
+    verification_path, baseline_plan, candidate_plan = opt.verification, opt.baseline_plan, opt.candidate_plan
+    local_notes: List[str] = []
+    if opt.local_tools and not verification_path:
+        # 도구가 있으면 V1~V4 를 지금 실행 (predeploy 와 같은 코드). 없으면 NOT_RUN 으로 기록된다
+        from .local_verify import run_local_verification
+        lv = run_local_verification(settings, tf_dir, cand.files, target, policy, run.dir / "local_verify", report)
+        verification_path = str(lv.verification_path)
+        if not baseline_plan and lv.baseline_plan:
+            baseline_plan = str(lv.baseline_plan)
+        if not candidate_plan and lv.candidate_plan:
+            candidate_plan = str(lv.candidate_plan)
+        local_notes = ["V1~V4 를 로컬 도구로 실행했다 (run 폴더 local_verify/). 도구가 없는 계층은 NOT_RUN"] + lv.notes
+        run.set(local_tools=lv.tools)
     try:
-        linked: LinkedVerification = link_verification(cand.files, opt.verification, opt.baseline_plan, opt.candidate_plan, opt.intent,
+        linked: LinkedVerification = link_verification(cand.files, verification_path, baseline_plan, candidate_plan, opt.intent,
                                                        policy, cand_sources)
     except VerificationInputError as e:
         run.error(str(e))
-        linked = link_verification(cand.files, None, opt.baseline_plan, opt.candidate_plan, opt.intent, policy, cand_sources)
+        linked = link_verification(cand.files, None, baseline_plan, candidate_plan, opt.intent, policy, cand_sources)
         linked.notes.append(f"검증 결과 파일을 쓰지 못했다: {e}")
+    linked.notes = local_notes + linked.notes
     validity = combine("pre_deploy", linked.layers)
     run.write_json("verification.json", {"source": linked.source, "mismatch": linked.mismatch, "provided_layers": linked.provided_layers,
                                          "computed_layers": linked.computed_layers, "notes": linked.notes, "report": validity.to_dict()})
@@ -250,9 +266,9 @@ def run_review(settings: Settings, opt: ReviewOptions) -> ReviewResult:
     risk_text = score_risk_text(rubric, change)
     plan_risk: Optional[RiskDecision] = None
     v5 = validity.layer("V5")
-    if v5 is not None and v5.verdict not in (Verdict.NOT_RUN, Verdict.SKIPPED) and opt.candidate_plan:
+    if v5 is not None and v5.verdict not in (Verdict.NOT_RUN, Verdict.SKIPPED) and candidate_plan:
         try:
-            world = build_world(load_plan(opt.candidate_plan), cand_sources)
+            world = build_world(load_plan(candidate_plan), cand_sources)
             diff_stats = next((c for c in pol.checks if c.get("check") == "diff_stats"), {})
             v6 = validity.layer("V6")
             plan_risk = score_risk(rubric, v5.details, world, diff_stats, v6.details if v6 else None)

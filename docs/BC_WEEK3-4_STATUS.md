@@ -3,15 +3,21 @@
 > 구분 규칙: **완료** = 코드 + 테스트 통과 + 이 저장소의 실제 입력(A 의 Trivy JSON·Terraform)으로 실행 확인. **부분** = 코드는 있으나 예제/fixture 로만 확인. **미완료** = 코드 없음 또는 명세만.
 > 이번 세션에서 외부 LLM API·Claude Code CLI·AWS·네트워크는 **호출하지 않았다.** mock/manual 후보와 예제 검증 결과는 사람이 만든 것이며 LLM 출력·A 의 실측이 아니다.
 
-## 확인된 입력 (A)
+## 확인된 입력 (A) — 2026-09-15 재확인
 
-| 항목 | 상태 |
-|---|---|
-| GitHub `main` | 74a6f38 (2026-09-12). 3~4주차 커밋 없음 |
-| PR #1 (krk1206, 09-12) | RDP 개방 SG 추가 — CI 트리거 테스트. `scenarios/dev/pr1-two-defects/` 로 복사 (0107 ×2 = 실제 중복 finding 케이스) |
-| A 산출물로 실제 쓴 것 | `infrastructure/sg-baseline/*.tf` + `baseline-scan.json`(Trivy 0.74.0 원문) |
-| A 의 V1~V4 검증 결과 파일 | **없음** → 리포트에 NOT_RUN(검증 대기). 형식은 `docs/IO_SPEC_A_B_C.md` 1-3 |
-| AGENTS.md / 첨부 자료 | 없음 |
+A 의 1~2주차 산출물은 전부 `main` 74a6f38 (2026-09-12) 에 있다. 3~4주차 커밋·브랜치·PR 은 PR #1 외에 없다 (`git ls-remote` 로 확인).
+
+| A 의 파일 | 내용 | B·C 에서 어떻게 썼나 |
+|---|---|---|
+| `docs/worklog/2026-09-11.md` | 1주차 전체 기록 (TerraProbe 분석, 우회 실험, AWS 구축, CI, 막힌 지점 8건) | 설계 근거로 읽음. 수치 인용은 `docs/DOC_CORRECTIONS.md` 대로 정정 |
+| `experiments/trivy-sg-probe/cases/` 9종 + `results/`, `results-verify/` | Trivy 우회 실험 원본과 스캔 JSON (Trivy 0.74.0, 09-08) | `scenarios/eval/a-probe/` 로 byte 동일 복사 → `a-probe-dev` 세트의 원본·입력 스캔. `check_a_results.py` 로 9 케이스 표 **전부 재현** |
+| `experiments/trivy-sg-probe/VERIFY.md`, `RESULTS.md` | A/B/C 3단계 검증 기록, 결과 표 | 케이스별 대상 SG 주소를 intent 에 옮김 |
+| `infrastructure/sg-baseline/` + `baseline-scan.json` | 의도적 결함 Terraform + 스캔 원문 | 검토 흐름 통합 테스트의 기본 입력 |
+| `.github/workflows/iac-scan.yml` | CI (Trivy 스캔) | 손대지 않음. `bc-unit-tests.yml` 은 별도 |
+| `README.md`, `한장요약.md`, `criticism and rebuttal.md`, `RoadMap.md` | 계획·요약·예상 질문 | 제목·인용 정정 외 유지 |
+| PR #1 (krk1206, 09-12) | RDP 개방 SG 추가 — CI 트리거 테스트 | `scenarios/dev/pr1-two-defects/` (0107 ×2 = 실제 중복 finding 케이스) |
+| A 의 후보별 V1~V4 결과 파일 | 없음 (후보가 아직 A 에게 간 적이 없으니 당연) | `--local-tools` 로 대체 가능 — trivy/terraform 이 있는 컴퓨터에서 검토 흐름이 직접 돌림 |
+| AGENTS.md / 첨부 자료 | 없음 | — |
 
 ## B — 3주차
 
@@ -54,27 +60,29 @@
 | 항목 | 상태 | 위치 / 근거 |
 |---|---|---|
 | 상태 전환 (INPUT_READY→CANDIDATE_READY→VALIDATION_PENDING→REVIEW_REQUIRED + 오류/실패/정보부족) | 완료 | `models.ReviewState`, `state.json.history` |
-| 통합 테스트 9종 (정상/없음/중복/JSON 오류/후보 누락·빈 파일/검증 없음/검증 실패/근거 부족/반복 실행) | 완료 | `tests/unit/test_review_flow.py` 21개 |
+| 통합 테스트 9종 (정상/없음/중복/JSON 오류/후보 누락·빈 파일/검증 없음/검증 실패/근거 부족/반복 실행) | 완료 | `tests/unit/test_review_flow.py` 26개 |
 | fixture PASS 출처 표시 | 완료 | 계층마다 `details.result_source`, 리포트 '결과 출처' 열 |
-| 로컬 테스트 명령 | 완료 | `scripts/run_tests.sh` / `.bat` (137 테스트, 도구 없으면 7 skip) |
+| 로컬 테스트 명령 | 완료 | `scripts/run_tests.sh` / `.bat` (142 테스트, 도구 없으면 7 skip) |
 | 네트워크·키 없는 CI 워크플로 | 부분 | `.github/workflows/bc-unit-tests.yml` 작성. **GitHub 에서 미실행** (push 안 함). A 의 iac-scan.yml 유지 |
 | 집계 (`iacpatch metrics --labels`) | 완료 | `metrics.py`: 출처별(E1)·오라클 유무(E2) 수치, 라벨 있을 때만 일치율 |
 | 후보 세트 일괄 실행 + 규칙 기반 후보 출처 | 완료 | `scripts/run_candidate_set.py`, `--candidate rule_based`, `experiments/candidate-sets/example-dev/` (개발용 예제), `docs/EXPERIMENT_GUIDE.md` |
-| 후보별 오프라인 plan JSON 생성 스크립트 | 부분 | `scripts/make_plan.sh` — 셸 로직만 stub 으로 확인. **terraform 없어 실제 plan 생성 미확인** (generate_fixtures.sh 와 같은 명령) |
+| 후보별 오프라인 plan JSON 생성 스크립트 | 부분 | `scripts/make_plan.sh` — 셸 로직만 stub 으로 확인. 샌드박스는 provider 다운로드가 막혀 실제 plan 생성 미확인 |
+| `review --local-tools` (V1~V4 로컬 실행 + plan 생성 → V5/V6) | 부분 | `review/local_verify.py`. **Trivy 0.74.0 으로 V1/V2 실측 확인** (A 케이스 4건, 입력 스캔과 키 집합 동일). V3/V4 는 provider 차단으로 ERROR 기록만 확인 — terraform+provider 있는 WSL 에서 확인 필요. 테스트 3종 (도구 없음→NOT_RUN, stub 스캐너→V1/V2, 파일 우선) |
+| A 의 9 케이스 세트 (`a-probe-dev`) | 완료(개발용) | `experiments/candidate-sets/a-probe-dev/` — A 결과 표 재현 확인(`A_RESULTS_CHECK.md`), 규칙 기반 후보 4/9 생성, 우회 원본 2건 NO_FINDING, 미지원 3건. 승인 CIDR 예제값 → 발표 수치 아님 |
 | V5·V8 완전 연결 / 비교 실험 | 미완료(명세) | `docs/IO_SPEC_A_B_C.md` 4절 |
 
 ## 실제로 실행한 것 / 하지 않은 것
 
 | | |
 |---|---|
-| 실행 | 단위·통합 테스트 137개 (샌드박스, Python 3.11, 외부 도구 없이 → 7 skip). `iacpatch review` 예제 4건 + PR #1 케이스. `iacpatch metrics`. Trivy 0.74.0 으로 PR #1 사본 스캔(fixture 생성 목적) |
+| 실행 | 단위·통합 테스트 142개 (샌드박스, Python 3.11, 외부 도구 없이 → 7 skip). `iacpatch review` 예제 4건 + PR #1 케이스. `iacpatch metrics`. Trivy 0.74.0 으로 PR #1 사본 스캔(fixture 생성 목적). **Trivy 0.74.0 으로 A 의 9 케이스 재스캔(전부 A 결과와 동일) + a-probe-dev 세트 V1/V2 실측** |
 | mock 으로만 확인 | 후보 생성 (mock/manual 전부 사람 작성), V1~V4 값(예제 파일) |
-| 외부 연결 없어 확인 못 함 | 실제 LLM 후보, A 의 실제 V1~V4 결과, Terraform 1.16.1 plan, AWS(V7/V8), GitHub Actions 실행, PR 게시 |
+| 외부 연결 없어 확인 못 함 | 실제 LLM 후보, terraform plan (OpenTofu 1.10.6 은 있으나 provider 레지스트리가 차단됨 → V3/V4 ERROR, V5/V6 NOT_RUN), AWS(V7/V8), GitHub Actions 실행, PR 게시 |
 
 ## 5주차 이후
 
-1. A: V1~V4 결과를 `verification-v1` JSON 으로 내는 스크립트 (+ `candidate_sha256`, `source_commit`)
-2. 팀: `policy/intent/sg-baseline.json` 승인 CIDR 확정 → V6 실측
+1. A: WSL(Terraform 1.16.1 + trivy) 에서 `python3 scripts/run_candidate_set.py experiments/candidate-sets/a-probe-dev/manifest.json` 실행 → V3~V6 가 채워지는지, correct 4건이 기대대로 나오는지 확인. 따로 결과 JSON 스크립트를 만들 필요 없음 (`--local-tools` 가 그 역할)
+2. 팀: `policy/intent/sg-baseline.json` 승인 CIDR 확정 → `a-probe-dev/make_intents.py` 의 APPROVED_V4 교체 → 평가용 세트 이름으로 재실행
 3. B: 실제 후보 공급자(사람이 Claude Code 등으로 만든 파일을 `manual:` 로 넣는 방식이 지도교수 지시에 맞음) — 20~30건 모아 `metrics` 로 집계
 4. C: bc-unit-tests.yml 첫 실행 확인, V5 상태 기준 plan 연결, V8 체크 정의
 5. 팀: 위험도 기준표 고정 (`RISK_RUBRIC_DRAFT.md` 4절 결정 사항)

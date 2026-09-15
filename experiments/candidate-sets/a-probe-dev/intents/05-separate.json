@@ -1,0 +1,53 @@
+{
+  "intent_version": "1",
+  "intent_id": "a-probe-dev-05-separate",
+  "status": "active",
+  "description": "개발용 intent (A 의 trivy-sg-probe 케이스 05-separate). 승인 출처 ['10.0.0.0/8'] 는 예제 값이며 팀 승인 CIDR 이 아니다.",
+  "target_dir": "scenarios/eval/a-probe/05-separate",
+  "targets": {
+    "security_groups": [
+      "aws_security_group.clean"
+    ],
+    "attachment_points": []
+  },
+  "guarded_services": [
+    {
+      "label": "ssh",
+      "direction": "ingress",
+      "protocol": "tcp",
+      "from_port": 22,
+      "to_port": 22,
+      "approved_sources": {
+        "cidrs_v4": [
+          "10.0.0.0/8"
+        ],
+        "cidrs_v6": [],
+        "security_group_refs": [],
+        "prefix_list_refs": []
+      }
+    },
+    {
+      "label": "rdp",
+      "direction": "ingress",
+      "protocol": "tcp",
+      "from_port": 3389,
+      "to_port": 3389,
+      "approved_sources": {
+        "cidrs_v4": [],
+        "cidrs_v6": [],
+        "security_group_refs": [],
+        "prefix_list_refs": []
+      }
+    }
+  ],
+  "required_access": [
+    {
+      "label": "admin-ssh",
+      "direction": "ingress",
+      "protocol": "tcp",
+      "from_port": 22,
+      "to_port": 22,
+      "source_cidr": "10.0.0.0/8"
+    }
+  ]
+}

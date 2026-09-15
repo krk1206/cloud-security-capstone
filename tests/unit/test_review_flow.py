@@ -255,6 +255,103 @@ class ReviewFlowTests(unittest.TestCase):
         self.assertEqual(len(select_findings(fs, FindingSelector(resource="aws_security_group.vulnerable_ssh", start_line=19))), 1)
         self.assertEqual(select_findings(fs, FindingSelector(resource="aws_security_group.vulnerable_ssh", start_line=19))[0].rule_id, "AVD-AWS-0104")
 
+    def _with_env(self, **env):
+        import os
+        old = {k: os.environ.get(k) for k in env}
+        for k, v in env.items():
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v
+        def restore():
+            for k, v in old.items():
+                if v is None:
+                    os.environ.pop(k, None)
+                else:
+                    os.environ[k] = v
+        self.addCleanup(restore)
+
+    def test_local_tools_without_tools_records_not_run(self):
+        self._with_env(TRIVY_BIN=str(self.out / "no-such-trivy"), TERRAFORM_BIN=str(self.out / "no-such-terraform"))
+        s = load_settings(str(ROOT))
+        res = run_review(s, self._opt("mock:sg_baseline_ok", local_tools=True))
+        self.assertEqual(res.state, ReviewState.REVIEW_REQUIRED, res.message)
+        self.assertTrue(all(l.verdict == Verdict.NOT_RUN for l in res.validity.layers))
+        v = json.loads((res.run_dir / "local_verify" / "verification.json").read_text(encoding="utf-8"))
+        self.assertEqual(v["schema"], "iacpatch-verification-v1")
+        self.assertIn("trivy 없음", v["source"])
+        self.assertFalse(v["tools"]["trivy"].get("available", True))
+        st = json.loads((res.run_dir / "state.json").read_text(encoding="utf-8"))
+        self.assertEqual(st["verification_status"], "PENDING")
+
+    @unittest.skipUnless(__import__("os").name == "posix", "stub 스캐너는 셸 스크립트")
+    def test_local_tools_with_stub_trivy_computes_v1_v2(self):
+        """가짜 trivy(원본 JSON 사본을 돌려주는 셸 스크립트)로 V1/V2 계산 경로를 확인한다. 실제 스캐너 결과가 아니다."""
+        import os, stat
+        stub = self.out / "trivy"
+        vuln = ROOT / "tests/fixtures/trivy/00-baseline.json"
+        fixed = ROOT / "tests/fixtures/trivy/00b-baseline-fixed.json"
+        stub.write_text("#!/usr/bin/env bash\n"
+                        "if [ \"$1\" = \"--version\" ]; then echo 'Version: 0.0.0-stub'; exit 0; fi\n"
+                        "dir=$2; out=''; while [ $# -gt 0 ]; do if [ \"$1\" = \"--output\" ]; then out=$2; fi; shift; done\n"
+                        f"if grep -q '0.0.0.0/0' \"$dir\"/*.tf; then cp '{vuln}' \"$out\"; else cp '{fixed}' \"$out\"; fi\n", encoding="utf-8")
+        stub.chmod(stub.stat().st_mode | stat.S_IEXEC)
+        self._with_env(TRIVY_BIN=str(stub), TERRAFORM_BIN=str(self.out / "no-such-terraform"))
+        s = load_settings(str(ROOT))
+        res = run_review(s, ReviewOptions(tf_dir="scenarios/dev/case00-baseline", trivy_json="scenarios/dev/case00-baseline/trivy-scan.json",
+                                          candidate="manual:" + str(EX / "case00" / "candidate_fixed"), scenario="stub-local",
+                                          rule="AVD-AWS-0107", out_dir=str(self.out), local_tools=True))
+        self.assertEqual(res.state, ReviewState.REVIEW_REQUIRED, res.message)
+        verdicts = {l.layer: l.verdict for l in res.validity.layers}
+        self.assertEqual(verdicts["V1"], Verdict.PASS)
+        self.assertEqual(verdicts["V2"], Verdict.PASS)
+        self.assertEqual(verdicts["V3"], Verdict.NOT_RUN)
+        self.assertEqual(verdicts["V4"], Verdict.NOT_RUN)
+        self.assertEqual(verdicts["V6"], Verdict.NOT_RUN)
+        v1 = res.validity.layer("V1")
+        self.assertIn("local tools", v1.details.get("result_source", ""))
+        self.assertTrue((res.run_dir / "local_verify" / "trivy_after.json").exists())
+        review = (res.run_dir / "review.md").read_text(encoding="utf-8")
+        self.assertIn("로컬 도구로 실행", review)
+
+    def test_local_tools_not_used_when_verification_file_given(self):
+        self._with_env(TRIVY_BIN=str(self.out / "no-such-trivy"))
+        s = load_settings(str(ROOT))
+        res = run_review(s, self._opt("mock:sg_baseline_ok", local_tools=True, verification=str(EX / "verification" / "example_all_pass.json")))
+        self.assertFalse((res.run_dir / "local_verify").exists())
+        self.assertEqual(res.validity.layer("V1").verdict, Verdict.PASS)
+
+    def test_metrics_labels_not_triggered_and_unsupported(self):
+        from iacpatch.metrics import collect, summarize
+        out = Path(tempfile.mkdtemp(prefix="iacpatch-metrics2-"))
+        s = load_settings(str(ROOT))
+        # A 의 우회 케이스 01 → finding 없음 (not_triggered), 02 → 규칙 기반 미지원 (unsupported)
+        base = "scenarios/eval/a-probe"
+        run_review(s, ReviewOptions(tf_dir=f"{base}/01-cidr-split", trivy_json=f"{base}/01-cidr-split/trivy-scan.json", candidate="rule_based",
+                                    scenario="nt", rule="AVD-AWS-0107", out_dir=str(out), intent="experiments/candidate-sets/a-probe-dev/intents/01-cidr-split.json"))
+        run_review(s, ReviewOptions(tf_dir=f"{base}/02-var-default", trivy_json=f"{base}/02-var-default/trivy-scan.json", candidate="rule_based",
+                                    scenario="us", rule="AVD-AWS-0107", out_dir=str(out), intent="experiments/candidate-sets/a-probe-dev/intents/02-var-default.json"))
+        rows = collect([out])
+        summ = summarize(rows, labels={"nt": {"expected": "not_triggered", "source": "rule_based"}, "us": {"expected": "unsupported", "source": "rule_based"}})
+        self.assertEqual(summ["labeled"]["as_expected"], 2)
+        self.assertEqual(summ["labeled"]["by_source"]["rule_based"]["candidate_produced"], 0)
+        shutil.rmtree(out, ignore_errors=True)
+
+    def test_a_probe_dev_set_runs_without_tools(self):
+        """A 의 9 케이스 세트가 도구 없이도 끝까지 돈다 (V1~V4 NOT_RUN). 원본 사본이 A 파일과 동일한지도 확인."""
+        import subprocess, sys
+        for c in ("00-baseline", "01-cidr-split", "06-prefix-list", "08-second-sg"):
+            self.assertEqual((ROOT / "scenarios/eval/a-probe" / c / "main.tf").read_bytes(),
+                             (ROOT / "experiments/trivy-sg-probe/cases" / c / "main.tf").read_bytes(), c)
+        env = dict(__import__("os").environ, TRIVY_BIN=str(self.out / "none"), TERRAFORM_BIN=str(self.out / "none"))
+        r = subprocess.run([sys.executable, str(ROOT / "scripts/run_candidate_set.py"), "experiments/candidate-sets/a-probe-dev/manifest.json",
+                            "--out", str(self.out / "runs")], cwd=str(ROOT), capture_output=True, text=True, env=env, timeout=300)
+        self.assertEqual(r.returncode, 0, r.stderr[-2000:])
+        self.assertIn("NO_FINDING", r.stdout)
+        self.assertIn("INFO_INSUFFICIENT", r.stdout)
+        self.assertEqual(len(list((self.out / "runs").iterdir())), 9)
+
+
 
 class MetricsTests(unittest.TestCase):
     def test_metrics_over_review_records(self):
@@ -273,6 +370,6 @@ class MetricsTests(unittest.TestCase):
         self.assertIn("LLM 출력이 아님", table)
         shutil.rmtree(out, ignore_errors=True)
 
-
+    # ---- --local-tools: 도구가 있으면 V1~V4 실행, 없으면 NOT_RUN ----------------------------------
 if __name__ == "__main__":
     unittest.main()

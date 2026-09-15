@@ -17,7 +17,7 @@
 
 ## 1. 재료 준비 (한 번만)
 
-1. **원본 + Trivy JSON** (A): `infrastructure/sg-baseline/` 처럼 결함이 있는 Terraform 과 그 스캔 결과. 변형 케이스는 `experiments/trivy-sg-probe/cases/` 9종을 `scenarios/eval/` 로 복사해 쓰면 된다 (각각 Trivy JSON 필요).
+1. **원본 + Trivy JSON** (A): `infrastructure/sg-baseline/` 처럼 결함이 있는 Terraform 과 그 스캔 결과. A 의 변형 9종은 이미 `scenarios/eval/a-probe/<case>/` 에 A 의 스캔(`results-verify`)과 함께 복사돼 있다 (`scenarios/eval/a-probe/README.md`). 정책이 `experiments/` 아래 수정을 막으므로 원본은 항상 `scenarios/` 나 `infrastructure/` 아래에 둔다.
 2. **intent** (팀): 승인 CIDR·필수 접근을 적은 `policy/intent/<시나리오>.json`. 이게 없으면 V6 도 규칙 기반도 못 돈다.
 3. **plan JSON** (A 또는 terraform 있는 사람 누구나): 원본 plan 1개 + 후보마다 plan 1개. 없으면 V5/V6 는 검증 대기로 남는다 → 숫자가 안 나온다. **plan 이 핵심 재료다.**
    ```bash
@@ -25,7 +25,9 @@
    scripts/make_plan.sh scenarios/eval/case00 plans/cc-01.json candidates/cc-01.tf main.tf     # 후보
    ```
    오프라인 plan 이라 AWS 계정·요금이 없다 (`terraform init` 의 provider 다운로드만 네트워크). 옆에 `.meta.txt` 로 도구 버전·후보 sha256 이 남는다. 이 스크립트는 작성 세션에 terraform 이 없어 **실행 확인을 못 했다** — 첫 실행 때 오류 나면 `scripts/generate_fixtures.sh` 와 같은 명령이니 그 절차대로 손으로 해도 된다.
-4. **검증 결과** (A): V1~V4 를 돌린 결과를 `docs/IO_SPEC_A_B_C.md` 1-3 형식 JSON 으로.
+4. **검증 결과 (V1~V4)**: 두 방법 중 하나.
+   - `--local-tools` (권장): 실행하는 컴퓨터에 trivy / terraform 이 있으면 검토 흐름이 V1~V4 를 그 자리에서 돌리고 plan JSON 까지 만든다 (`review/local_verify.py`, predeploy 와 같은 코드). 그러면 3번의 plan 도 자동으로 생겨 V5/V6 가 같이 계산된다. 도구가 없는 계층은 NOT_RUN. `terraform init` 이 provider 를 받아야 하므로 `TF_PLUGIN_CACHE_DIR` 을 잡아두면 후보마다 다시 받지 않는다.
+   - 파일로 받기: A 가 다른 곳에서 돌린 결과를 `docs/IO_SPEC_A_B_C.md` 1-3 형식 JSON 으로 (`verification`).
 5. **후보** (B): 아래 세 종류. 파일로 저장한다.
    - `claude-code`: 지도교수 지시대로 Claude Code 대화에서 "이 finding 을 고쳐줘" 하고 받은 파일 (프롬프트를 고정해 두고 케이스마다 N번 반복). **저장할 때 어느 대화에서 받았는지 note 에 적는다.** 프롬프트 원문은 세트 폴더에 `prompt.md` 로 같이 둔다 (규칙 기반과 같은 정보 — finding 위치 + intent 의 승인 CIDR — 를 주고, 그 이상은 주지 않는다. 그래야 E1 이 공정한 비교가 된다).
    - `rule_based`: `--candidate rule_based` 로 자동 (LLM 아님)
@@ -48,14 +50,16 @@ experiments/candidate-sets/eval-sg-01/
 ```
 
 1. manifest 작성 (형식은 `experiments/candidate-sets/example-dev/manifest.json` 복사). 후보마다:
-   - `expected`: 사람이 **후보 내용을 읽고** 적는다 — `correct`(승인 출처만 남김) / `deceptive`(스캐너만 피함) / `breaks_required`(필요 접근 삭제) / `unapproved`(승인 밖 출처) / `unknown`(판정 불가가 정답) / `invalid`(빈 파일 등)
+   - `expected`: 사람이 **후보 내용을 읽고** 적는다 — `correct`(승인 출처만 남김) / `deceptive`(스캐너만 피함) / `breaks_required`(필요 접근 삭제) / `unapproved`(승인 밖 출처) / `unknown`(판정 불가가 정답) / `invalid`(빈 파일 등) / `not_triggered`(스캐너가 안 잡아 시작 안 되는 게 정답, A 의 01·06) / `unsupported`(생성기가 지원 범위 밖이라 후보를 안 내는 게 정답, 규칙 기반의 변수·dynamic 케이스)
+   - 후보마다 `tf_dir` / `trivy_json` / `intent` 를 따로 줄 수 있다 (케이스가 여러 개인 세트)
    - `source`: `claude-code` / `rule_based` / `seeded`
    - `candidate_plan`: 그 후보의 plan JSON (A 가 만든 것)
 2. 실행:
    ```bash
    export PYTHONPATH=src
-   python3 scripts/run_candidate_set.py experiments/candidate-sets/eval-sg-01/manifest.json
+   python3 scripts/run_candidate_set.py experiments/candidate-sets/eval-sg-01/manifest.json --local-tools
    ```
+   (`--local-tools` 또는 manifest 의 `"local_tools": true`. trivy/terraform 이 PATH 에 있거나 `TRIVY_BIN` / `TERRAFORM_BIN` 으로 지정)
    → 후보마다 `data/reviews/<id>/` 기록, 세트 폴더에 `labels.json` + `results.md`
 3. `results.md` 를 읽는다. 위 0절 표의 숫자가 그대로 있다.
 
@@ -84,6 +88,8 @@ experiments/candidate-sets/eval-sg-01/
 ## 6. 지금 당장 돌려볼 수 있는 것
 
 ```bash
-python3 scripts/run_candidate_set.py experiments/candidate-sets/example-dev/manifest.json
+python3 scripts/run_candidate_set.py experiments/candidate-sets/example-dev/manifest.json      # 예제 4건 (도구 없이)
+python3 experiments/candidate-sets/a-probe-dev/check_a_results.py                              # A 의 9 케이스 결과 재현 확인
+python3 scripts/run_candidate_set.py experiments/candidate-sets/a-probe-dev/manifest.json      # A 의 9 케이스 × 규칙 기반 (--local-tools 는 manifest 에 켜져 있음)
 ```
-개발용 예제 4건(정상·CIDR 분할·규칙 기반·검증 없음)이 돌아가고 `results.md` 가 생긴다. 이 표의 숫자는 예제라서 발표에는 못 쓰지만, **형식은 실제 실험과 똑같다.**
+example-dev 는 형식 확인용, a-probe-dev 는 A 의 실제 케이스·스캔을 쓴 개발용 세트다 (`experiments/candidate-sets/a-probe-dev/README.md` 에 2026-09-15 결과 해석). 둘 다 승인 CIDR 이 예제값이라 발표 수치는 아니지만, **형식과 명령은 실제 실험과 똑같다.**
