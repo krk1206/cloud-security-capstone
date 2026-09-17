@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# 혼자 돌리는 실험 한 방 (WSL / Linux / macOS).
+#
+#   bash scripts/run_experiments.sh            # 전부
+#   bash scripts/run_experiments.sh --no-tools # trivy/terraform 없이 (검증 계층은 NOT_RUN 으로 남는다)
+#
+# 하는 일 (순서대로):
+#   0. tools/ 에 받아둔 trivy/terraform 을 잡는다 (없으면 PATH, 그것도 없으면 그 계층은 NOT_RUN)
+#   1. A 의 Trivy 우회 실험 9 케이스 결과가 이 컴퓨터에서 재현되는지 (A_RESULTS_CHECK.md)
+#   2. eval-a-probe-rule  : A 9 케이스 × 규칙 기반 후보 (E1 기준선)
+#   3. eval-seeded-sg     : 00-baseline × seeded 11 후보 (E2)
+#   4. eval-claude-code   : Claude Code 후보 (manifest 에 항목이 있을 때만)
+#   5. experiments/RESULTS_SUMMARY.md 로 합산
+# 하지 않는 일: LLM API 호출, Claude Code 자동 호출, AWS 접속/생성, git push. terraform 은 오프라인 plan 만.
+set -uo pipefail
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$ROOT"
+export PYTHONPATH="$ROOT/src"
+PY="${PYTHON:-python3}"
+USE_TOOLS=1
+[ "${1:-}" = "--no-tools" ] && USE_TOOLS=0
+
+if [ $USE_TOOLS = 1 ]; then
+  if [ -x "$ROOT/tools/trivy" ]; then export TRIVY_BIN="$ROOT/tools/trivy"; fi
+  if [ -x "$ROOT/tools/terraform" ]; then export TERRAFORM_BIN="$ROOT/tools/terraform"; fi
+  export TRIVY_SKIP_CHECK_UPDATE="${TRIVY_SKIP_CHECK_UPDATE:-1}"      # 내장 체크 번들 사용 (네트워크 불필요)
+  export TF_PLUGIN_CACHE_DIR="${TF_PLUGIN_CACHE_DIR:-$ROOT/tools/plugin-cache}"; mkdir -p "$TF_PLUGIN_CACHE_DIR"
+  echo "trivy    : $(${TRIVY_BIN:-trivy} --version 2>/dev/null | head -1 || echo '없음 → V1/V2 NOT_RUN')"
+  echo "terraform: $(${TERRAFORM_BIN:-terraform} version 2>/dev/null | head -1 || echo '없음 → V3~V6 NOT_RUN')"
+else
+  export TRIVY_BIN="/nonexistent/trivy" TERRAFORM_BIN="/nonexistent/terraform"
+  echo "도구 없이 실행 (검증 계층 NOT_RUN)"
+fi
+echo
+
+step() { echo; echo "================ $1"; }
+
+step "1/5 A 의 9 케이스 결과 재현 확인"
+$PY experiments/candidate-sets/a-probe-dev/check_a_results.py | tail -3
+
+step "2/5 eval-a-probe-rule (규칙 기반 기준선)"
+$PY scripts/run_candidate_set.py experiments/candidate-sets/eval-a-probe-rule/manifest.json | head -12
+
+step "3/5 eval-seeded-sg (오라클 유무 재료)"
+$PY scripts/run_candidate_set.py experiments/candidate-sets/eval-seeded-sg/manifest.json | head -14
+
+step "4/5 eval-claude-code (LLM 후보)"
+if $PY - <<'EOF'
+import json, sys
+m = json.load(open("experiments/candidate-sets/eval-claude-code/manifest.json", encoding="utf-8"))
+sys.exit(0 if m.get("candidates") else 1)
+EOF
+then
+  $PY scripts/run_candidate_set.py experiments/candidate-sets/eval-claude-code/manifest.json | head -40
+else
+  echo "후보 0건 — scripts/cc_prompt.py 로 프롬프트 뽑아 Claude Code 에서 받고, scripts/cc_add.py 로 등록하면 여기서 돈다"
+fi
+
+step "5/5 요약"
+$PY scripts/summarize_experiments.py | tail -25
+echo
+echo "결과 파일:"
+echo "  experiments/RESULTS_SUMMARY.md                       ← 한 장 요약"
+echo "  experiments/candidate-sets/<세트>/results.md         ← 세트별 표 (+ results-history/ 에 이 실행이 추가됨)"
+echo "  data/reviews/<id>/review.md                          ← 후보별 리포트·diff·검증 원문"

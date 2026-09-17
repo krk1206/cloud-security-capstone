@@ -1,6 +1,7 @@
 # 졸업작품 통합 개발 계획
 
 > **처음 보신다면 [`한장요약.md`](한장요약.md)부터 읽어주세요.** (3분)
+> **실험을 직접 돌리려면 [`docs/SOLO_RUNBOOK.md`](docs/SOLO_RUNBOOK.md)** — 도구 받기 → `scripts/run_experiments.*` 한 방 → Claude Code 후보 채우기.
 
 
 ## LLM이 생성한 AWS IaC 보안 수정의 실효성 검증 시스템 구현
