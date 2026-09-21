@@ -1,10 +1,11 @@
-# 혼자 실험용 도구 설치 (Windows PowerShell). trivy.exe / terraform.exe 를 저장소 안 tools\ 에만 받는다.
+﻿# 혼자 실험용 도구 설치 (Windows PowerShell). trivy.exe / terraform.exe 를 저장소 안 tools\ 에만 받는다.
 #
 #   powershell -ExecutionPolicy Bypass -File scripts\setup_tools.ps1
 #   (더블클릭: scripts\setup_tools.bat)
 #
 # 버전은 팀 기준(A 의 VERIFY.md): Trivy 0.74.0, Terraform 1.16.1. AWS 계정 불필요. 네트워크는 다운로드 때만.
 $ErrorActionPreference = "Stop"
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $ScriptDir = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
 $Root = Split-Path -Parent $ScriptDir
 $Tools = Join-Path $Root "tools"

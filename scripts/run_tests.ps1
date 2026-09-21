@@ -1,4 +1,4 @@
-# Windows PowerShell: 단위 + (도구 있으면) 통합 테스트. 현재 폴더에 의존하지 않는다.
+﻿# Windows PowerShell: 단위 + (도구 있으면) 통합 테스트. 현재 폴더에 의존하지 않는다.
 $ErrorActionPreference = "Continue"
 $ScriptDir = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
 $Root = Split-Path -Parent $ScriptDir

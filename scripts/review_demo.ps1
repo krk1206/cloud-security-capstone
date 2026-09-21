@@ -1,4 +1,5 @@
-# Windows PowerShell: B·C 로컬 검토 흐름 데모. 사용법: scripts\review_demo.ps1 [manual|mock|split]
+﻿# Windows PowerShell: B·C 로컬 검토 흐름 데모. 사용법: scripts\review_demo.ps1 [manual|mock|split]
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 param([string]$Mode = "manual")
 $ScriptDir = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
 $Root = Split-Path -Parent $ScriptDir

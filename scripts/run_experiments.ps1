@@ -1,4 +1,4 @@
-# 혼자 돌리는 실험 한 방 (Windows PowerShell). 더블클릭은 scripts\run_experiments.bat
+﻿# 혼자 돌리는 실험 한 방 (Windows PowerShell). 더블클릭은 scripts\run_experiments.bat
 #
 #   powershell -ExecutionPolicy Bypass -File scripts\run_experiments.ps1 [-NoTools]
 #
