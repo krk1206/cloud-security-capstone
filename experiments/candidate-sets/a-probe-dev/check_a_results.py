@@ -49,7 +49,7 @@ def local_scan(case_dir: Path, trivy: str):
     argv = [trivy, "config", str(case_dir), "--format", "json", "--include-non-failures", "--quiet", "--output", str(out)]
     if os.environ.get("TRIVY_SKIP_CHECK_UPDATE", "1") == "1":
         argv.append("--skip-check-update")
-    r = subprocess.run(argv, capture_output=True, text=True, timeout=600)
+    r = subprocess.run(argv, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=600)
     if r.returncode != 0:
         return None, (r.stderr or r.stdout)[:300]
     return json.loads(out.read_text(encoding="utf-8")), ""
@@ -57,8 +57,8 @@ def local_scan(case_dir: Path, trivy: str):
 
 def main() -> int:
     trivy = os.environ.get("TRIVY_BIN", "trivy")
-    have_trivy = subprocess.run([trivy, "--version"], capture_output=True, text=True).returncode == 0 if _which(trivy) else False
-    ver = subprocess.run([trivy, "--version"], capture_output=True, text=True).stdout.strip().splitlines()[0] if have_trivy else "없음"
+    have_trivy = subprocess.run([trivy, "--version"], capture_output=True, text=True, encoding="utf-8", errors="replace").returncode == 0 if _which(trivy) else False
+    ver = subprocess.run([trivy, "--version"], capture_output=True, text=True, encoding="utf-8", errors="replace").stdout.strip().splitlines()[0] if have_trivy else "없음"
     rows = []
     all_same = True
     for c in CASES:

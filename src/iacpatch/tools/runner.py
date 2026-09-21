@@ -38,10 +38,11 @@ def run(argv: List[str], cwd: Optional[str] = None, env: Optional[Dict[str, str]
     if env:
         full_env.update(env)
     try:
+        # encoding 을 명시하지 않으면 윈도우(한국어)에서 cp949 로 읽어 terraform 의 UTF-8 출력(→, ─ 등)에서 죽는다
         p = subprocess.run(argv, cwd=cwd, env=full_env, capture_output=True, text=True,
-                           timeout=timeout, input=input_text)
+                           encoding="utf-8", errors="replace", timeout=timeout, input=input_text)
         return CmdResult(argv, p.returncode, p.stdout, p.stderr, cwd or os.getcwd())
     except subprocess.TimeoutExpired as e:
-        return CmdResult(argv, -1, (e.stdout or b"").decode() if isinstance(e.stdout, bytes) else (e.stdout or ""),
-                         (e.stderr or b"").decode() if isinstance(e.stderr, bytes) else (e.stderr or ""),
-                         cwd or os.getcwd(), timed_out=True)
+        def _txt(x):
+            return x.decode("utf-8", errors="replace") if isinstance(x, bytes) else (x or "")
+        return CmdResult(argv, -1, _txt(e.stdout), _txt(e.stderr), cwd or os.getcwd(), timed_out=True)
