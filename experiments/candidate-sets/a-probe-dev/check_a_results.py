@@ -9,6 +9,10 @@ trivy 가 있으면 같은 케이스를 로컬에서 다시 스캔해 FAIL 룰 �
 """
 from __future__ import annotations
 
+import sys as _sys
+for _s in (_sys.stdout, _sys.stderr):
+    try: _s.reconfigure(encoding="utf-8")
+    except Exception: pass
 import json
 import os
 import subprocess
