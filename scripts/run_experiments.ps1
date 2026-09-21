@@ -26,7 +26,8 @@ if (-not $PyExe) { Write-Host "python 3.10+ 이 없다. https://www.python.org/d
 Write-Host ("python   : " + (& $PyExe @($PyPre + @("--version")) 2>&1 | Out-String).Trim() + "  ($PyExe)")
 $Log = Join-Path $Root "experiments\run_experiments.log"
 "run_experiments $(Get-Date -Format s)" | Out-File -FilePath $Log -Encoding utf8
-function RunPy { param([string[]]$a) & $PyExe @($PyPre + $a) 2>&1 | Tee-Object -FilePath $Log -Append }
+# Tee-Object 는 PS 5.1 에서 UTF-16 으로 써서 로그 한글이 깨진다 → 줄마다 화면 출력 + UTF-8 로 append
+function RunPy { param([string[]]$a) & $PyExe @($PyPre + $a) 2>&1 | ForEach-Object { $_ | Out-Host; Add-Content -LiteralPath $Log -Value ([string]$_) -Encoding UTF8 } }
 
 if ($NoTools) {
     $env:TRIVY_BIN = "C:\nonexistent\trivy.exe"; $env:TERRAFORM_BIN = "C:\nonexistent\terraform.exe"
