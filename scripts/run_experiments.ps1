@@ -62,10 +62,14 @@ if ($m.candidates -and $m.candidates.Count -gt 0) {
     Write-Host "후보 0건 - scripts\cc_prompt.py 로 프롬프트 뽑아 Claude Code 에서 받고, scripts\cc_add.py 로 등록하면 여기서 돈다"
 }
 
-Step "5/5 요약"
+Step "5/6 오라클 실험 (스캐너 vs V6, 실제 plan)"
+RunPy @("scripts\oracle_experiment.py")
+
+Step "6/6 요약"
 RunPy @("scripts\summarize_experiments.py")
 Write-Host ""
 Write-Host "결과 파일:"
+Write-Host "  experiments\ORACLE_RESULTS.md                       <- E2 핵심 (스캐너 vs 오라클, 실제 plan)"
 Write-Host "  experiments\RESULTS_SUMMARY.md                      <- 한 장 요약"
 Write-Host "  experiments\candidate-sets\<세트>\results.md        <- 세트별 표 (+ results-history\ 에 이 실행이 추가됨)"
 Write-Host "  data\reviews\<id>\review.md                         <- 후보별 리포트·diff·검증 원문"
