@@ -33,16 +33,18 @@ else
 fi
 echo
 
-step() { echo; echo "================ $1"; }
+LOG="$ROOT/experiments/run_experiments.log"; echo "run_experiments $(date -Is)" > "$LOG"
+run() { "$@" 2>&1 | tee -a "$LOG"; }
+step() { echo; echo "================ $1" | tee -a "$LOG"; }
 
 step "1/5 A 의 9 케이스 결과 재현 확인"
-$PY experiments/candidate-sets/a-probe-dev/check_a_results.py | tail -3
+run $PY experiments/candidate-sets/a-probe-dev/check_a_results.py
 
 step "2/5 eval-a-probe-rule (규칙 기반 기준선)"
-$PY scripts/run_candidate_set.py experiments/candidate-sets/eval-a-probe-rule/manifest.json | head -12
+run $PY scripts/run_candidate_set.py experiments/candidate-sets/eval-a-probe-rule/manifest.json
 
 step "3/5 eval-seeded-sg (오라클 유무 재료)"
-$PY scripts/run_candidate_set.py experiments/candidate-sets/eval-seeded-sg/manifest.json | head -14
+run $PY scripts/run_candidate_set.py experiments/candidate-sets/eval-seeded-sg/manifest.json
 
 step "4/5 eval-claude-code (LLM 후보)"
 if $PY - <<'EOF'
@@ -51,15 +53,16 @@ m = json.load(open("experiments/candidate-sets/eval-claude-code/manifest.json", 
 sys.exit(0 if m.get("candidates") else 1)
 EOF
 then
-  $PY scripts/run_candidate_set.py experiments/candidate-sets/eval-claude-code/manifest.json | head -40
+  run $PY scripts/run_candidate_set.py experiments/candidate-sets/eval-claude-code/manifest.json
 else
   echo "후보 0건 — scripts/cc_prompt.py 로 프롬프트 뽑아 Claude Code 에서 받고, scripts/cc_add.py 로 등록하면 여기서 돈다"
 fi
 
 step "5/5 요약"
-$PY scripts/summarize_experiments.py | tail -25
+run $PY scripts/summarize_experiments.py
 echo
 echo "결과 파일:"
 echo "  experiments/RESULTS_SUMMARY.md                       ← 한 장 요약"
 echo "  experiments/candidate-sets/<세트>/results.md         ← 세트별 표 (+ results-history/ 에 이 실행이 추가됨)"
 echo "  data/reviews/<id>/review.md                          ← 후보별 리포트·diff·검증 원문"
+echo "  experiments/run_experiments.log                      ← 이 실행의 전체 출력 (문제 생기면 이 파일을 보낼 것)"

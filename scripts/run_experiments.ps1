@@ -13,13 +13,19 @@ $env:PYTHONPATH = Join-Path $Root "src"
 $env:PYTHONIOENCODING = "utf-8"
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
-# python 찾기 (py 런처 우선)
-$Py = $null
-foreach ($c in @(@("py", "-3"), @("python", ""), @("python3", ""))) {
-    try { $v = & $c[0] $c[1] --version 2>$null; if ($LASTEXITCODE -eq 0 -and $v) { $Py = $c; break } } catch {}
+# python 찾기 (py 런처 우선). Microsoft Store 의 가짜 python 별칭은 --version 이 실패하므로 걸러진다
+$PyExe = $null; $PyPre = @()
+foreach ($c in @(@{exe = "py"; pre = @("-3")}, @{exe = "python"; pre = @()}, @{exe = "python3"; pre = @()})) {
+    try {
+        $out = & $c.exe @($c.pre + @("--version")) 2>&1 | Out-String
+        if ($LASTEXITCODE -eq 0 -and $out -match "Python 3\.(1[0-9]|[2-9][0-9])") { $PyExe = $c.exe; $PyPre = $c.pre; break }
+    } catch {}
 }
-if (-not $Py) { Write-Host "python 3 이 없다. https://www.python.org/downloads/ 에서 설치 (Add to PATH 체크)"; exit 1 }
-function RunPy { param([string[]]$a) if ($Py[1]) { & $Py[0] $Py[1] @a } else { & $Py[0] @a } }
+if (-not $PyExe) { Write-Host "python 3.10+ 이 없다. https://www.python.org/downloads/ 에서 설치 (Add python.exe to PATH 체크)"; exit 1 }
+Write-Host ("python   : " + (& $PyExe @($PyPre + @("--version")) 2>&1 | Out-String).Trim() + "  ($PyExe)")
+$Log = Join-Path $Root "experiments\run_experiments.log"
+"run_experiments $(Get-Date -Format s)" | Out-File -FilePath $Log -Encoding utf8
+function RunPy { param([string[]]$a) & $PyExe @($PyPre + $a) 2>&1 | Tee-Object -FilePath $Log -Append }
 
 if ($NoTools) {
     $env:TRIVY_BIN = "C:\nonexistent\trivy.exe"; $env:TERRAFORM_BIN = "C:\nonexistent\terraform.exe"
@@ -39,26 +45,27 @@ if ($NoTools) {
 function Step($t) { Write-Host ""; Write-Host "================ $t" }
 
 Step "1/5 A 의 9 케이스 결과 재현 확인"
-RunPy @("experiments\candidate-sets\a-probe-dev\check_a_results.py") | Select-Object -Last 3
+RunPy @("experiments\candidate-sets\a-probe-dev\check_a_results.py")
 
 Step "2/5 eval-a-probe-rule (규칙 기반 기준선)"
-RunPy @("scripts\run_candidate_set.py", "experiments\candidate-sets\eval-a-probe-rule\manifest.json") | Select-Object -First 12
+RunPy @("scripts\run_candidate_set.py", "experiments\candidate-sets\eval-a-probe-rule\manifest.json")
 
 Step "3/5 eval-seeded-sg (오라클 유무 재료)"
-RunPy @("scripts\run_candidate_set.py", "experiments\candidate-sets\eval-seeded-sg\manifest.json") | Select-Object -First 14
+RunPy @("scripts\run_candidate_set.py", "experiments\candidate-sets\eval-seeded-sg\manifest.json")
 
 Step "4/5 eval-claude-code (LLM 후보)"
 $m = Get-Content (Join-Path $Root "experiments\candidate-sets\eval-claude-code\manifest.json") -Raw -Encoding UTF8 | ConvertFrom-Json
 if ($m.candidates -and $m.candidates.Count -gt 0) {
-    RunPy @("scripts\run_candidate_set.py", "experiments\candidate-sets\eval-claude-code\manifest.json") | Select-Object -First 40
+    RunPy @("scripts\run_candidate_set.py", "experiments\candidate-sets\eval-claude-code\manifest.json")
 } else {
     Write-Host "후보 0건 - scripts\cc_prompt.py 로 프롬프트 뽑아 Claude Code 에서 받고, scripts\cc_add.py 로 등록하면 여기서 돈다"
 }
 
 Step "5/5 요약"
-RunPy @("scripts\summarize_experiments.py") | Select-Object -Last 25
+RunPy @("scripts\summarize_experiments.py")
 Write-Host ""
 Write-Host "결과 파일:"
 Write-Host "  experiments\RESULTS_SUMMARY.md                      <- 한 장 요약"
 Write-Host "  experiments\candidate-sets\<세트>\results.md        <- 세트별 표 (+ results-history\ 에 이 실행이 추가됨)"
 Write-Host "  data\reviews\<id>\review.md                         <- 후보별 리포트·diff·검증 원문"
+Write-Host "  experiments\run_experiments.log                     <- 이 실행의 전체 출력 (문제 생기면 이 파일을 보낼 것)"

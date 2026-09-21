@@ -23,3 +23,4 @@ data/reviews/*
 # 혼자 실험용 도구 (scripts/setup_tools.*) — 바이너리는 커밋하지 않는다
 tools/*
 !tools/README.md
+experiments/run_experiments.log
