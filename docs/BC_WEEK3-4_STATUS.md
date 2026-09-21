@@ -67,10 +67,10 @@ A 의 1~2주차 산출물은 전부 `main` 74a6f38 (2026-09-12) 에 있다. 3~4�
 | 집계 (`iacpatch metrics --labels`) | 완료 | `metrics.py`: 출처별(E1)·오라클 유무(E2) 수치, 라벨 있을 때만 일치율 |
 | 후보 세트 일괄 실행 + 규칙 기반 후보 출처 | 완료 | `scripts/run_candidate_set.py`, `--candidate rule_based`, `experiments/candidate-sets/example-dev/` (개발용 예제), `docs/EXPERIMENT_GUIDE.md` |
 | 후보별 오프라인 plan JSON 생성 스크립트 | 부분 | `scripts/make_plan.sh` — 셸 로직만 stub 으로 확인. 샌드박스는 provider 다운로드가 막혀 실제 plan 생성 미확인 |
-| `review --local-tools` (V1~V4 로컬 실행 + plan 생성 → V5/V6) | 부분 | `review/local_verify.py`. **Trivy 0.74.0 으로 V1/V2 실측 확인** (A 케이스 4건, 입력 스캔과 키 집합 동일). V3/V4 는 provider 차단으로 ERROR 기록만 확인 — terraform+provider 있는 WSL 에서 확인 필요. 테스트 3종 (도구 없음→NOT_RUN, stub 스캐너→V1/V2, 파일 우선) |
+| `review --local-tools` (V1~V4 로컬 실행 + plan 생성 → V5/V6) | **완료** | `review/local_verify.py`. **2026-09-21 B 의 PC(Windows, Python 3.14.7, Trivy 0.74.0, Terraform 1.16.1)에서 V1~V6 전 계층 실측** — eval-a-probe-rule 9/9, eval-seeded-sg 11/11 기대 일치, NOT_RUN 0. 기록: `results-history/20260921-*-DESKTOP-TSH8UUD.md` |
 | A 의 9 케이스 세트 (`a-probe-dev`) | 완료(개발용) | `experiments/candidate-sets/a-probe-dev/` — A 결과 표 재현 확인(`A_RESULTS_CHECK.md`), 규칙 기반 후보 4/9 생성, 우회 원본 2건 NO_FINDING, 미지원 3건. 승인 CIDR 예제값 → 발표 수치 아님 |
 | 텍스트 단계 리소스 블록 정책 (허용 밖 타입 생성·삭제·허용 밖 타입 변경 차단, plan 없이) | 완료 | `policy/validator.py::_resource_block_checks`. seeded prefix-list 패치·리소스 삭제 패치가 POLICY_BLOCKED. 차단돼도 텍스트 위험도는 기록 |
-| 평가용 세트 3종 (expected 고정) | 완료(샌드박스 부분 실행) | `eval-a-probe-rule`(A 9 케이스 × 규칙 기반), `eval-seeded-sg`(00-baseline × seeded 11), `eval-claude-code`(뼈대 + prompt.md, 후보 0건). 결과는 `results-history/` 에 환경별 누적 |
+| 평가용 세트 3종 (expected 고정) | 완료(B PC 에서 V1~V6 실측, 09-21) | `eval-a-probe-rule`(A 9 케이스 × 규칙 기반), `eval-seeded-sg`(00-baseline × seeded 11), `eval-claude-code`(뼈대 + prompt.md, 후보 0건). 결과는 `results-history/` 에 환경별 누적 |
 | 결정 기록 | 완료 | `docs/DECISIONS.md` — 제목(D-1), 평가용 승인 출처 10.0.0.0/8(D-2), dev/eval 구분(D-3), 라벨 정정 규칙(D-4) |
 | 혼자 실험 키트 | 완료(샌드박스 실행 확인) | `docs/SOLO_RUNBOOK.md`, `scripts/setup_tools.{sh,ps1,bat}`, `scripts/run_experiments.{sh,ps1,bat}`, `scripts/summarize_experiments.py` → `experiments/RESULTS_SUMMARY.md`, `scripts/cc_prompt.py`(프롬프트 7개 생성) / `scripts/cc_add.py`(응답 등록·diff 확인). .sh 경로는 샌드박스에서 끝까지 실행(50초). **.ps1/.bat 는 Windows 가 없어 미실행** |
 | V5·V8 완전 연결 / 비교 실험 | 미완료(명세) | `docs/IO_SPEC_A_B_C.md` 4절 |
