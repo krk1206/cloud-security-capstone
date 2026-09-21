@@ -8,6 +8,7 @@
 | D-2 | 2026-09-15 | 평가용 승인 출처 = `10.0.0.0/8` (SSH 22). RDP 3389 는 승인 출처 없음(규칙이 남아 있으면 안 됨). 필수 접근 = 10.0.0.0/8 → 22 | 승인 출처가 없으면 "규칙 삭제" 패치가 만점으로 통과해 V6 가 Trivy 재탕이 된다. 값 자체는 실제 조직 IP 일 필요가 없고 **실행 전에 고정**되는 것이 중요. 배포 후 접속 검증(V8) 때만 실제 공인 IP /32 가 필요 → 그때 `sg-baseline.sandbox.json` 별도 | B (위임받아 확정) |
 | D-3 | 2026-09-15 | 개발용 세트(`example-dev`, `a-probe-dev`) 숫자는 발표에 쓰지 않는다. 평가용 세트는 `eval-*` 이름으로 manifest·expected 를 먼저 고정하고 돌린다. 실행 결과는 `results-history/` 에 환경별로 누적한다 | 결과 보고 기준 바꾸기 금지 (docs/EXPERIMENT_GUIDE.md 2절) | B |
 | D-4 | 2026-09-15 | `expected` 라벨 정정은 manifest 의 `expected_history` 에 이유와 함께 남긴다 (첫 사례: a-probe-dev 07-ipv6-only unsupported→correct) | 라벨을 조용히 바꾸지 않기 위해 | B |
+| D-5 | 2026-09-21 | **유료 LLM API 를 쓰지 않는다.** LLM 후보는 사람이 Claude Code 를 새 세션으로 열어 고정 프롬프트(`scripts/cc_prompt.py`)를 붙여 넣고, 응답 파일을 `scripts/cc_add.py` 로 등록한다 (출처 `claude-code`). 실험 경로(`scripts/run_experiments.*` → `run_candidate_set.py` → `iacpatch.review`)는 `mock:` / `manual:` / `rule_based` 후보만 읽고 LLM 생성기를 import 하지 않는다. 1주차에 만든 API 호출 코드(`generator/llm_generator.py`, `generator/llm_providers.py`, `iacpatch run --generator llm`)는 기본값 `LLM_PROVIDER=mock` 이라 키 없이는 아무 곳에도 접속하지 않으며, 실험 결과에 쓰지 않는다 | 지도교수 지시(09-15, 유료 API 대신 Claude Code) + B 지시(API 키·결제·로컬 모델·CLI 자동 호출 금지). 자동 호출이 아니라 사람이 세션을 여는 것이므로 "생성 시각·모델·세션" 은 `responses/` 원문과 manifest 의 `note` 로 남긴다 | B |
 
 ## 아직 안 정한 것
 
