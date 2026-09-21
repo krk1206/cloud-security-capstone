@@ -5,7 +5,8 @@
 #
 # 버전은 팀 기준(A 의 VERIFY.md): Trivy 0.74.0, Terraform 1.16.1. AWS 계정 불필요. 네트워크는 다운로드 때만.
 $ErrorActionPreference = "Stop"
-$Root = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
+$ScriptDir = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
+$Root = Split-Path -Parent $ScriptDir
 $Tools = Join-Path $Root "tools"
 $TrivyVer = if ($env:TRIVY_VER) { $env:TRIVY_VER } else { "0.74.0" }
 $TfVer = if ($env:TF_VER) { $env:TF_VER } else { "1.16.1" }

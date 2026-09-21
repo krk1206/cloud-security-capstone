@@ -7,7 +7,8 @@
 # 하지 않는 일: LLM API 호출, Claude Code 자동 호출, AWS 접속/생성, git push. terraform 은 오프라인 plan 만.
 param([switch]$NoTools)
 $ErrorActionPreference = "Continue"
-$Root = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
+$ScriptDir = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
+$Root = Split-Path -Parent $ScriptDir
 Set-Location $Root
 $env:PYTHONPATH = Join-Path $Root "src"
 $env:PYTHONIOENCODING = "utf-8"

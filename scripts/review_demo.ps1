@@ -1,6 +1,7 @@
 # Windows PowerShell: B·C 로컬 검토 흐름 데모. 사용법: scripts\review_demo.ps1 [manual|mock|split]
 param([string]$Mode = "manual")
-$Root = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
+$ScriptDir = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
+$Root = Split-Path -Parent $ScriptDir
 Set-Location $Root; $env:PYTHONPATH = "$Root\src"
 switch ($Mode) {
   "manual" { python -m iacpatch review --tf-dir infrastructure/sg-baseline --trivy-json infrastructure/sg-baseline/baseline-scan.json --candidate manual:examples/bc/manual_candidate_ok --scenario demo-manual }
