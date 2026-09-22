@@ -30,13 +30,15 @@ if ($LASTEXITCODE -ne 0) { Write-Host "tkinter 가 없다. python.org 설치본�
 if ($LASTEXITCODE -ne 0) { Write-Host "pyinstaller 설치 실패"; exit 1 }
 
 $mode = if ($Console) { "--console" } else { "--windowed" }
+# 경로는 전부 절대경로로 준다. --specpath 를 쓰면 PyInstaller 가 --add-data 의 상대경로를 spec 폴더(packaging\) 기준으로 풀어서
+# "packaging\src\iacpatch\generator\prompts 를 찾을 수 없다" 로 실패한다 (팀 PC 첫 빌드에서 실측, 2026-09-22).
 $args = @("-m", "PyInstaller", "--noconfirm", "--clean", "--onefile", $mode,
           "--name", "IaCPatch",
-          "--paths", "src",
+          "--paths", "$Root\src",
           "--collect-submodules", "iacpatch",
-          "--add-data", "src\iacpatch\generator\prompts;iacpatch\generator\prompts",
-          "--distpath", "packaging\dist", "--workpath", "packaging\build", "--specpath", "packaging",
-          "src\iacpatch\app.py")
+          "--add-data", "$Root\src\iacpatch\generator\prompts;iacpatch\generator\prompts",
+          "--distpath", "$Root\packaging\dist", "--workpath", "$Root\packaging\build", "--specpath", "$Root\packaging",
+          "$Root\src\iacpatch\app.py")
 & $PyExe @($PyPre + $args)
 if ($LASTEXITCODE -ne 0) { Write-Host "빌드 실패"; exit 1 }
 
