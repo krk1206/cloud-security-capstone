@@ -200,8 +200,8 @@ def run_review(settings: Settings, opt: ReviewOptions) -> ReviewResult:
         return ReviewResult(run.run_id, run.dir, ReviewState.CANDIDATE_INVALID, message=str(e))
     intent_raw = None
     if opt.intent:
-        from ..intent import try_load_intent
-        ispec, _ierr = try_load_intent(settings.path(opt.intent))
+        from ..iam_intent import try_load_any_intent
+        ispec, _ikind, _ierr = try_load_any_intent(settings.path(opt.intent))
         intent_raw = ispec.to_dict() if ispec else None
     cand = load_candidate(spec, target, original, Path(opt.mock_dir) if opt.mock_dir else None, intent_raw, policy)
     shape, reasons = validate_candidate_shape(cand, original)

@@ -51,8 +51,12 @@ def score_risk(rubric: Dict[str, Any], v5_details: Dict[str, Any], world: Option
             touched_types.append(addr.split(".")[0])
 
     # hard conditions
-    if hard.get("iam_resource_touched") and any(t.startswith(iam_prefixes) for t in touched_types):
+    iam_touched = any(t.startswith(iam_prefixes) for t in touched_types)
+    if hard.get("iam_resource_touched") and iam_touched:
         hard_hit.append("iam_resource_touched")
+    trust_changed = [a for a, attrs in (changed.items() if isinstance(changed, dict) else []) if a.startswith("aws_iam_role.") and "assume_role_policy" in (attrs or [])]
+    if hard.get("iam_trust_policy_changed") and trust_changed:
+        hard_hit.append("iam_trust_policy_changed")
     if hard.get("resource_deleted") and (removed or deletes):
         hard_hit.append("resource_deleted")
     if hard.get("resource_replaced") and replaces:
@@ -131,4 +135,11 @@ def score_risk(rubric: Dict[str, Any], v5_details: Dict[str, Any], world: Option
         level = RiskLevel.MEDIUM
     else:
         level = RiskLevel.HIGH
+    floor = rubric.get("medium_floor_conditions") or {}
+    if floor.get("iam_resource_touched") and iam_touched:
+        raised = level == RiskLevel.LOW
+        if raised:
+            level = RiskLevel.MEDIUM
+        factors.append({"factor": "iam_resource_touched", "value": True, "points": 0,
+                        "note": "medium floor → at least MEDIUM (human approval required)" + ("" if raised else " (score already above LOW)")})
     return RiskDecision(level, RISK_TO_AUTONOMY_CAP[level], score, factors, str(rubric.get("rubric_version", "")))

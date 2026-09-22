@@ -86,11 +86,17 @@ class RiskTests(unittest.TestCase):
         self.assertEqual(r.risk_level, RiskLevel.HIGH)
         self.assertTrue(any(f["factor"] == "resource_deleted" for f in r.factors))
 
-    def test_iam_is_hard_high(self):
-        details = {"removed": [], "added": [{"address": "aws_iam_policy.x", "type": "aws_iam_policy"}], "changed": {}, "plan_actions_delete": [], "plan_actions_replace": [], "provider_config_diff": []}
+    def test_iam_touched_is_at_least_medium_and_trust_policy_is_high(self):
+        """risk-v2 (D-6): IAM 리소스 변경은 최소 MEDIUM(사람 승인 필수). 신뢰 정책(assume_role_policy) 변경은 hard HIGH."""
+        details = {"removed": [], "added": [], "changed": {"aws_iam_policy.x": ["policy"]}, "plan_actions_delete": [], "plan_actions_replace": [], "provider_config_diff": []}
         r = score_risk(RUBRIC, details, None, {"added_lines": 5, "removed_lines": 1, "files": 1})
-        self.assertEqual(r.risk_level, RiskLevel.HIGH)
-        self.assertEqual(r.autonomy_cap, AutonomyLevel.LOW)
+        self.assertEqual(r.risk_level, RiskLevel.MEDIUM)
+        self.assertTrue(any(f["factor"] == "iam_resource_touched" for f in r.factors))
+        details2 = {"removed": [], "added": [], "changed": {"aws_iam_role.x": ["assume_role_policy"]}, "plan_actions_delete": [], "plan_actions_replace": [], "provider_config_diff": []}
+        r2 = score_risk(RUBRIC, details2, None, {"added_lines": 1, "removed_lines": 1, "files": 1})
+        self.assertEqual(r2.risk_level, RiskLevel.HIGH)
+        self.assertEqual(r2.autonomy_cap, AutonomyLevel.LOW)
+        self.assertTrue(any(f["factor"] == "iam_trust_policy_changed" for f in r2.factors))
 
     def test_attachment_blast_radius_raises_score(self):
         cplan = load_case_plan("08-second-sg")

@@ -66,7 +66,17 @@ def load_trivy_report(path: str | Path) -> Dict[str, Any]:
 
 
 def list_findings(report: Dict[str, Any], include_pass: bool = False) -> List[Finding]:
-    return parse_findings(report, include_pass=include_pass)
+    """parse_findings + 완전 중복 제거. Trivy 는 같은 IAM 정책을 policies 와 role.policies 두 경로로 평가해
+    (룰, 파일, 리소스, 줄, 상태) 가 똑같은 finding 을 두 번 낸다 (AVD-AWS-0345). 하나만 남긴다 — 다른 리소스/줄이면 남긴다."""
+    out: List[Finding] = []
+    seen = set()
+    for f in parse_findings(report, include_pass=include_pass):
+        key = (f.rule_id, f.filename, f.resource, f.start_line, f.end_line, f.status)
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(f)
+    return out
 
 
 def select_findings(findings: List[Finding], sel: FindingSelector) -> List[Finding]:

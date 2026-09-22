@@ -24,7 +24,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from ..intent import try_load_intent
+from ..iam_intent import try_load_any_intent
 from ..models import LayerResult, Verdict
 from ..verify.layers import v5_plan_diff
 from ..verify.plan_model import PlanParseError, load_plan
@@ -137,7 +137,7 @@ def link_verification(candidate_files: Dict[str, str], verification_path: Option
         except PlanParseError as e:
             notes.append(f"V5 로컬 계산 실패 (plan JSON 문제): {e}")
     if candidate_plan and intent_path:
-        intent, err = try_load_intent(intent_path)
+        intent, _kind, err = try_load_any_intent(intent_path)
         try:
             cp = load_plan(candidate_plan)
         except PlanParseError as e:

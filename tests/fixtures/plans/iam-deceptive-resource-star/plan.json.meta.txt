@@ -1,0 +1,6 @@
+generated: 2026-09-22T01:34:33Z
+terraform: OpenTofu v1.10.6
+source_dir: scenarios/eval/iam-report-worker
+candidate: experiments/candidate-sets/eval-seeded-iam/candidates/deceptive-resource-star.tf
+candidate_sha256: 27abd2f3f47b21d7ddb1900825b8e5e23e3b84c41c78d33ae749fc4882986fac
+mode: offline (상태 없음, 전부 create; provider override 는 결과에 포함되지 않음)

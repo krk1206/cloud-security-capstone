@@ -168,8 +168,12 @@ def score_risk_text(rubric: Dict[str, Any], change: HclChange) -> RiskDecision:
         factors.append({"factor": "hcl_unparsable", "value": change.unparsable, "points": 0, "note": "블록 구조를 읽지 못해 근거 부족", "basis": "text"})
 
     types = change.resource_types()
-    if hard.get("iam_resource_touched") and any(t.startswith(iam_prefixes) for t in types):
+    iam_touched = any(t.startswith(iam_prefixes) for t in types)
+    if hard.get("iam_resource_touched") and iam_touched:
         hard_hit.append("iam_resource_touched")
+    trust_changed = [a for a, attrs in change.changed_resources.items() if a.startswith("aws_iam_role.") and "assume_role_policy" in attrs]
+    if hard.get("iam_trust_policy_changed") and trust_changed:
+        hard_hit.append("iam_trust_policy_changed")
     if hard.get("resource_deleted") and (change.removed_resources or change.type_changed):
         hard_hit.append("resource_block_removed_or_retyped (plan 으로 삭제/교체 확정 필요)")
     for h in hard_hit:
@@ -222,6 +226,13 @@ def score_risk_text(rubric: Dict[str, Any], change: HclChange) -> RiskDecision:
         level = RiskLevel.MEDIUM
     else:
         level = RiskLevel.HIGH
+    floor = rubric.get("medium_floor_conditions") or {}
+    if floor.get("iam_resource_touched") and iam_touched:
+        raised = level == RiskLevel.LOW
+        if raised:
+            level = RiskLevel.MEDIUM
+        factors.append({"factor": "iam_resource_touched", "value": True, "points": 0,
+                        "note": "medium floor → 최소 MEDIUM (사람 승인 필수)" + ("" if raised else " (score already above LOW)"), "basis": "text"})
     return RiskDecision(level, RISK_TO_AUTONOMY_CAP[level], score, factors, str(rubric.get("rubric_version", "")) + " [text basis]")
 
 

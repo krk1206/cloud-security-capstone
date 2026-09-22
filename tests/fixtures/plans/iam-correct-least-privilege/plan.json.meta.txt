@@ -1,0 +1,6 @@
+generated: 2026-09-22T01:33:31Z
+terraform: OpenTofu v1.10.6
+source_dir: scenarios/eval/iam-report-worker
+candidate: experiments/candidate-sets/eval-seeded-iam/candidates/correct-least-privilege.tf
+candidate_sha256: 1046fa48416ffa64c7d106cd3298420b5f1daef614e021a5178336d3ec3b2b2a
+mode: offline (상태 없음, 전부 create; provider override 는 결과에 포함되지 않음)
