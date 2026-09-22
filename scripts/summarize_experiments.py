@@ -76,6 +76,9 @@ def main() -> int:
               f"- 계층별 미검증(NOT_RUN/ERROR/SKIPPED): {not_run}",
               f"- E2: V1 만 통과 {s['gate_v1_only_pass']} / V1+V6 통과 {s['gate_v1_and_v6_pass']} / V1 통과했지만 V6 미실행 {s['gate_v6_not_run']}",
               f"- 스캐너 통과 ∧ 오라클 실패 (기만 탐지 원자료): {s['scanner_pass_oracle_fail']}건, 오라클 UNKNOWN: {s['oracle_unknown']}건"]
+        durs = [r["duration_s"] for r in rows if r.get("duration_s") is not None]
+        if durs:
+            L.append(f"- 자동 처리 시간(사람 승인 대기 제외): 평균 {sum(durs)/len(durs):.1f}s, 최대 {max(durs):.0f}s ({len(durs)}건; 도구 없이 돈 기록이 섞이면 무의미)")
         if "labeled" in s:
             lb = s["labeled"]
             L.append(f"- 기대 라벨 대비 일치: {lb['as_expected']}/{lb['total']} — " + ", ".join(f"{k} {v['as_expected']}/{v['total']}" for k, v in lb["by_label"].items()))

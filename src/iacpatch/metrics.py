@@ -27,6 +27,16 @@ def _load(p: Path) -> Optional[Dict[str, Any]]:
         return None
 
 
+def _duration_s(started: Optional[str], finished: Optional[str]) -> Optional[float]:
+    """자동 처리 시간(초) = 기록 시작~종료. 사람 승인 대기는 이 안에 없다 (PR 이후는 별도 측정)."""
+    import datetime as _dt
+    try:
+        a, b = _dt.datetime.fromisoformat(str(started)), _dt.datetime.fromisoformat(str(finished))
+    except (TypeError, ValueError):
+        return None
+    return round((b - a).total_seconds(), 1)
+
+
 def _row_from_review(d: Path) -> Optional[Dict[str, Any]]:
     st = _load(d / "state.json")
     if not st:
@@ -39,6 +49,7 @@ def _row_from_review(d: Path) -> Optional[Dict[str, Any]]:
     risk = (_load(d / "risk.json") or {}).get("decision") or {}
     return {
         "kind": "review", "run_id": st.get("run_id"), "scenario": st.get("scenario"), "state": st.get("state"),
+        "duration_s": _duration_s(st.get("started_at"), st.get("finished_at")),
         "review_level": st.get("review_level"), "origin": cand.get("origin") or st.get("candidate_origin") or "-",
         "generator": cand.get("generator") or "-", "candidate_status": cand.get("status") or "-", "verification_status": st.get("verification_status"),
         "verification_source": st.get("verification_source") or ver.get("source"), "risk": risk.get("risk_level"), "layers": layers,
@@ -173,9 +184,15 @@ def render_table(rows: List[Dict[str, Any]], title: str = "집계", labels: Opti
             for k, v in lb["by_source"].items():
                 L.append(f"| {k} | {v['total']} | {v['candidate_produced']} | {v['as_expected']} |")
         L.append("")
-    L += ["| run | 시나리오 | 출처 | 상태 | 검토수준 | 검증 | 위험도 | V1 | V2 | V3 | V4 | V5 | V6 |", "|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
+    durs = [r["duration_s"] for r in rows if r.get("duration_s") is not None]
+    if durs:
+        L.append(f"- 자동 처리 시간(기록 시작~종료, 사람 승인 대기 제외): {len(durs)}건 합계 {sum(durs):.0f}s, 평균 {sum(durs)/len(durs):.1f}s, 최대 {max(durs):.0f}s"
+                 " — 도구 없이 돈 기록은 검증을 건너뛴 시간이므로 도구 있는 기록과 섞어 평균 내지 말 것")
+        L.append("")
+    L += ["| run | 시나리오 | 출처 | 상태 | 검토수준 | 검증 | 위험도 | V1 | V2 | V3 | V4 | V5 | V6 | 소요(s) |", "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
     for r in rows:
         ly = r["layers"]
+        d = r.get("duration_s")
         L.append(f"| {r['run_id']} | {r['scenario']} | {r['origin']} | {r['state']} | {r['review_level']} | {r['verification_status']} | {r['risk'] or '-'} | "
-                 + " | ".join(str(ly.get(x, "-")) for x in ["V1", "V2", "V3", "V4", "V5", "V6"]) + " |")
+                 + " | ".join(str(ly.get(x, "-")) for x in ["V1", "V2", "V3", "V4", "V5", "V6"]) + f" | {d if d is not None else '-'} |")
     return "\n".join(L) + "\n"
