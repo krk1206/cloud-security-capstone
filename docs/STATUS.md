@@ -9,7 +9,7 @@
 | 항목 | 위치 | 실행 근거 |
 |---|---|---|
 | Trivy 스캔 어댑터 + finding 파싱 | `tools/trivy.py` | Trivy 0.74.0 실제 실행 (`data/runs-sample/*/run.json`) |
-| Terraform 어댑터 (init/fmt/validate/plan/show -json, 오프라인 override) | `tools/terraform.py` | **OpenTofu 1.10.6 + AWS provider 5.100.0** 으로 실행. Terraform 1.16.1 은 샌드박스에서 릴리스 서버 차단으로 미실행 → 팀 환경에서 재실행 필요 |
+| Terraform 어댑터 (init/fmt/validate/plan/show -json, 오프라인 override) | `tools/terraform.py` | 샌드박스는 **OpenTofu 1.10.6 + AWS provider 5.100.0** (릴리스 서버 차단). 팀 PC 에서 **Terraform 1.16.1** 로 4세트 38건 재실행(2026-09-22 16:12, `results-history/*-DESKTOP-TSH8UUD.md`) → 상태·검토 수준·위험도·V1~V6 판정이 샌드박스 기록과 38/38 동일 |
 | Intent Spec 로딩/검증 (플레이스홀더·draft·인터넷 전체 승인 거부) | `intent.py` | `test_intent.py` |
 | Evidence Bundle | `evidence.py` | 통합 테스트 |
 | LLM 응답 계약·파싱 (잘림/비JSON/스키마 위반 → GENERATION_FAILED) | `generator/base.py` | `test_generators.py`, matrix |

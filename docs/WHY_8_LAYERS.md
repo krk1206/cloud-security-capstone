@@ -32,6 +32,7 @@
 | 실제 plan 23개에서 스캐너 vs V6 (SG) | 스캐너 PASS ∧ V6 FAIL **5건** (01, 06, 14 대상 삭제, 18 self 참조, 22 레거시 규칙). 기대 FAIL 16/16 탐지, 정상 5/5 통과, 판정 불가 2건은 UNKNOWN | `experiments/ORACLE_RESULTS.md` |
 | 실제 plan 14개에서 스캐너 vs V6 (IAM Tier 1) | 스캐너 PASS ∧ V6 FAIL **8건** (기만 5 + 필수 권한 깨짐 2 + 신뢰 정책 전체 개방 1). UNKNOWN 3건(NotAction/Condition/관리형)은 사람 검토 | `experiments/ORACLE_RESULTS.md` IAM 절 |
 | 파이프라인 전체(정책→V1~V6→검토 수준) | SG seeded 11: 재스캔(V1)만 믿었으면 통과 **7건 → V6 까지 통과 2건**. IAM seeded 13: **9건 → 1건** (교차검증 전 기록은 2건 — 신뢰 정책 전체 개방을 통과시키던 false PASS 를 고친 뒤 1건). 라벨 일치 11/11, 13/13 | `experiments/candidate-sets/eval-seeded-{sg,iam}/results-history/` (2026-09-22 03:38/03:43 vm) |
+| 다른 컴퓨터·다른 Terraform 으로 같은 판정이 나오는가 | 샌드박스(OpenTofu 1.10.6, Linux) 와 팀 PC(Terraform 1.16.1, Windows, Python 3.14) 에서 4세트 38건의 상태·검토 수준·위험도·V1~V6 판정이 **38/38 동일**. 다른 것은 소요 시간뿐(PC 6~12초/후보) | `results-history/20260922-03*-vm.md` vs `results-history/20260922-16*-DESKTOP-TSH8UUD.md` (세트별) |
 | V6 자체의 오류 | 교차검증 1회차에서 IAM 오라클의 **false PASS 7종**(참조 세탁, 모듈 prefix, exclusive attachment 등)을 찾아 고침 | `docs/CROSS_VERIFICATION_2026-09-22.md` |
 | 겉모습만 바꾼 변형을 자동 생성해 넣었을 때 (SG 42 + IAM 32 종) | 잡혀야 하는 변형 중 **Trivy 사각 종수 / 그중 오라클 탐지 / 오라클도 놓침** — 숫자는 `experiments/FUZZ_RESULTS.md` 머리의 "합계" 줄 (실행 때마다 갱신) | `scripts/fuzz_scanner.py`, `src/iacpatch/fuzz/` |
 | 오라클의 집합 연산이 맞는가 | 무작위 CIDR 목록 20,000건 + 글롭 쌍 2,014건을 따로 짠 기준 구현과 대조 → **불일치 0** (seed 고정, 재실행 가능) | `experiments/ORACLE_FUZZ.md`, `scripts/oracle_fuzz.py` |
