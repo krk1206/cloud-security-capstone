@@ -119,5 +119,16 @@ class FingerprintTests(unittest.TestCase):
             self.assertEqual((t / ".terraform.lock.hcl").read_text(encoding="utf-8"), "lock2")
 
 
+class SelfcheckTests(unittest.TestCase):
+    def test_selfcheck_passes_on_this_tree_and_launcher_checks_python_version(self):
+        from iacpatch import app
+        self.assertEqual(app.selfcheck(), [])
+        raw = (ROOT / "IaCPatch.bat").read_bytes().decode("ascii")
+        self.assertIn("pyver.py", raw)                       # 3.10+ 파이썬을 골라 쓴다 (py -3 가 3.7 을 가리킨 사례)
+        self.assertIn("py -3.14", raw)
+        r = subprocess.run([sys.executable, str(ROOT / "scripts" / "pyver.py")])
+        self.assertEqual(r.returncode, 0)
+
+
 if __name__ == "__main__":
     unittest.main()

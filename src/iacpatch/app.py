@@ -114,6 +114,85 @@ def _env() -> dict:
     return env
 
 
+def _installed_pythons() -> List[str]:
+    """Windows: `py -0p` 로 설치된 파이썬 경로를 높은 버전부터. 그 외: PATH 의 python3.x."""
+    found: List[tuple] = []
+    if platform.system() == "Windows":
+        import shutil as _sh
+        # 1) py 런처에 버전을 직접 물어본다 (구 런처·새 Python 설치 관리자 둘 다 동작)
+        for mi in (14, 13, 12, 11, 10):
+            try:
+                r = subprocess.run(["py", f"-3.{mi}", "-c", "import sys;print(sys.executable)"], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=20)
+                if r.returncode == 0 and r.stdout.strip():
+                    found.append(((3, mi), r.stdout.strip()))
+            except (OSError, subprocess.TimeoutExpired):
+                pass
+        # 2) PATH 의 python
+        for name in ("python", "python3"):
+            pth = _sh.which(name)
+            if pth:
+                found.append(((1, 0), pth))
+        # 3) `py -0p` 목록 (형식이 런처마다 달라 마지막 수단)
+        try:
+            out = subprocess.run(["py", "-0p"], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=20).stdout
+            import re
+            for m in re.finditer(r"-V?:?(\d+)\.(\d+)(?:-\d+)?\s+\*?\s*(\S.*?)\s*$", out, re.M):
+                found.append(((int(m.group(1)), int(m.group(2))), m.group(3).strip()))
+        except (OSError, subprocess.TimeoutExpired):
+            pass
+    else:
+        import shutil as _sh
+        for name in ("python3.14", "python3.13", "python3.12", "python3.11", "python3.10", "python3"):
+            p = _sh.which(name)
+            if p:
+                found.append(((0, 0), p))
+    found.sort(key=lambda t: t[0], reverse=True)
+    return [p for _, p in found]
+
+
+def ensure_python(argv: List[str]) -> None:
+    """3.10 미만 파이썬으로 시작됐으면(팀 PC 의 `py -3` 가 3.7 을 가리킨 사례) 설치된 3.10+ 로 자기 자신을 다시 띄운다."""
+    if FROZEN or sys.version_info >= (3, 10):
+        return
+    for cand in _installed_pythons():
+        try:
+            chk = subprocess.run([cand, str(ROOT / "scripts" / "pyver.py")], capture_output=True, timeout=20)
+        except (OSError, subprocess.TimeoutExpired):
+            continue
+        if chk.returncode == 0:
+            env = dict(os.environ); env["PYTHONPATH"] = str(ROOT / "src") + os.pathsep + env.get("PYTHONPATH", "")
+            print(f"(python {platform.python_version()} 은 너무 낮음 → {cand} 로 다시 시작)")
+            rc = subprocess.call([cand, "-X", "utf8", "-m", "iacpatch.app", *argv], cwd=str(ROOT), env=env)
+            raise SystemExit(rc)
+    raise SystemExit(f"Python 3.10 이상이 필요하다 (지금 {platform.python_version()}). python.org 에서 설치하고 'Add python.exe to PATH' 를 체크.")
+
+
+def selfcheck() -> List[str]:
+    """설치 상태 검사 — 옛 파일과 새 파일이 섞였는지(zip 을 기존 폴더에 풀며 '건너뛰기' 한 사례), 필수 스크립트가 있는지."""
+    problems: List[str] = []
+    if sys.version_info < (3, 10):
+        problems.append(f"python {platform.python_version()} — 3.10 이상 필요")
+    checks = [("iacpatch.config", "Settings", "tf_template_dir"), ("iacpatch.report_html", "summarize", None), ("iacpatch.fuzz.runner", "run_variants", None),
+              ("iacpatch.fingerprint", "code_digest", None), ("iacpatch.tools.terraform", "TerraformAdapter", "restore_provider_template"),
+              ("iacpatch.review.local_verify", "run_local_verification", None)]
+    import importlib
+    for mod, name, attr in checks:
+        try:
+            m = importlib.import_module(mod)
+            obj = getattr(m, name)
+            if attr and not hasattr(obj, attr):
+                raise AttributeError(attr)
+        except Exception as e:  # ImportError / AttributeError = 옛 파일이 남아 있음
+            problems.append(f"{mod}.{name}{'.' + attr if attr else ''} 없음 ({type(e).__name__}) — 옛 파일이 남아 있음")
+    for rel in ("scripts/fuzz_scanner.py", "scripts/oracle_fuzz.py", "scripts/run_candidate_set.py", "tests/unit/test_fuzz.py", "policy/risk_rubric.json"):
+        if not (ROOT / rel).exists():
+            problems.append(f"{rel} 없음")
+    return problems
+
+
+STALE_HINT = "옛 파일과 새 파일이 섞여 있다. zip 을 기존 폴더에 덮어쓰지 말고 **빈 새 폴더**에 풀어서 거기서 실행할 것 (tools\\ 는 버튼으로 다시 받으면 됨)."
+
+
 def steps(include_cc: bool, fresh: bool = False) -> List[tuple]:
     """scripts/run_experiments.sh 의 8 단계와 같은 순서. (제목, 명령 또는 None=건너뜀). fresh=True 면 이전 기록 재사용 없이 전부 다시 돌린다."""
     rcs = "scripts/run_candidate_set.py"
@@ -162,6 +241,14 @@ def run_all(log: Callable[[str], None], progress: Callable[[int, int], None], re
             log(line); lf.write(line + "\n")
         if not ts["terraform"]["ok"]:
             log("terraform 이 없으면 V3~V6 이 NOT_RUN 이 된다. scripts/setup_tools.bat 를 먼저 돌려라.")
+        probs = selfcheck()
+        if probs:
+            log("설치 상태 검사 실패 — 실험을 돌리지 않는다:")
+            for pr in probs:
+                log(f"  - {pr}"); lf.write(f"selfcheck: {pr}\n")
+            log(STALE_HINT.replace("**", ""))
+            raise RuntimeError("설치 상태 검사 실패 (위 목록). " + STALE_HINT.replace("**", ""))
+        log(f"설치 상태 검사 OK (python {platform.python_version()})")
         todo = [] if report_only else steps(has_cc_candidates(), fresh=fresh)
         if todo:
             log("재사용: " + ("끔 — 전부 다시 돌린다 (--fresh)" if fresh else "켬 — 입력·정책·코드·도구가 같은 후보는 이전 기록을 쓴다 (처음 한 번은 전부 돈다)"))
@@ -258,7 +345,12 @@ def gui() -> int:
         for k, v in ts.items():
             chip_widgets.append(_chip(f"{k} {v['version'].replace('Version: ', '') if v['ok'] else '없음 → 도구 설치 버튼'}", v["ok"]))
         chip_widgets.append(_chip(f"저장소 {ROOT}", None))
-        chip_widgets.append(_chip("하지 않는 것: AWS 접속·apply · LLM API · Claude Code 자동 호출 · git push", None))
+        probs = selfcheck()
+        chip_widgets.append(_chip(f"설치 검사 OK · python {platform.python_version()}" if not probs else f"설치 검사 실패 {len(probs)}건 → 로그 참조 (새 폴더에 zip 풀기)", not probs))
+        if probs:
+            for pr in probs:
+                q.put(("log", f"설치 상태 검사: {pr}"))
+            q.put(("log", STALE_HINT.replace("**", "")))
 
     refresh_chips()
 
@@ -481,6 +573,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         except Exception:
             pass
     argv = list(sys.argv[1:] if argv is None else argv)
+    ensure_python(argv)     # 3.10 미만이면 설치된 3.10+ 로 다시 시작 (아래는 실행되지 않음)
     # 내부용: exe 가 자기 자신을 다시 띄워 스크립트/테스트를 돌릴 때 (PC 에 python 이 없어도 됨)
     if argv[:1] == ["--exec"] and len(argv) >= 2:
         return _exec_script(argv[1], argv[2:])
