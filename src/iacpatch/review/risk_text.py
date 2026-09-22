@@ -46,17 +46,39 @@ def _norm_body(body: str) -> str:
     return "\n".join(l.strip() for l in body.strip().splitlines() if l.strip())
 
 
+def _top_level_attr_at_lines(body: str) -> List[Optional[str]]:
+    """각 줄이 속한 최상위 속성/블록 이름. 깊이 0 에서 `name = ...{` 또는 `name {` 로 열린 뒤 안쪽 줄(깊이>0)은 그 이름,
+    여는 줄 자체도 그 이름, 그 밖의 줄은 None."""
+    out: List[Optional[str]] = []
+    depth = 0
+    current: Optional[str] = None
+    for line in body.splitlines():
+        s = line.strip()
+        if depth == 0:
+            m = re.match(r'^([A-Za-z_][A-Za-z0-9_]*)\s*(=|\{)', s)
+            current = m.group(1) if (m and s.rstrip().endswith("{")) else None
+        out.append(current if (depth > 0 or (current and s.rstrip().endswith("{"))) else None)
+        depth = max(0, depth + line.count("{") - line.count("}"))
+    return out
+
+
 def _changed_attr_names(a: str, b: str) -> List[str]:
-    """두 블록 본문의 줄 diff 에서 바뀐 줄의 속성/블록 이름을 모은다 (중첩 깊이는 구분하지 않는다)."""
+    """두 블록 본문의 줄 diff 에서 바뀐 줄의 속성 이름을 모은다. jsonencode({...}) 나 map 처럼 중괄호 안(깊이>0)의 키는
+    그 값을 여는 최상위 속성(예: assume_role_policy, policy)으로 귀속시킨다 (교차검증 #9b: 'Principal' 이 아니라 'assume_role_policy')."""
     names: List[str] = []
-    for line in difflib.unified_diff(a.splitlines(), b.splitlines(), lineterm="", n=0):
-        if line.startswith(("+++", "---", "@@")):
+    al, bl = a.splitlines(), b.splitlines()
+    ta, tb = _top_level_attr_at_lines(a), _top_level_attr_at_lines(b)
+    sm = difflib.SequenceMatcher(a=al, b=bl)
+    for tag, i1, i2, j1, j2 in sm.get_opcodes():
+        if tag == "equal":
             continue
-        if line[:1] in "+-":
-            m = _ATTR_RE.match(line[1:])
-            if m and m.group(1) not in names:
-                names.append(m.group(1))
-    # 속성 이름을 못 찾은 변경(값 줄만 바뀐 리스트 원소 등)은 'ingress'/'egress' 같은 블록 안일 수 있으므로 상위 블록 이름을 찾는다
+        for lines, tops, lo, hi in ((al, ta, i1, i2), (bl, tb, j1, j2)):
+            for k in range(lo, min(hi, len(lines))):
+                top = tops[k] if k < len(tops) else None
+                m = _ATTR_RE.match(lines[k])
+                name = top or (m.group(1) if m else None)
+                if name and name not in names:
+                    names.append(name)
     return names
 
 
@@ -172,8 +194,12 @@ def score_risk_text(rubric: Dict[str, Any], change: HclChange, target_type: Opti
     iam_touched = any(t.startswith(iam_prefixes) for t in types)
     if hard.get("iam_resource_touched") and iam_touched:
         hard_hit.append("iam_resource_touched")
-    trust_changed = [a for a, attrs in change.changed_resources.items() if a.startswith("aws_iam_role.") and "assume_role_policy" in attrs]
-    if hard.get("iam_trust_policy_changed") and trust_changed:
+    def _rtype(addr: str) -> str:
+        parts = addr.split(".")
+        return parts[-2] if len(parts) >= 2 else addr
+    trust_changed = [a for a, attrs in change.changed_resources.items() if _rtype(a) == "aws_iam_role" and "assume_role_policy" in attrs]
+    trust_added = [a for a in change.added_resources if _rtype(a) == "aws_iam_role"]
+    if hard.get("iam_trust_policy_changed") and (trust_changed or trust_added):
         hard_hit.append("iam_trust_policy_changed")
     if hard.get("resource_deleted") and (change.removed_resources or change.type_changed):
         hard_hit.append("resource_block_removed_or_retyped (plan 으로 삭제/교체 확정 필요)")

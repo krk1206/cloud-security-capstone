@@ -7,8 +7,13 @@
 
 Tier 1 에서 판단하지 않는 것 (→ UNKNOWN, 자동 승인 금지):
   Deny 문, NotAction / NotResource, Condition, Principal(리소스 정책), 정책 변수(${...}), `?` 와일드카드,
-  plan 시점에 값이 미확정인 policy, AWS 관리형 정책(내용을 읽지 않음; intent 의 approved_managed_policy_arns 에 있으면 허용),
-  같은 역할에 다른 방식(aws_iam_policy_attachment 의 roles 목록 등)으로 붙는 정책.
+  plan 시점에 값이 미확정인 policy / inline_policy / managed_policy_arns, AWS 관리형 정책(내용을 읽지 않음; intent 의
+  approved_managed_policy_arns 에 있으면 허용), 같은 역할에 다른 방식(aws_iam_policy_attachment 의 roles 목록,
+  *_policy_attachments_exclusive, *_policies_exclusive)으로 붙는 정책, policy_arn 참조가 둘 이상이거나 모호한 attachment,
+  JSON 중복 키, 액션/ARN 의 비ASCII·공백 문자.
+신뢰 정책(assume_role_policy): 권한 집합은 아니지만 Principal 이 '*'(또는 AWS:'*') 이고 Condition 이 없으면 EXCESS 로 FAIL 한다.
+
+2026-09-22 교차검증(docs/CROSS_VERIFICATION_2026-09-22.md)에서 발견된 false PASS 8건을 이 버전에서 막았다.
 
 패턴 포함 판정: 후보 패턴 P 가 승인 패턴 Q 에 포함되는가(P ⊆ Q) — `*` 만 지원. P 의 `*` 를 어떤 리터럴과도 일치하지 않는
 문자로 바꿔 Q 에 매칭한다 (예: "s3:*" ⊄ "s3:Get*", "s3:GetObject" ⊆ "s3:Get*", "*" ⊆ "*" 만).
@@ -28,8 +33,11 @@ from ..models import Verdict
 from .plan_model import PlanParseError
 
 POLICY_TYPES = ("aws_iam_policy", "aws_iam_role_policy", "aws_iam_user_policy", "aws_iam_group_policy")
-UNSUPPORTED_ATTACH_TYPES = ("aws_iam_policy_attachment", "aws_iam_role_policies_exclusive")
+UNSUPPORTED_ATTACH_TYPES = ("aws_iam_policy_attachment", "aws_iam_role_policies_exclusive", "aws_iam_role_policy_attachments_exclusive",
+                            "aws_iam_user_policy_attachments_exclusive", "aws_iam_group_policy_attachments_exclusive",
+                            "aws_iam_user_policies_exclusive", "aws_iam_group_policies_exclusive")
 _SENTINEL = "\x00"
+_ASCII_TOKEN_RE = re.compile(r"^[\x21-\x7e]+$")     # 공백·제어문자·비ASCII 없음
 
 
 # ---------------------------------------------------------------------------
@@ -62,6 +70,8 @@ class IamStatement:
         for v in self.actions + self.resources:
             if "${" in v or "?" in v:
                 r.append(f"{self.origin}: pattern {v!r} uses a variable or '?' — not supported")
+            elif not _ASCII_TOKEN_RE.match(v):
+                r.append(f"{self.origin}: pattern {v!r} contains whitespace, control or non-ASCII characters — not evaluated")
         return r
 
 
@@ -81,6 +91,8 @@ class IamRole:
     inline_docs: List[IamPolicyDoc] = field(default_factory=list)
     trust_policy: str = ""
     unknown_reasons: List[str] = field(default_factory=list)
+    trust_open: List[str] = field(default_factory=list)          # Principal '*' 이고 Condition 없는 문의 origin
+    module_prefix: str = ""
 
 
 @dataclass
@@ -109,8 +121,13 @@ def parse_policy_document(address: str, text: Any) -> IamPolicyDoc:
     if text is None:
         doc.unknown_reason = "policy value unknown at plan time"
         return doc
+    def _no_dup(pairs):
+        keys = [k for k, _ in pairs]
+        if len(keys) != len(set(keys)):
+            raise ValueError(f"duplicate JSON keys {sorted(k for k in keys if keys.count(k) > 1)}")
+        return dict(pairs)
     try:
-        data = json.loads(text) if isinstance(text, str) else text
+        data = json.loads(text, object_pairs_hook=_no_dup) if isinstance(text, str) else text
     except (TypeError, ValueError) as e:
         doc.unknown_reason = f"policy is not valid JSON: {e}"
         return doc
@@ -154,15 +171,61 @@ def _walk_config(mod: Dict[str, Any], out: List[Dict[str, Any]], prefix: str = "
         _walk_config(sub, out, prefix=f"{prefix}module.{name}.")
 
 
-def _ref_to_address(refs: List[str], want_type: str) -> Optional[str]:
-    """references ["aws_iam_policy.app.arn", "aws_iam_policy.app"] → "aws_iam_policy.app"."""
+def _module_prefix(address: str) -> str:
+    """'module.a.module.b.aws_iam_role.x' → 'module.a.module.b.'  (루트면 '')."""
+    parts = address.split(".")
+    i = 0
+    prefix = []
+    while i + 1 < len(parts) and parts[i] == "module":
+        prefix += [parts[i], parts[i + 1]]
+        i += 2
+    return ".".join(prefix) + ("." if prefix else "")
+
+
+def _refs_to_addresses(refs: List[str], want_type: str, prefix: str = "") -> List[str]:
+    """references ["aws_iam_policy.app.arn", "aws_iam_policy.app"] → ["<prefix>aws_iam_policy.app"] (중복 제거, 순서 유지).
+    참조는 참조하는 리소스와 같은 모듈 기준의 상대 주소이므로 그 리소스의 모듈 접두를 붙인다."""
+    out: List[str] = []
     for r in refs or []:
         parts = r.split(".")
-        # module.x.aws_iam_policy.app.arn 형태도 허용
         for i in range(len(parts) - 1):
             if parts[i] == want_type:
-                return ".".join(parts[: i + 2])
-    return None
+                a = ".".join(parts[: i + 2])
+                a = a if a.startswith("module.") else prefix + a
+                if a not in out:
+                    out.append(a)
+                break
+    return out
+
+
+def _ref_to_address(refs: List[str], want_type: str, prefix: str = "") -> Optional[str]:
+    """정확히 하나의 참조만 인정한다. 둘 이상이면 None (호출자가 UNKNOWN 처리)."""
+    found = _refs_to_addresses(refs, want_type, prefix)
+    return found[0] if len(found) == 1 else None
+
+
+def _trust_open_statements(address: str, text: str) -> Tuple[List[str], str]:
+    """신뢰 정책에서 Principal 이 전체('*' 또는 {AWS:'*'}) 이고 Condition 이 없는 Allow 문의 origin 목록. (목록, 파싱 실패 사유)"""
+    if not text:
+        return [], ""
+    try:
+        data = json.loads(text)
+    except (TypeError, ValueError) as e:
+        return [], f"trust policy is not valid JSON: {e}"
+    stmts = data.get("Statement") if isinstance(data, dict) else None
+    if isinstance(stmts, dict):
+        stmts = [stmts]
+    if not isinstance(stmts, list):
+        return [], "trust policy has no Statement list"
+    out = []
+    for i, st in enumerate(stmts):
+        if not isinstance(st, dict) or str(st.get("Effect", "")).lower() != "allow" or st.get("Condition"):
+            continue
+        pr = st.get("Principal")
+        wide = pr == "*" or (isinstance(pr, dict) and any(v == "*" or (isinstance(v, list) and "*" in v) for v in pr.values()))
+        if wide:
+            out.append(f"{address}.assume_role_policy#{i}")
+    return out, ""
 
 
 def build_iam_world(plan: Dict[str, Any]) -> IamWorld:
@@ -189,15 +252,26 @@ def build_iam_world(plan: Dict[str, Any]) -> IamWorld:
                 doc = parse_policy_document(addr, pol_text)
             world.policies[addr] = doc
         elif t == "aws_iam_role":
-            role = IamRole(addr, name=str(vals.get("name") or ""), trust_policy=str(vals.get("assume_role_policy") or ""))
+            role = IamRole(addr, name=str(vals.get("name") or ""), trust_policy=str(vals.get("assume_role_policy") or ""), module_prefix=_module_prefix(addr))
+            cfg_ex = (cfg_by_addr.get(addr) or {}).get("expressions") or {}
             for i, ip in enumerate(vals.get("inline_policy") or []):
                 if isinstance(ip, dict) and ip.get("policy"):
                     role.inline_docs.append(parse_policy_document(f"{addr}.inline_policy[{i}]", ip.get("policy")))
-            if "inline_policy" in unknown_attrs.get(addr, []) and not role.inline_docs:
-                pass  # provider 가 계산하는 속성 — 실제 인라인 정책이 없을 때도 unknown 으로 뜬다
+                else:
+                    # 이름만 있고 policy 값이 plan 시점에 미확정 → 판단 불가 (교차검증 #4)
+                    role.unknown_reasons.append(f"{addr}.inline_policy[{i}]: policy value unknown at plan time")
             mp = vals.get("managed_policy_arns")
             if isinstance(mp, list):
                 role.managed_policy_arns = [str(x) for x in mp]
+            elif "managed_policy_arns" in cfg_ex:
+                # 설정에는 있는데 plan 값이 없다 = 미확정 (Optional+Computed 라 after_unknown 만으로는 구분이 안 된다) (교차검증 #1)
+                role.unknown_reasons.append(f"{addr}: managed_policy_arns is configured but unknown at plan time")
+            if "assume_role_policy" not in vals and "assume_role_policy" in cfg_ex:
+                role.unknown_reasons.append(f"{addr}: assume_role_policy is configured but unknown at plan time")
+            opened, terr = _trust_open_statements(addr, role.trust_policy)
+            role.trust_open = opened
+            if terr:
+                role.unknown_reasons.append(f"{addr}: {terr}")
             world.roles[addr] = role
         elif t in UNSUPPORTED_ATTACH_TYPES:
             world.notes.append(f"{addr}: {t} is not evaluated in Tier 1 (attached policies unknown)")
@@ -209,25 +283,34 @@ def build_iam_world(plan: Dict[str, Any]) -> IamWorld:
             continue
         cfg = cfg_by_addr.get(addr) or {}
         ex = cfg.get("expressions") or {}
-        role_addr = _ref_to_address((ex.get("role") or {}).get("references") or [], "aws_iam_role")
-        if role_addr is None:
-            # 리터럴 역할 이름 → 이름으로 찾는다
-            rname = str(vals.get("role") or (ex.get("role") or {}).get("constant_value") or "")
+        prefix = _module_prefix(addr)
+        role_refs = _refs_to_addresses((ex.get("role") or {}).get("references") or [], "aws_iam_role", prefix)
+        role_addr: Optional[str] = None
+        rname = vals.get("role")
+        if isinstance(rname, str) and rname:
+            # plan 값이 확정돼 있으면 그 이름으로 찾는다 (참조보다 값이 우선 — 교차검증 #2)
             role_addr = next((a for a, ro in world.roles.items() if ro.name and ro.name == rname), None)
+            if role_addr is None and len(role_refs) == 1 and role_refs[0] in world.roles and world.roles[role_refs[0]].name in ("", rname):
+                role_addr = role_refs[0]
+        elif len(role_refs) == 1:
+            role_addr = role_refs[0]
         if role_addr is None or role_addr not in world.roles:
-            world.notes.append(f"{addr}: role reference could not be resolved in plan ({vals.get('role')!r})")
+            world.notes.append(f"{addr}: role reference could not be resolved in plan (role={rname!r}, refs={role_refs})")
             continue
         role = world.roles[role_addr]
         if t == "aws_iam_role_policy_attachment":
-            pol_addr = _ref_to_address((ex.get("policy_arn") or {}).get("references") or [], "aws_iam_policy")
-            if pol_addr and pol_addr in world.policies:
-                role.attached_policies.append(pol_addr)
+            arn = vals.get("policy_arn")
+            if isinstance(arn, str) and arn:
+                # 값이 확정된 ARN 은 plan 안의 정책이 아니다(그 ARN 은 apply 전엔 미확정). 리터럴/관리형으로 취급 — 참조를 믿지 않는다 (교차검증 #2)
+                role.managed_policy_arns.append(arn)
+                continue
+            pol_refs = _refs_to_addresses((ex.get("policy_arn") or {}).get("references") or [], "aws_iam_policy", prefix)
+            if len(pol_refs) == 1 and pol_refs[0] in world.policies:
+                role.attached_policies.append(pol_refs[0])
+            elif len(pol_refs) > 1:
+                role.unknown_reasons.append(f"{addr}: policy_arn references several policies {pol_refs} — ambiguous (교차검증 #3)")
             else:
-                arn = vals.get("policy_arn") or (ex.get("policy_arn") or {}).get("constant_value")
-                if isinstance(arn, str) and arn:
-                    role.managed_policy_arns.append(arn)
-                else:
-                    role.unknown_reasons.append(f"{addr}: policy_arn unresolved (not a plan policy, not a literal ARN)")
+                role.unknown_reasons.append(f"{addr}: policy_arn unresolved (not a plan policy, not a literal ARN)")
         else:  # aws_iam_role_policy (inline via separate resource)
             if addr in world.policies:
                 role.attached_policies.append(addr)
@@ -239,7 +322,8 @@ def build_iam_world(plan: Dict[str, Any]) -> IamWorld:
 # ---------------------------------------------------------------------------
 def _glob_regex(q: str, ignore_case: bool) -> "re.Pattern[str]":
     parts = [re.escape(p) for p in q.split("*")]
-    return re.compile("^" + ".*".join(parts) + "$", re.IGNORECASE if ignore_case else 0)
+    flags = re.ASCII | (re.IGNORECASE if ignore_case else 0)     # 유니코드 대소문자 접기 금지 (교차검증 #8)
+    return re.compile("^" + ".*".join(parts) + r"\Z", flags)
 
 
 def pattern_subset(p: str, q: str, ignore_case: bool) -> bool:
@@ -349,7 +433,11 @@ def evaluate(world: IamWorld, intent: IamIntentSpec) -> IamOracleReport:
                 extra.append(f"{ra}: managed policy {arn} attached — content not evaluated (not in approved_managed_policy_arns)")
         if not docs and not extra:
             extra.append(f"{ra}: no policy attached in plan — required permissions cannot be satisfied")
-        scopes.append(_evaluate_docs(ra, docs, intent, extra))
+        res = _evaluate_docs(ra, docs, intent, extra)
+        if role.trust_open:
+            res.excess += [f"{o}: trust policy allows Principal '*' without Condition (anyone can assume the role)" for o in role.trust_open]
+            res.verdict = Verdict.FAIL
+        scopes.append(res)
     for n in world.notes:
         # Tier 1 밖의 연결 방식이 plan 에 있으면 판단 불가로 남긴다 (대상 역할에 붙었을 수 있으므로)
         for s in scopes:

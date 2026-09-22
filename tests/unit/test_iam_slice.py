@@ -72,8 +72,9 @@ class OracleOnRealPlansTests(unittest.TestCase):
         "deceptive-inline-role-policy": Verdict.FAIL, "deceptive-second-policy": Verdict.FAIL,
         "unapproved-managed-policy": Verdict.UNKNOWN, "breaks-required-missing-list": Verdict.FAIL,
         "breaks-required-wrong-bucket": Verdict.FAIL, "invalid-identical": Verdict.FAIL,
-        "unapproved-trust-policy-open": Verdict.PASS,   # 신뢰 정책은 오라클 범위 밖 — 정책(V5)·기준표가 막는다
+        "unapproved-trust-policy-open": Verdict.FAIL,   # 09-22 교차검증 후: Principal '*' 무조건 신뢰는 EXCESS 로 FAIL (이전엔 PASS, V5·기준표에만 의존)
     }
+    ATTACKS = ["b1-ref-launder", "b2-inline-unknown", "b3-module", "b4-attachments-exclusive", "b5-policy-attachment", "b9c", "b13-two-refs"]
 
     def setUp(self):
         self.intent = load_iam_intent(INTENT)
@@ -109,6 +110,31 @@ class OracleOnRealPlansTests(unittest.TestCase):
         # 원본은 스캐너도 잡는다 (AVD-AWS-0345), 그리고 중복 finding 은 하나로 합쳐진다
         fails = list_findings(load_trivy_report(SCEN / "trivy-scan.json"))
         self.assertEqual([f.rule_id for f in fails], ["AVD-AWS-0345"])
+
+    def test_cross_verification_attacks_never_pass(self):
+        """docs/CROSS_VERIFICATION_2026-09-22.md 의 false-PASS 7건 (tests/fixtures/plans/iam-x-*). 수정 후 PASS 가 나오면 회귀."""
+        for name in self.ATTACKS:
+            rep = evaluate(build_iam_world(plan(f"x-{name}")), self.intent)
+            self.assertNotEqual(rep.verdict, Verdict.PASS, f"{name}: {rep.summary}")
+        self.assertEqual(evaluate(build_iam_world(plan("x-b3-module")), self.intent).verdict, Verdict.FAIL)
+
+    def test_document_tricks_never_pass(self):
+        """중복 키·유니코드 대소문자·공백·모듈 접두 — 교차검증 #7/#8."""
+        import copy
+        base = plan("correct-least-privilege")
+        def with_policy(text):
+            p = copy.deepcopy(base)
+            for r in p["planned_values"]["root_module"]["resources"]:
+                if r["address"] == "aws_iam_policy.worker":
+                    r["values"]["policy"] = text
+            return p
+        dup = '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":"*","Action":["s3:GetObject","s3:ListBucket"],"Resource":["arn:aws:s3:::report-archive","arn:aws:s3:::report-archive/*"]}]}'
+        self.assertEqual(evaluate(build_iam_world(with_policy(dup)), self.intent).verdict, Verdict.UNKNOWN)
+        homoglyph = json.dumps({"Version": "2012-10-17", "Statement": [{"Effect": "Allow", "Action": ["\u017f3:GetObject", "s3:ListBucKet".replace("K", "\u212a")],
+                                                                        "Resource": ["arn:aws:s3:::report-archive", "arn:aws:s3:::report-archive/*"]}]})
+        self.assertNotEqual(evaluate(build_iam_world(with_policy(homoglyph)), self.intent).verdict, Verdict.PASS)
+        self.assertFalse(pattern_subset("s3:GetObject\n", "s3:GetObject", True))
+        self.assertFalse(pattern_subset("\u017f3:GetObject", "s3:GetObject", True))
 
     def test_v6_layer_dispatches_to_iam(self):
         lr = v6_intent_oracle(plan("deceptive-star-action"), {}, self.intent)

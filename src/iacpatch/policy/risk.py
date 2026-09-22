@@ -71,9 +71,13 @@ def score_risk(rubric: Dict[str, Any], v5_details: Dict[str, Any], world: Option
     iam_touched = any(t.startswith(iam_prefixes) for t in touched_types)
     if hard.get("iam_resource_touched") and iam_touched:
         hard_hit.append("iam_resource_touched")
-    trust_changed = [a for a, attrs in (changed.items() if isinstance(changed, dict) else []) if a.startswith("aws_iam_role.") and "assume_role_policy" in (attrs or [])]
-    if hard.get("iam_trust_policy_changed") and trust_changed:
-        hard_hit.append("iam_trust_policy_changed")
+    def _rtype(addr: str) -> str:
+        parts = addr.split(".")
+        return parts[-2] if len(parts) >= 2 else addr
+    trust_changed = [a for a, attrs in (changed.items() if isinstance(changed, dict) else []) if _rtype(a) == "aws_iam_role" and "assume_role_policy" in (attrs or [])]
+    trust_added = [str(a.get("address") if isinstance(a, dict) else a) for a in added if (str(a.get("type")) if isinstance(a, dict) else _rtype(str(a))) == "aws_iam_role"]
+    if hard.get("iam_trust_policy_changed") and (trust_changed or trust_added):
+        hard_hit.append("iam_trust_policy_changed")   # 모듈 안 역할·새 역할(=새 신뢰 정책)도 포함 (교차검증 #9)
     if hard.get("resource_deleted") and (removed or deletes):
         hard_hit.append("resource_deleted")
     if hard.get("resource_replaced") and replaces:
