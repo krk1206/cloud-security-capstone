@@ -262,8 +262,11 @@ def gui() -> int:
 
     refresh_chips()
 
+    # ---- 아래 버튼 줄은 본문보다 *먼저* 창 바닥에 붙인다 (pack 은 먼저 넣은 위젯이 자리를 먼저 차지 → 창이 작아도 버튼이 안 잘림)
+    foot = tk.Frame(root, bg=C["bg"], padx=16, pady=10); foot.pack(side="bottom", fill="x")
+
     # ---- 본문: 왼쪽 단계 목록 + 결과 타일, 오른쪽 로그
-    body = tk.Frame(root, bg=C["bg"], padx=16, pady=12); body.pack(fill="both", expand=True)
+    body = tk.Frame(root, bg=C["bg"], padx=16, pady=12); body.pack(side="top", fill="both", expand=True)
     body.columnconfigure(1, weight=1); body.rowconfigure(0, weight=1)
     left = tk.Frame(body, bg=C["panel"], highlightthickness=1, highlightbackground=C["line"], padx=14, pady=12, width=330)
     left.grid(row=0, column=0, sticky="nsw", padx=(0, 12)); left.grid_propagate(False)
@@ -318,7 +321,7 @@ def gui() -> int:
     right = tk.Frame(body, bg=C["panel"], highlightthickness=1, highlightbackground=C["line"])
     right.grid(row=0, column=1, sticky="nsew")
     ttk.Label(right, text="로그", style="PanelH.TLabel").pack(anchor="w", padx=14, pady=(10, 0))
-    txt = tk.Text(right, wrap="none", font=MONO, bg=C["panel"], fg=C["ink"], relief="flat", padx=12, pady=8, insertbackground=C["ink"])
+    txt = tk.Text(right, wrap="none", font=MONO, bg=C["panel"], fg=C["ink"], relief="flat", padx=12, pady=8, insertbackground=C["ink"], height=12, width=40)
     sb = ttk.Scrollbar(right, orient="vertical", command=txt.yview); txt.configure(yscrollcommand=sb.set)
     sb.pack(side="right", fill="y", pady=(4, 8)); txt.pack(fill="both", expand=True, padx=(4, 0), pady=(4, 8))
     txt.tag_configure("hdr", foreground=C["accent"], font=(MONO[0], 10, "bold"))
@@ -345,8 +348,7 @@ def gui() -> int:
         txt.insert("end", line + "\n", tag) if tag else txt.insert("end", line + "\n")
         txt.see("end")
 
-    # ---- 아래: 진행 막대 + 상태 + 버튼
-    foot = tk.Frame(root, bg=C["bg"], padx=16, pady=10); foot.pack(fill="x")
+    # ---- 아래: 진행 막대 + 상태 + 버튼 (foot 은 위에서 이미 바닥에 붙여 둠)
     pb = ttk.Progressbar(foot, mode="determinate", maximum=10, style="Blue.Horizontal.TProgressbar"); pb.pack(fill="x")
     status = tk.StringVar(value="대기 — '▶ 전체 실행' 을 누르면 단위 테스트 → 실험 8단계 → 리포트 순서로 돈다.")
     ttk.Label(foot, textvariable=status, style="Sub.TLabel", wraplength=1080).pack(anchor="w", pady=(6, 8))
