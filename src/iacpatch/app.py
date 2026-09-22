@@ -21,7 +21,7 @@ import threading
 import time
 import webbrowser
 from pathlib import Path
-from typing import Callable, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 
 def find_root() -> Path:
@@ -191,37 +191,193 @@ def run_all(log: Callable[[str], None], progress: Callable[[int, int], None], re
 
 
 # --------------------------------------------------------------------------- GUI
+TITLE = "AI가 생성한 테라폼 보안패치의 실효성 검증 자동화"
+C = {"bg": "#f6f5f1", "panel": "#ffffff", "line": "#e3e2dc", "hero": "#0f2a4a", "hero_sub": "#b9cbe3", "ink": "#0b0b0b", "ink2": "#52514e",
+     "ink3": "#8a8985", "accent": "#2a78d6", "good": "#0ca30c", "crit": "#d03b3b", "warn": "#9a6b00", "muted": "#a9a8a3", "code": "#f1f0ea", "s2": "#eb6834"}
+
+
 def gui() -> int:
     import tkinter as tk
     from tkinter import ttk
 
+    win = platform.system() == "Windows"
+    UI = ("Malgun Gothic", 10) if win else ("TkDefaultFont", 10)
+    UI_B = (UI[0], 10, "bold")
+    MONO = ("Consolas", 10) if win else ("TkFixedFont", 10)
+
     root = tk.Tk()
-    root.title("IaCPatch — AI가 생성한 테라폼 보안패치의 실효성 검증 자동화")
-    root.geometry("980x640")
+    root.title(f"IaCPatch — {TITLE}")
+    root.geometry("1120x760")
+    root.minsize(900, 600)
+    root.configure(bg=C["bg"])
+    st = ttk.Style(root)
+    try:
+        st.theme_use("clam")
+    except tk.TclError:
+        pass
+    st.configure(".", background=C["bg"], foreground=C["ink"], font=UI)
+    st.configure("TFrame", background=C["bg"])
+    st.configure("Panel.TFrame", background=C["panel"])
+    st.configure("TLabel", background=C["bg"], foreground=C["ink"], font=UI)
+    st.configure("Panel.TLabel", background=C["panel"], foreground=C["ink"], font=UI)
+    st.configure("PanelSub.TLabel", background=C["panel"], foreground=C["ink2"], font=UI)
+    st.configure("PanelH.TLabel", background=C["panel"], foreground=C["ink"], font=(UI[0], 11, "bold"))
+    st.configure("Sub.TLabel", background=C["bg"], foreground=C["ink2"], font=UI)
+    st.configure("TButton", padding=(12, 6), font=UI, background=C["panel"], foreground=C["ink"], bordercolor=C["line"], relief="flat")
+    st.map("TButton", background=[("active", "#eceae4"), ("disabled", C["bg"])], foreground=[("disabled", C["ink3"])])
+    st.configure("Accent.TButton", background=C["accent"], foreground="#ffffff", font=UI_B, bordercolor=C["accent"])
+    st.map("Accent.TButton", background=[("active", "#1c5cab"), ("disabled", "#9dbde6")], foreground=[("disabled", "#ffffff")])
+    st.configure("TCheckbutton", background=C["bg"], foreground=C["ink2"], font=UI)
+    st.map("TCheckbutton", background=[("active", C["bg"])])
+    st.configure("Blue.Horizontal.TProgressbar", troughcolor=C["line"], background=C["accent"], bordercolor=C["line"], lightcolor=C["accent"], darkcolor=C["accent"])
     q: "queue.Queue[tuple]" = queue.Queue()
 
-    top = ttk.Frame(root, padding=10); top.pack(fill="x")
-    ttk.Label(top, text="AI가 생성한 테라폼 보안패치의 실효성 검증 자동화 — 한 번 클릭 실행", font=("", 13, "bold")).pack(anchor="w")
-    ttk.Label(top, text=f"저장소: {ROOT}", foreground="#52514e").pack(anchor="w")
-    ts = tool_status()
-    tool_var = tk.StringVar(value="  ·  ".join(f"{k}: {v['version'] if v['ok'] else '없음'}" for k, v in ts.items()))
-    ttk.Label(top, textvariable=tool_var, foreground="#52514e").pack(anchor="w", pady=(2, 0))
-    ttk.Label(top, text="하는 일: Trivy 스캔 → 후보 → V1~V6 검증 → 위험도/검토 수준 → HTML 리포트.  하지 않는 것: AWS 접속·apply, LLM API, Claude Code 자동 호출, git push.",
-              foreground="#52514e", wraplength=940).pack(anchor="w", pady=(2, 6))
+    # ---- 머리 (짙은 띠): 제목 + 한 줄 설명 + 도구 상태 칩
+    hero = tk.Frame(root, bg=C["hero"], padx=22, pady=16)
+    hero.pack(fill="x")
+    tk.Label(hero, text="IACPATCH  ·  한 번 클릭 실행기", bg=C["hero"], fg=C["hero_sub"], font=(UI[0], 9)).pack(anchor="w")
+    tk.Label(hero, text=TITLE, bg=C["hero"], fg="#ffffff", font=(UI[0], 17, "bold")).pack(anchor="w", pady=(2, 4))
+    tk.Label(hero, text="Trivy 가 통과시킨 패치를 그대로 믿지 않는다 — 8계층 검증 + 위험도 기준표가 후보마다 '사람이 어떤 검토를 해야 하나' 를 정한다.",
+             bg=C["hero"], fg=C["hero_sub"], font=UI, wraplength=1040, justify="left").pack(anchor="w")
+    chips = tk.Frame(hero, bg=C["hero"]); chips.pack(anchor="w", pady=(10, 0))
+    chip_widgets: List[tk.Label] = []
 
-    btns = ttk.Frame(root, padding=(10, 0)); btns.pack(fill="x")
-    pb = ttk.Progressbar(root, mode="determinate", maximum=10); pb.pack(fill="x", padx=10, pady=6)
-    status = tk.StringVar(value="대기")
-    ttk.Label(root, textvariable=status).pack(anchor="w", padx=10)
-    txt = tk.Text(root, wrap="none", height=24, font=("Consolas", 10))
-    txt.pack(fill="both", expand=True, padx=10, pady=(4, 10))
+    def _chip(text: str, ok: Optional[bool]) -> tk.Label:
+        fg = "#ffffff"; border = C["good"] if ok else (C["crit"] if ok is False else C["hero_sub"])
+        lb = tk.Label(chips, text=f"  {text}  ", bg=C["hero"], fg=fg, font=(UI[0], 9), highlightthickness=1, highlightbackground=border, highlightcolor=border)
+        lb.pack(side="left", padx=(0, 6)); return lb
+
+    def refresh_chips():
+        for w in chip_widgets:
+            w.destroy()
+        chip_widgets.clear()
+        ts = tool_status()
+        for k, v in ts.items():
+            chip_widgets.append(_chip(f"{k} {v['version'].replace('Version: ', '') if v['ok'] else '없음 → 도구 설치 버튼'}", v["ok"]))
+        chip_widgets.append(_chip(f"저장소 {ROOT}", None))
+        chip_widgets.append(_chip("하지 않는 것: AWS 접속·apply · LLM API · Claude Code 자동 호출 · git push", None))
+
+    refresh_chips()
+
+    # ---- 본문: 왼쪽 단계 목록 + 결과 타일, 오른쪽 로그
+    body = tk.Frame(root, bg=C["bg"], padx=16, pady=12); body.pack(fill="both", expand=True)
+    body.columnconfigure(1, weight=1); body.rowconfigure(0, weight=1)
+    left = tk.Frame(body, bg=C["panel"], highlightthickness=1, highlightbackground=C["line"], padx=14, pady=12, width=330)
+    left.grid(row=0, column=0, sticky="nsw", padx=(0, 12)); left.grid_propagate(False)
+    ttk.Label(left, text="단계", style="PanelH.TLabel").pack(anchor="w")
+    ttk.Label(left, text="처음 한 번은 전부 돈다. 이후엔 바뀐 후보만 다시 돈다.", style="PanelSub.TLabel", wraplength=290).pack(anchor="w", pady=(0, 8))
+    step_rows: List[Dict[str, Any]] = []
+    steps_box = tk.Frame(left, bg=C["panel"]); steps_box.pack(fill="x")
+
+    def build_steps(fresh: bool):
+        for w in steps_box.winfo_children():
+            w.destroy()
+        step_rows.clear()
+        for title, argv in steps(has_cc_candidates(), fresh=fresh) + [("리포트 생성 (report/index.html)", "report")]:
+            row = tk.Frame(steps_box, bg=C["panel"]); row.pack(fill="x", pady=1)
+            ic = tk.Label(row, text="○", bg=C["panel"], fg=C["muted"], font=(UI[0], 11), width=2, anchor="w"); ic.pack(side="left")
+            short = title.split(" (")[0] if len(title) > 40 else title
+            tx = tk.Label(row, text=short, bg=C["panel"], fg=C["ink2"] if argv is not None else C["muted"], font=UI, anchor="w", wraplength=230, justify="left"); tx.pack(side="left", fill="x", expand=True)
+            el = tk.Label(row, text="", bg=C["panel"], fg=C["ink3"], font=(UI[0], 9), width=6, anchor="e"); el.pack(side="right")
+            step_rows.append({"title": title, "ic": ic, "tx": tx, "el": el, "skip": argv is None, "t0": None})
+
+    build_steps(False)
+
+    result_box = tk.Frame(left, bg=C["panel"]); result_box.pack(fill="x", pady=(14, 0))
+    ttk.Label(result_box, text="결과 (리포트와 같은 숫자)", style="PanelH.TLabel").pack(anchor="w")
+    tiles_box = tk.Frame(result_box, bg=C["panel"]); tiles_box.pack(fill="x", pady=(6, 0))
+    tiles_box.columnconfigure(0, weight=1); tiles_box.columnconfigure(1, weight=1)
+
+    def show_tiles(S: Dict[str, Any]):
+        for w in tiles_box.winfo_children():
+            w.destroy()
+        blind = (S["blind_sg"][0] if S.get("blind_sg") else 0) + (S["blind_iam"][0] if S.get("blind_iam") else 0)
+        items = [(str(blind), "스캐너 통과 ∧ 오라클 FAIL\n(실제 plan, SG+IAM)", C["crit"]),
+                 (f"{S['label_agree']}/{S['label_total']}", "기대 라벨 일치", C["good"]),
+                 (str(S["not_run_total"]), "미검증 계층", C["warn"] if S["not_run_total"] else C["good"]),
+                 (str(S["n_llm"]), "LLM 후보" + (" (미측정)" if S["n_llm"] == 0 else ""), C["warn"] if S["n_llm"] == 0 else C["good"])]
+        for i, (n, l, col) in enumerate(items):
+            t = tk.Frame(tiles_box, bg=C["code"], highlightthickness=1, highlightbackground=C["line"], padx=8, pady=6)
+            t.grid(row=i // 2, column=i % 2, sticky="nsew", padx=2, pady=2)
+            tk.Frame(t, bg=col, width=4).pack(side="left", fill="y", padx=(0, 8))
+            tk.Label(t, text=n, bg=C["code"], fg=C["ink"], font=(UI[0], 18, "bold")).pack(anchor="w")
+            tk.Label(t, text=l, bg=C["code"], fg=C["ink2"], font=(UI[0], 9), justify="left").pack(anchor="w")
+
+    try:
+        from .report_html import summarize
+        if (ROOT / "report" / "index.html").exists():
+            show_tiles(summarize())
+        else:
+            tk.Label(tiles_box, text="아직 실행 전", bg=C["panel"], fg=C["ink3"], font=UI).grid(row=0, column=0, sticky="w")
+    except Exception:
+        tk.Label(tiles_box, text="아직 실행 전", bg=C["panel"], fg=C["ink3"], font=UI).grid(row=0, column=0, sticky="w")
+
+    right = tk.Frame(body, bg=C["panel"], highlightthickness=1, highlightbackground=C["line"])
+    right.grid(row=0, column=1, sticky="nsew")
+    ttk.Label(right, text="로그", style="PanelH.TLabel").pack(anchor="w", padx=14, pady=(10, 0))
+    txt = tk.Text(right, wrap="none", font=MONO, bg=C["panel"], fg=C["ink"], relief="flat", padx=12, pady=8, insertbackground=C["ink"])
+    sb = ttk.Scrollbar(right, orient="vertical", command=txt.yview); txt.configure(yscrollcommand=sb.set)
+    sb.pack(side="right", fill="y", pady=(4, 8)); txt.pack(fill="both", expand=True, padx=(4, 0), pady=(4, 8))
+    txt.tag_configure("hdr", foreground=C["accent"], font=(MONO[0], 10, "bold"))
+    txt.tag_configure("pass", foreground=C["good"], font=(MONO[0], 10, "bold"))
+    txt.tag_configure("fail", foreground=C["crit"], font=(MONO[0], 10, "bold"))
+    txt.tag_configure("unk", foreground=C["warn"])
+    txt.tag_configure("reuse", foreground=C["ink3"])
+    txt.tag_configure("dim", foreground=C["ink3"])
+
+    def append_log(line: str):
+        tag = None
+        if line.startswith("================"):
+            tag = "hdr"
+        elif "FAIL" in line or "종료 코드" in line or "오류" in line or "Traceback" in line:
+            tag = "fail"
+        elif "재사용" in line:
+            tag = "reuse"
+        elif "UNKNOWN" in line or "NOT_RUN" in line:
+            tag = "unk"
+        elif "PASS" in line or " OK" in line or "완료" in line or "일치" in line:
+            tag = "pass"
+        elif line.startswith(("|", "-", "#")):
+            tag = "dim"
+        txt.insert("end", line + "\n", tag) if tag else txt.insert("end", line + "\n")
+        txt.see("end")
+
+    # ---- 아래: 진행 막대 + 상태 + 버튼
+    foot = tk.Frame(root, bg=C["bg"], padx=16, pady=10); foot.pack(fill="x")
+    pb = ttk.Progressbar(foot, mode="determinate", maximum=10, style="Blue.Horizontal.TProgressbar"); pb.pack(fill="x")
+    status = tk.StringVar(value="대기 — '▶ 전체 실행' 을 누르면 단위 테스트 → 실험 8단계 → 리포트 순서로 돈다.")
+    ttk.Label(foot, textvariable=status, style="Sub.TLabel", wraplength=1080).pack(anchor="w", pady=(6, 8))
+    btns = tk.Frame(foot, bg=C["bg"]); btns.pack(fill="x")
+    fresh_var = tk.BooleanVar(value=False)
     last_report: List[Optional[Path]] = [ROOT / "report" / "index.html" if (ROOT / "report" / "index.html").exists() else None]
 
-    fresh_var = tk.BooleanVar(value=False)
+    def mark_step(title: str):
+        now = time.time()
+        for r in step_rows:
+            if r["t0"] is not None and r["ic"].cget("text") == "◔":
+                r["ic"].configure(text="●", fg=C["good"]); r["el"].configure(text=f"{now - r['t0']:.0f}s")
+        for r in step_rows:
+            if r["title"] == title or (title.startswith("리포트") and r["title"].startswith("리포트")):
+                if r["skip"]:
+                    r["ic"].configure(text="–", fg=C["muted"]); r["el"].configure(text="건너뜀")
+                else:
+                    r["ic"].configure(text="◔", fg=C["accent"]); r["t0"] = now
+                break
+
+    def finish_steps(ok: bool):
+        now = time.time()
+        for r in step_rows:
+            if r["ic"].cget("text") == "◔":
+                r["ic"].configure(text="●" if ok else "✖", fg=C["good"] if ok else C["crit"]); r["el"].configure(text=f"{now - r['t0']:.0f}s" if r["t0"] else "")
 
     def worker(report_only: bool):
         try:
             out = run_all(lambda s: q.put(("log", s)), lambda i, n: q.put(("prog", i, n)), report_only=report_only, open_browser=True, fresh=fresh_var.get())
+            try:
+                from .report_html import summarize
+                q.put(("summary", summarize()))
+            except Exception as e:  # 집계 실패는 리포트 생성과 별개
+                q.put(("log", f"집계 실패: {e}"))
             q.put(("done", out))
         except Exception as e:
             q.put(("log", f"오류: {e}")); q.put(("done", None))
@@ -229,21 +385,32 @@ def gui() -> int:
     def start(report_only: bool):
         for b in (b_run, b_rep, b_tools):
             b.state(["disabled"])
-        txt.delete("1.0", "end"); status.set("실행 중… (처음 한 번은 후보 38개를 전부 돌린다. 이후에는 바뀐 후보만)")
+        txt.delete("1.0", "end")
+        build_steps(fresh_var.get())
+        if report_only:
+            for r in step_rows[:-1]:
+                r["ic"].configure(text="–", fg=C["muted"]); r["el"].configure(text="건너뜀")
+        status.set("실행 중… 처음 한 번은 후보 38개를 전부 돈다 (PC 마다 다름). 이후에는 바뀐 후보만 다시 돈다." if not report_only else "리포트만 다시 만드는 중…")
         threading.Thread(target=worker, args=(report_only,), daemon=True).start()
 
     def setup_tools():
-        win = platform.system() == "Windows"
         script = ROOT / "scripts" / ("setup_tools.ps1" if win else "setup_tools.sh")
         argv = ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(script)] if win else ["bash", str(script)]
+
         def w():
             q.put(("log", f"도구 설치: {' '.join(argv)}"))
-            p = subprocess.Popen(argv, cwd=str(ROOT), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace")
-            for line in p.stdout:  # type: ignore[union-attr]
-                q.put(("log", line.rstrip("\n")))
-            p.wait(); q.put(("tools", None)); q.put(("done", None))
+            try:
+                p = subprocess.Popen(argv, cwd=str(ROOT), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace")
+                for line in p.stdout:  # type: ignore[union-attr]
+                    q.put(("log", line.rstrip("\n")))
+                p.wait()
+            except OSError as e:
+                q.put(("log", f"도구 설치 실패: {e}"))
+            q.put(("tools", None)); q.put(("done", None))
         for b in (b_run, b_rep, b_tools):
             b.state(["disabled"])
+        txt.delete("1.0", "end")
+        status.set("trivy / terraform 을 tools\\ 에 받는 중… (처음 한 번, 수백 MB)")
         threading.Thread(target=w, daemon=True).start()
 
     def open_report():
@@ -252,25 +419,32 @@ def gui() -> int:
         else:
             status.set("리포트가 아직 없다. '전체 실행' 또는 '리포트만' 을 먼저.")
 
-    b_tools = ttk.Button(btns, text="도구 설치/확인 (trivy·terraform → tools\\)", command=setup_tools); b_tools.pack(side="left", padx=(0, 6))
-    b_run = ttk.Button(btns, text="▶ 전체 실행 (실험 8단계 + 리포트)", command=lambda: start(False)); b_run.pack(side="left", padx=(0, 6))
-    b_rep = ttk.Button(btns, text="리포트만 다시 생성", command=lambda: start(True)); b_rep.pack(side="left", padx=(0, 6))
-    ttk.Button(btns, text="리포트 열기", command=open_report).pack(side="left")
-    ttk.Checkbutton(btns, text="전부 다시 돌리기 (이전 기록 재사용 안 함)", variable=fresh_var).pack(side="left", padx=(14, 0))
+    b_run = ttk.Button(btns, text="▶  전체 실행", style="Accent.TButton", command=lambda: start(False)); b_run.pack(side="left", padx=(0, 8))
+    b_rep = ttk.Button(btns, text="리포트만 다시 생성", command=lambda: start(True)); b_rep.pack(side="left", padx=(0, 8))
+    ttk.Button(btns, text="리포트 열기", command=open_report).pack(side="left", padx=(0, 8))
+    b_tools = ttk.Button(btns, text="도구 설치/확인", command=setup_tools); b_tools.pack(side="left", padx=(0, 8))
+    ttk.Checkbutton(btns, text="전부 다시 돌리기 (이전 기록 재사용 안 함)", variable=fresh_var).pack(side="left", padx=(10, 0))
+    ttk.Label(btns, text="로그: experiments\\run_experiments.log", style="Sub.TLabel").pack(side="right")
 
     def pump():
         try:
             while True:
                 item = q.get_nowait()
                 if item[0] == "log":
-                    txt.insert("end", item[1] + "\n"); txt.see("end")
+                    line = item[1]
+                    append_log(line)
+                    if line.startswith("================ "):
+                        mark_step(line[len("================ "):].strip())
                 elif item[0] == "prog":
                     pb.configure(maximum=max(item[2], 1), value=item[1])
                 elif item[0] == "tools":
-                    ts2 = tool_status(); tool_var.set("  ·  ".join(f"{k}: {v['version'] if v['ok'] else '없음'}" for k, v in ts2.items()))
+                    refresh_chips()
+                elif item[0] == "summary":
+                    show_tiles(item[1])
                 elif item[0] == "done":
+                    finish_steps(item[1] is not None)
                     if item[1]:
-                        last_report[0] = item[1]; status.set(f"완료 — 리포트: {item[1]}")
+                        last_report[0] = item[1]; status.set(f"완료 — 리포트: {item[1]}  (브라우저로 열었다. 안 열리면 '리포트 열기')")
                     else:
                         status.set("끝 (리포트 없음 또는 오류 — 로그 확인)")
                     for b in (b_run, b_rep, b_tools):
