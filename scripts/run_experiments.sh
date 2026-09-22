@@ -71,10 +71,12 @@ run $PY scripts/oracle_experiment.py
 
 step "8/8 요약"
 run $PY scripts/summarize_experiments.py
+run $PY scripts/why_this_gate.py
 echo
 echo "결과 파일:"
 echo "  experiments/ORACLE_RESULTS.md                        ← E2 핵심 (스캐너 vs 오라클, 실제 plan)"
 echo "  experiments/RESULTS_SUMMARY.md                       ← 한 장 요약"
+echo "  experiments/WHY_THIS_GATE.md                         ← 기업용 한 장 (스캐너 vs 게이트, 실측만)"
 echo "  experiments/candidate-sets/<세트>/results.md         ← 세트별 표 (+ results-history/ 에 이 실행이 추가됨)"
 echo "  data/reviews/<id>/review.md                          ← 후보별 리포트·diff·검증 원문"
 echo "  experiments/run_experiments.log                      ← 이 실행의 전체 출력 (문제 생기면 이 파일을 보낼 것)"

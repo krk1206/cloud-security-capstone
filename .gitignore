@@ -24,3 +24,4 @@ data/reviews/*
 tools/*
 !tools/README.md
 experiments/run_experiments.log
+.claude/settings.local.json

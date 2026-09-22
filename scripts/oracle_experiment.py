@@ -198,7 +198,7 @@ def main() -> int:
           "- 스캐너 열: 같은 후보를 Trivy 0.74.0(내장 체크, `--skip-check-update`)으로 스캔한 `trivy.json` 에 FAIL 이 하나라도 있는지. **AVD-AWS-0057(일반 와일드카드)은 이 번들에서 deprecated 라 `Action:\"*\"` 를 잡지 않는다** — s3:* 는 AVD-AWS-0345 로만 잡힌다",
           "- 오라클 열: `iacpatch.verify.iam_oracle.evaluate` (실제 V6 코드). intent = `experiments/candidate-sets/eval-seeded-iam/intent.json` (D-7)",
           "- 후보는 B 의 Claude 세션에서 작성한 seeded 예제(평가 대상 LLM 의 출력이 아님). expected 는 후보를 만들 때(실행 전) 적음", "",
-          f"- **스캐너 PASS ∧ 오라클 FAIL: {ispof}건** — 기만 5(s3:* → *, 나열, Resource *, 역할 inline, 두 번째 정책) + 필수 깨짐 2. 스캐너만 믿었으면 그대로 배포됐을 후보다.",
+          f"- **스캐너 PASS ∧ 오라클 FAIL: {ispof}건** — 기만 5(s3:* → *, 나열, Resource *, 역할 inline, 두 번째 정책) + 필수 깨짐 2 + 신뢰 정책 전체 개방 1. 스캐너만 믿었으면 그대로 배포됐을 후보다.",
           f"- 기만/취약(expected=FAIL) {len(idec)}건 중 {idec_caught}건 탐지. 정상(expected=PASS) {len(icor)}건 중 {icor_ok}건 통과 (오탐 {len(icor)-icor_ok}). 판정 불가(expected=UNKNOWN) {len(iunk)}건 중 {iunk_ok}건 UNKNOWN.",
           f"- 전체 {len(irows)}건 중 기대대로 {iagree}건.", "",
           "| 케이스 | 스캐너(FAIL 있음?) | IAM 오라클(V6) | 기대 | 일치 | 패턴 |", "|---|---|---|---|---|---|"]

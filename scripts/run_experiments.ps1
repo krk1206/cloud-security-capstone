@@ -74,10 +74,12 @@ RunPy @("scripts\oracle_experiment.py")
 
 Step "8/8 요약"
 RunPy @("scripts\summarize_experiments.py")
+RunPy @("scripts\why_this_gate.py")
 Write-Host ""
 Write-Host "결과 파일:"
 Write-Host "  experiments\ORACLE_RESULTS.md                       <- E2 핵심 (스캐너 vs 오라클, 실제 plan)"
 Write-Host "  experiments\RESULTS_SUMMARY.md                      <- 한 장 요약"
+Write-Host "  experiments\WHY_THIS_GATE.md                        <- 기업용 한 장 (스캐너 vs 게이트)"
 Write-Host "  experiments\candidate-sets\<세트>\results.md        <- 세트별 표 (+ results-history\ 에 이 실행이 추가됨)"
 Write-Host "  data\reviews\<id>\review.md                         <- 후보별 리포트·diff·검증 원문"
 Write-Host "  experiments\run_experiments.log                     <- 이 실행의 전체 출력 (문제 생기면 이 파일을 보낼 것)"
