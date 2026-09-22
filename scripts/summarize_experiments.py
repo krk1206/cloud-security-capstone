@@ -61,7 +61,7 @@ def main() -> int:
             L += [f"## {set_id}", "", "- manifest 없음", ""]
             continue
         m = json.loads(man.read_text(encoding="utf-8"))
-        labels = {f"{set_id}/{c['id']}": {"expected": c.get("expected", ""), "source": c.get("source", "")} for c in m.get("candidates", [])}
+        labels = {f"{set_id}/{c['id']}": {"expected": c.get("expected", ""), "source": c.get("source", ""), "expected_risk": c.get("expected_risk", "")} for c in m.get("candidates", [])}
         rows = latest_rows_for_set(all_rows, set_id)
         L += [f"## {set_id} — {m.get('_note', '')[:120]}", ""]
         if not m.get("candidates"):
@@ -82,6 +82,9 @@ def main() -> int:
         if "labeled" in s:
             lb = s["labeled"]
             L.append(f"- 기대 라벨 대비 일치: {lb['as_expected']}/{lb['total']} — " + ", ".join(f"{k} {v['as_expected']}/{v['total']}" for k, v in lb["by_label"].items()))
+            ga = s.get("grade_agreement") or {}
+            if ga.get("total"):
+                L.append(f"- 등급 일치율 (expected_risk vs 코드): {ga['agree']}/{ga['total']}" + (" — 불일치: " + "; ".join(ga["mismatches"][:5]) if ga["mismatches"] else ""))
             for src, v in lb.get("by_source", {}).items():
                 for k in e1[src]:
                     e1[src][k] += v[k]

@@ -13,7 +13,9 @@
       "candidate": "rule_based",
       "expected": "correct",
       "source": "rule_based",
-      "expected_reason": "단일 Allow 문, 리터럴 리스트 Action/Resource → 규칙 기반이 승인 목록으로 치환할 수 있다"
+      "expected_reason": "단일 Allow 문, 리터럴 리스트 Action/Resource → 규칙 기반이 승인 목록으로 치환할 수 있다",
+      "expected_risk": "MEDIUM",
+      "expected_risk_basis": "policy 는 핵심 속성(0점) + IAM medium floor"
     },
     {
       "id": "01-var-actions",
@@ -53,7 +55,10 @@
       "candidate": "rule_based",
       "expected": "correct",
       "source": "rule_based",
-      "expected_reason": "Action 이 문자열 리터럴 \"s3:*\" → 규칙 기반이 리스트로 치환"
+      "expected_reason": "Action 이 문자열 리터럴 \"s3:*\" → 규칙 기반이 리스트로 치환",
+      "expected_risk": "MEDIUM",
+      "expected_risk_basis": "policy 핵심(0점) + floor"
     }
-  ]
+  ],
+  "_expected_risk_note": "expected_risk = 사람이 docs/RISK_RUBRIC_V2.md 의 표를 손으로 적용한 등급 (2026-09-22, B). 코드가 표를 그대로 구현했는지의 '등급 일치율' 실험용. 후보가 위험도 판정에 이르지 않는 항목(NO_FINDING/INFO_INSUFFICIENT/CANDIDATE_INVALID)은 적지 않는다. 이 값들은 v1 실행 결과를 본 뒤에 적었으므로 '블라인드 예측' 이 아니라 '표 해석의 독립 검산' 이다."
 }

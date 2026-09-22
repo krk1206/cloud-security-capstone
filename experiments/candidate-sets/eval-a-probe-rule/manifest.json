@@ -13,7 +13,9 @@
       "source": "rule_based",
       "expected": "correct",
       "expected_reason": "리터럴 0.0.0.0/0 → 승인 출처 치환 (지원)",
-      "note": "규칙 기반 생성기 (LLM 아님). 원본·스캔은 A 의 experiments/trivy-sg-probe (origin/main 74a6f38)"
+      "note": "규칙 기반 생성기 (LLM 아님). 원본·스캔은 A 의 experiments/trivy-sg-probe (origin/main 74a6f38)",
+      "expected_risk": "LOW",
+      "expected_risk_basis": "SG 1개, ingress 만: 0점"
     },
     {
       "id": "01-cidr-split",
@@ -68,7 +70,9 @@
       "source": "rule_based",
       "expected": "correct",
       "expected_reason": "aws_vpc_security_group_ingress_rule cidr_ipv4 리터럴, 승인 출처 1개 → 지원",
-      "note": "규칙 기반 생성기 (LLM 아님). 원본·스캔은 A 의 experiments/trivy-sg-probe (origin/main 74a6f38)"
+      "note": "규칙 기반 생성기 (LLM 아님). 원본·스캔은 A 의 experiments/trivy-sg-probe (origin/main 74a6f38)",
+      "expected_risk": "LOW",
+      "expected_risk_basis": "ingress_rule 의 cidr_ipv4 는 핵심 속성(0) + 오라클 caveat +1 = 1"
     },
     {
       "id": "06-prefix-list",
@@ -90,7 +94,9 @@
       "source": "rule_based",
       "expected": "correct",
       "expected_reason": "ipv6_cidr_blocks ['::/0'] → [] (v4 승인 출처 10.0.0.0/8 은 남으므로 규칙 삭제가 아님) — 지원",
-      "note": "규칙 기반 생성기 (LLM 아님). 원본·스캔은 A 의 experiments/trivy-sg-probe (origin/main 74a6f38)"
+      "note": "규칙 기반 생성기 (LLM 아님). 원본·스캔은 A 의 experiments/trivy-sg-probe (origin/main 74a6f38)",
+      "expected_risk": "LOW",
+      "expected_risk_basis": "SG 1개, ingress 만: 0점"
     },
     {
       "id": "08-second-sg",
@@ -101,7 +107,10 @@
       "source": "rule_based",
       "expected": "correct",
       "expected_reason": "legacy SG 리터럴 0.0.0.0/0 → 치환 (지원). V6 는 app+legacy 합산으로 판정",
-      "note": "규칙 기반 생성기 (LLM 아님). 원본·스캔은 A 의 experiments/trivy-sg-probe (origin/main 74a6f38)"
+      "note": "규칙 기반 생성기 (LLM 아님). 원본·스캔은 A 의 experiments/trivy-sg-probe (origin/main 74a6f38)",
+      "expected_risk": "LOW",
+      "expected_risk_basis": "부착 지점 1개 +1 = 1"
     }
-  ]
+  ],
+  "_expected_risk_note": "expected_risk = 사람이 docs/RISK_RUBRIC_V2.md 의 표를 손으로 적용한 등급 (2026-09-22, B). 코드가 표를 그대로 구현했는지의 '등급 일치율' 실험용. 후보가 위험도 판정에 이르지 않는 항목(NO_FINDING/INFO_INSUFFICIENT/CANDIDATE_INVALID)은 적지 않는다. 이 값들은 v1 실행 결과를 본 뒤에 적었으므로 '블라인드 예측' 이 아니라 '표 해석의 독립 검산' 이다."
 }

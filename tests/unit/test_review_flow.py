@@ -222,7 +222,7 @@ class ReviewFlowTests(unittest.TestCase):
         self.assertIn("resource_delete:", res.message)
         self.assertEqual(res.risk.risk_level.value, "HIGH")
         self.assertTrue(any("removed" in f["factor"] for f in res.risk.factors))
-        self.assertIn("잠정", res.risk.rubric_version)
+        self.assertIn("text basis", res.risk.rubric_version)   # plan 이 없으니 텍스트 근거 판정
 
     def test_risk_low_for_cidr_only_change_and_text_basis_marked(self):
         res = run_review(self.settings, self._opt("mock:sg_baseline_ok"))

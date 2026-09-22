@@ -1,22 +1,27 @@
 {
   "eval-iam-rule/00-literal-list": {
     "expected": "correct",
-    "source": "rule_based"
+    "source": "rule_based",
+    "expected_risk": "MEDIUM"
   },
   "eval-iam-rule/01-var-actions": {
     "expected": "unsupported",
-    "source": "rule_based"
+    "source": "rule_based",
+    "expected_risk": ""
   },
   "eval-iam-rule/02-two-statements": {
     "expected": "unsupported",
-    "source": "rule_based"
+    "source": "rule_based",
+    "expected_risk": ""
   },
   "eval-iam-rule/03-data-policy-document": {
     "expected": "unsupported",
-    "source": "rule_based"
+    "source": "rule_based",
+    "expected_risk": ""
   },
   "eval-iam-rule/04-string-action": {
     "expected": "correct",
-    "source": "rule_based"
+    "source": "rule_based",
+    "expected_risk": "MEDIUM"
   }
 }

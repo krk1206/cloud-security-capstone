@@ -97,7 +97,7 @@ def _norm_labels(labels: Optional[Dict[str, Any]]) -> Dict[str, Dict[str, str]]:
         if isinstance(v, str):
             out[k] = {"expected": v, "source": ""}
         elif isinstance(v, dict):
-            out[k] = {"expected": str(v.get("expected", "")), "source": str(v.get("source", ""))}
+            out[k] = {"expected": str(v.get("expected", "")), "source": str(v.get("source", "")), "expected_risk": str(v.get("expected_risk") or "")}
     return out
 
 
@@ -159,6 +159,25 @@ def summarize(rows: List[Dict[str, Any]], labels: Optional[Dict[str, Any]] = Non
                 detail[exp]["as_expected"] += 1
                 by_source[src]["as_expected"] += 1
         out["labeled"] = {"total": total, "as_expected": agree, "by_label": dict(detail), "by_source": dict(by_source)}
+        # 등급 일치율: 사람이 기준표를 손으로 적용한 expected_risk vs 코드가 낸 risk (위험도 판정이 있는 실행만)
+        g_total = g_agree = 0
+        mism: List[str] = []
+        for r in rows:
+            lab = labels.get(str(r["scenario"])) or {}
+            er = lab.get("expected_risk")
+            if not er:
+                continue
+            actual = r.get("risk")
+            if not actual or actual == "-":
+                mism.append(f"{r['scenario']}: 기대 {er}, 실제 판정 없음")
+                g_total += 1
+                continue
+            g_total += 1
+            if str(actual) == er:
+                g_agree += 1
+            else:
+                mism.append(f"{r['scenario']}: 기대 {er}, 실제 {actual}")
+        out["grade_agreement"] = {"total": g_total, "agree": g_agree, "mismatches": mism}
     return out
 
 
@@ -180,6 +199,10 @@ def render_table(rows: List[Dict[str, Any]], title: str = "집계", labels: Opti
         L.append(f"- 라벨 있는 실행 {lb['total']}건 중 기대대로 판정 {lb['as_expected']}건")
         for k, v in lb["by_label"].items():
             L.append(f"  - 기대={k}: {v['as_expected']}/{v['total']}")
+        ga = s.get("grade_agreement") or {}
+        if ga.get("total"):
+            L.append(f"- 등급 일치율 (사람이 기준표를 손으로 적용한 expected_risk vs 코드 판정): {ga['agree']}/{ga['total']}"
+                     + (" — 불일치: " + "; ".join(ga["mismatches"][:5]) if ga["mismatches"] else ""))
         if lb.get("by_source"):
             L.append("- 후보 출처별 (E1 비교):")
             L.append("")

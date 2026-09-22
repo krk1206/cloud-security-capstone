@@ -225,7 +225,7 @@ def run_review(settings: Settings, opt: ReviewOptions) -> ReviewResult:
         validity = ValidityReport("pre_deploy", [], Validity.INCOMPLETE, "정책 위반으로 검증 연결을 진행하지 않음")
         # 차단돼도 텍스트 근거 위험도는 계산해 둔다 (왜 위험한 변경인지 리포트에 남기기 위함). 검증은 진행하지 않는다
         change = diff_hcl(original, cand.files)
-        risk_blocked = score_risk_text(rubric, change)
+        risk_blocked = score_risk_text(rubric, change, target_type=target.resource.split(".")[0])
         run.write_json("risk.json", {"decision": risk_blocked.to_dict(), "hcl_change": change.__dict__, "plan_based": None})
         level, lreasons = decide_review_level(validity, pol, risk_blocked, cand.needs_info)
         ctx = _ctx(opt, run, target, others, cand, pol, validity, risk_blocked, level, lreasons, src_check, [], change.__dict__, None, [])
@@ -268,7 +268,7 @@ def run_review(settings: Settings, opt: ReviewOptions) -> ReviewResult:
 
     # ------------------------------------------------------------------ 4. 위험도 (텍스트 근거 + plan 근거)
     change = diff_hcl(original, cand.files)
-    risk_text = score_risk_text(rubric, change)
+    risk_text = score_risk_text(rubric, change, target_type=target.resource.split(".")[0])
     plan_risk: Optional[RiskDecision] = None
     v5 = validity.layer("V5")
     if v5 is not None and v5.verdict not in (Verdict.NOT_RUN, Verdict.SKIPPED) and candidate_plan:
@@ -276,7 +276,7 @@ def run_review(settings: Settings, opt: ReviewOptions) -> ReviewResult:
             world = build_world(load_plan(candidate_plan), cand_sources)
             diff_stats = next((c for c in pol.checks if c.get("check") == "diff_stats"), {})
             v6 = validity.layer("V6")
-            plan_risk = score_risk(rubric, v5.details, world, diff_stats, v6.details if v6 else None)
+            plan_risk = score_risk(rubric, v5.details, world, diff_stats, v6.details if v6 else None, target_type=target.resource.split(".")[0])
         except Exception as e:  # plan 이 깨졌으면 텍스트 근거만
             linked.notes.append(f"plan 기반 위험도 계산 실패: {e}")
     risk = merge_with_plan_based(risk_text, plan_risk)

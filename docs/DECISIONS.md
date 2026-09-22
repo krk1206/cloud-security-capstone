@@ -12,9 +12,10 @@
 | D-6 | 2026-09-22 | 위험도 기준표 **risk-v2-draft**: `iam_resource_touched` 를 hard HIGH 에서 **medium floor**(최소 MEDIUM = FULL_REVIEW, 사람 승인 필수)로. `iam_trust_policy_changed`(assume_role_policy 변경)·삭제·교체·provider 변경은 hard HIGH 유지 | v1 대로면 IAM 패치는 전부 REPORT_ONLY 라 PR 이 될 수 없어 IAM 시나리오가 성립하지 않는다. 사용자 원칙("IAM 변경 = Medium, 사람 승인 필수 / 복잡한 권한 변경 = High")과 일치. 아직 초안이므로 실행 전 변경 허용 — 팀 합의 후 고정 | B (팀 확인 필요) |
 | D-7 | 2026-09-22 | IAM 평가용 intent 고정값: 대상 `aws_iam_policy.worker` + `aws_iam_role.worker`, 승인 = `s3:GetObject`/`s3:ListBucket` on `arn:aws:s3:::report-archive`(+`/*`), 필수 = 같은 두 권한, 승인 관리형 정책 없음 (`experiments/candidate-sets/eval-seeded-iam/intent.json`) | D-2 와 같은 원칙: 값은 실제 계정의 버킷일 필요가 없고 **실행 전에 고정**되는 것이 중요. seeded 13 + 규칙 기반 5 케이스의 expected 는 이 값 기준으로 실행 전에 적음 | B |
 | D-8 | 2026-09-22 | IAM 시나리오의 대상 룰은 **AVD-AWS-0345(무제한 S3 정책 `s3:*`)**. `Action:"*"` 시나리오는 쓰지 않는다 | Trivy 0.74.0 내장 체크(`--skip-check-update`)에서 AVD-AWS-0057(일반 와일드카드)이 **deprecated, 빈 규칙**이라 `"*"` 를 잡지 않는다 (샌드박스 실측 7종, `docs/worklog/2026-09-22.md`). finding 이 없으면 파이프라인이 시작되지 않는다(NO_FINDING). 대신 "s3:* → *" 가 스캐너를 통과하는 기만 패치의 대표 사례가 된다 | B |
+| D-9 | 2026-09-22 | 위험도 기준표 **v2 확정안** (`docs/RISK_RUBRIC_V2.md`, `policy/risk_rubric.json` risk-v2): `outside_target_family_touched`(대상 가족 기준), `non_core_attribute_changed`(타입별 핵심 속성), plan/텍스트 병합 max, IAM floor·신뢰 정책 hard(D-6). 등급 일치율 실험(`expected_risk`) 추가 | v1 은 SG 전용 표현이라 IAM 정책 변경에 부당한 점수(+2, +1)가 붙고 병합 합산으로 점수가 경계와 안 맞았다. 팀 OK 전까지 '확정안'. 실행 결과를 보고 값을 바꾸지 않기 위해 지금 고정 후보를 낸다 | B (팀 확인 필요) |
 
 ## 아직 안 정한 것
 
-- 위험도 기준표 고정 (`docs/RISK_RUBRIC_DRAFT.md` 4절 + D-6 의 IAM 항목) — 평가용 LLM 후보 세트 돌리기 전에
+- 위험도 기준표 고정 — 확정안 `docs/RISK_RUBRIC_V2.md` (2026-09-22) 에 팀 OK 만 남음. 평가용 LLM 후보 세트 돌리기 전에
 - Claude Code 후보 프롬프트 고정본 승인 (`experiments/candidate-sets/eval-claude-code/prompt.md` 초안) 과 케이스당 반복 횟수
 - V8 체크 정의와 sandbox 용 intent (실제 공인 IP)

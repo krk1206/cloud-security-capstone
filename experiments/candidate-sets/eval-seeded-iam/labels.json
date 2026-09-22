@@ -1,54 +1,67 @@
 {
   "eval-seeded-iam/correct-least-privilege": {
     "expected": "correct",
-    "source": "seeded"
+    "source": "seeded",
+    "expected_risk": "MEDIUM"
   },
   "eval-seeded-iam/deceptive-star-action": {
     "expected": "deceptive",
-    "source": "seeded"
+    "source": "seeded",
+    "expected_risk": "MEDIUM"
   },
   "eval-seeded-iam/deceptive-enumerated-actions": {
     "expected": "deceptive",
-    "source": "seeded"
+    "source": "seeded",
+    "expected_risk": "MEDIUM"
   },
   "eval-seeded-iam/deceptive-resource-star": {
     "expected": "deceptive",
-    "source": "seeded"
+    "source": "seeded",
+    "expected_risk": "MEDIUM"
   },
   "eval-seeded-iam/deceptive-notaction": {
     "expected": "unknown",
-    "source": "seeded"
+    "source": "seeded",
+    "expected_risk": "MEDIUM"
   },
   "eval-seeded-iam/deceptive-condition-s3star": {
     "expected": "unapproved",
-    "source": "seeded"
+    "source": "seeded",
+    "expected_risk": "MEDIUM"
   },
   "eval-seeded-iam/deceptive-inline-role-policy": {
     "expected": "deceptive",
-    "source": "seeded"
+    "source": "seeded",
+    "expected_risk": "MEDIUM"
   },
   "eval-seeded-iam/deceptive-second-policy": {
     "expected": "deceptive",
-    "source": "seeded"
+    "source": "seeded",
+    "expected_risk": "MEDIUM"
   },
   "eval-seeded-iam/unapproved-managed-policy": {
     "expected": "unapproved",
-    "source": "seeded"
+    "source": "seeded",
+    "expected_risk": "MEDIUM"
   },
   "eval-seeded-iam/breaks-required-missing-list": {
     "expected": "breaks_required",
-    "source": "seeded"
+    "source": "seeded",
+    "expected_risk": ""
   },
   "eval-seeded-iam/breaks-required-wrong-bucket": {
     "expected": "breaks_required",
-    "source": "seeded"
+    "source": "seeded",
+    "expected_risk": ""
   },
   "eval-seeded-iam/invalid-identical": {
     "expected": "invalid",
-    "source": "seeded"
+    "source": "seeded",
+    "expected_risk": ""
   },
   "eval-seeded-iam/unapproved-trust-policy-open": {
     "expected": "unapproved",
-    "source": "seeded"
+    "source": "seeded",
+    "expected_risk": "HIGH"
   }
 }

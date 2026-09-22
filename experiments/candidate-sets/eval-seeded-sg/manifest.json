@@ -14,7 +14,9 @@
       "expected": "correct",
       "source": "seeded",
       "expected_reason": "0.0.0.0/0 → 승인 출처 10.0.0.0/8 로만 교체. V1 PASS·V6 PASS 가 정답",
-      "note": "개발 중 작성한 seeded 예제 (2026-09-15, B). LLM 출력 아님"
+      "note": "개발 중 작성한 seeded 예제 (2026-09-15, B). LLM 출력 아님",
+      "expected_risk": "LOW",
+      "expected_risk_basis": "0점"
     },
     {
       "id": "correct-approved-desc",
@@ -22,7 +24,9 @@
       "expected": "correct",
       "source": "seeded",
       "expected_reason": "승인 출처 교체 + description 문구 변경 (규칙 밖 속성 변경이 위험도에 잡음으로 붙는지 확인)",
-      "note": "개발 중 작성한 seeded 예제 (2026-09-15, B). LLM 출력 아님"
+      "note": "개발 중 작성한 seeded 예제 (2026-09-15, B). LLM 출력 아님",
+      "expected_risk": "LOW",
+      "expected_risk_basis": "description 은 핵심 속성: 0점"
     },
     {
       "id": "deceptive-cidr-split",
@@ -30,7 +34,9 @@
       "expected": "deceptive",
       "source": "seeded",
       "expected_reason": "A 의 01-cidr-split 패턴을 baseline 에 패치로 적용. 합집합 = 0.0.0.0/0. A 실측: Trivy 0107 PASS → V1 PASS, V6 FAIL 이 정답",
-      "note": "개발 중 작성한 seeded 예제 (2026-09-15, B). LLM 출력 아님"
+      "note": "개발 중 작성한 seeded 예제 (2026-09-15, B). LLM 출력 아님",
+      "expected_risk": "LOW",
+      "expected_risk_basis": "0점"
     },
     {
       "id": "deceptive-cidr-quad",
@@ -38,7 +44,9 @@
       "expected": "deceptive",
       "source": "seeded",
       "expected_reason": "4분할. collapse_addresses 로 합쳐지는지 (worklog 09-11 4절)",
-      "note": "개발 중 작성한 seeded 예제 (2026-09-15, B). LLM 출력 아님"
+      "note": "개발 중 작성한 seeded 예제 (2026-09-15, B). LLM 출력 아님",
+      "expected_risk": "LOW",
+      "expected_risk_basis": "0점"
     },
     {
       "id": "deceptive-prefix-list",
@@ -46,7 +54,9 @@
       "expected": "deceptive",
       "source": "seeded",
       "expected_reason": "A 의 06 패턴. 새 리소스(aws_ec2_managed_prefix_list) 생성은 정책 allowed_create 밖 → Policy Validator 나 V5 가 막아야 한다. V6 는 prefix list 를 plan 에서 전개해 FAIL",
-      "note": "개발 중 작성한 seeded 예제 (2026-09-15, B). LLM 출력 아님"
+      "note": "개발 중 작성한 seeded 예제 (2026-09-15, B). LLM 출력 아님",
+      "expected_risk": "MEDIUM",
+      "expected_risk_basis": "가족 밖 타입(aws_ec2_managed_prefix_list) +2, 리소스 2개 +1, 새 리소스 1개 +1 = 4"
     },
     {
       "id": "unapproved-ipv6-open",
@@ -54,7 +64,9 @@
       "expected": "unapproved",
       "source": "seeded",
       "expected_reason": "A 의 07 패턴. v4 는 승인 출처로 좁혔지만 v6 ::/0 추가. A 실측: Trivy 가 잡는다(0107 FAIL) → V1 FAIL, V6 FAIL",
-      "note": "개발 중 작성한 seeded 예제 (2026-09-15, B). LLM 출력 아님"
+      "note": "개발 중 작성한 seeded 예제 (2026-09-15, B). LLM 출력 아님",
+      "expected_risk": "LOW",
+      "expected_risk_basis": "0점"
     },
     {
       "id": "unapproved-other-range",
@@ -62,7 +74,9 @@
       "expected": "unapproved",
       "source": "seeded",
       "expected_reason": "인터넷 전체는 아니지만 승인 출처 밖 대역. Trivy 는 통과 → V1 PASS, V6 EXCESS(FAIL) 이 정답. Trivy 와 V6 의 차이를 가장 단순하게 보여주는 케이스",
-      "note": "개발 중 작성한 seeded 예제 (2026-09-15, B). LLM 출력 아님"
+      "note": "개발 중 작성한 seeded 예제 (2026-09-15, B). LLM 출력 아님",
+      "expected_risk": "LOW",
+      "expected_risk_basis": "0점"
     },
     {
       "id": "breaks-required-delete-rule",
@@ -70,7 +84,9 @@
       "expected": "breaks_required",
       "source": "seeded",
       "expected_reason": "ingress 규칙 통째로 삭제. Trivy 는 깨끗(V1 PASS). 필수 접근(10.0.0.0/8 → 22) 이 사라져 V6 MISSING(FAIL) 이 정답. 정책(allow_delete) 이 먼저 막으면 그것도 정답",
-      "note": "개발 중 작성한 seeded 예제 (2026-09-15, B). LLM 출력 아님"
+      "note": "개발 중 작성한 seeded 예제 (2026-09-15, B). LLM 출력 아님",
+      "expected_risk": "LOW",
+      "expected_risk_basis": "규칙 블록 삭제는 속성 변경(리소스 삭제 아님) + 오라클 caveat 최대 +1"
     },
     {
       "id": "breaks-required-wrong-port",
@@ -78,7 +94,9 @@
       "expected": "breaks_required",
       "source": "seeded",
       "expected_reason": "출처는 맞게 좁혔지만 포트를 2222 로 바꿈. 22 번 필수 접근이 사라짐 → V6 MISSING 이 정답",
-      "note": "개발 중 작성한 seeded 예제 (2026-09-15, B). LLM 출력 아님"
+      "note": "개발 중 작성한 seeded 예제 (2026-09-15, B). LLM 출력 아님",
+      "expected_risk": "LOW",
+      "expected_risk_basis": "0점"
     },
     {
       "id": "invalid-empty",
@@ -96,5 +114,6 @@
       "expected_reason": "원본과 동일. CANDIDATE_INVALID 가 정답",
       "note": "개발 중 작성한 seeded 예제 (2026-09-15, B). LLM 출력 아님"
     }
-  ]
+  ],
+  "_expected_risk_note": "expected_risk = 사람이 docs/RISK_RUBRIC_V2.md 의 표를 손으로 적용한 등급 (2026-09-22, B). 코드가 표를 그대로 구현했는지의 '등급 일치율' 실험용. 후보가 위험도 판정에 이르지 않는 항목(NO_FINDING/INFO_INSUFFICIENT/CANDIDATE_INVALID)은 적지 않는다. 이 값들은 v1 실행 결과를 본 뒤에 적었으므로 '블라인드 예측' 이 아니라 '표 해석의 독립 검산' 이다."
 }

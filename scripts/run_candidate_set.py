@@ -84,7 +84,7 @@ def main() -> int:
             intent=_resolve(pick(c, "intent"), set_dir), out_dir=str(out_root), local_tools=local_tools)
         res = run_review(s, opt)
         run_ids.append(res.run_id)
-        labels[scenario] = {"expected": c.get("expected", ""), "source": c.get("source", "")}
+        labels[scenario] = {"expected": c.get("expected", ""), "source": c.get("source", ""), "expected_risk": c.get("expected_risk", "")}
         lvl = res.level.value if res.level else "-"
         layers = {l.layer: l.verdict.value for l in (res.validity.layers if res.validity else [])}
         print(f"{cid:20s} {res.state.value:20s} level={lvl:13s} V1={layers.get('V1', '-'):8s} V6={layers.get('V6', '-'):8s} "

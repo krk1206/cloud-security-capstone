@@ -257,7 +257,7 @@ def run_predeploy(settings: Settings, target_dir: str, intent_path: str, scenari
                 world = None
         risk: Optional[RiskDecision] = None
         if v5 is not None and v5.executed and v5.verdict != Verdict.SKIPPED:
-            risk = score_risk(rubric, v5.details, world, diff_stats, v6.details if v6 else None)
+            risk = score_risk(rubric, v5.details, world, diff_stats, v6.details if v6 else None, target_type=target.resource.split(".")[0])
             rec.write_json("risk.json", risk.to_dict())
         gate = decide(validity, policy_res, risk, candidate.proposed_autonomy)
         rec.write_json("gate.json", gate.to_dict())

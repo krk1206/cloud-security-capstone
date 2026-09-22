@@ -16,13 +16,30 @@ from ..models import RISK_TO_AUTONOMY_CAP, RiskDecision, RiskLevel
 from ..verify.sgmodel import SGWorld
 
 
+def target_family(rubric: Dict[str, Any], target_type: Optional[str]):
+    """대상 finding 의 리소스 타입 → (가족 이름, 가족 판정 함수). SG 계열이면 network_types, IAM 계열이면 iam_type_prefixes."""
+    iam_prefixes = tuple(rubric.get("iam_type_prefixes") or ["aws_iam_"])
+    network_types = set(rubric.get("network_types") or [])
+    if target_type and target_type.startswith(iam_prefixes):
+        return "iam", (lambda t: t.startswith(iam_prefixes))
+    return "network", (lambda t: t in network_types)
+
+
+def core_attrs_for(rubric: Dict[str, Any], rtype: str) -> Optional[set]:
+    """리소스 타입의 '핵심 속성' 집합 (rubric.core_attributes). 정의가 없으면 None (= 판정하지 않음)."""
+    ca = rubric.get("core_attributes") or {}
+    v = ca.get(rtype)
+    return set(v) if isinstance(v, list) else None
+
+
 def score_risk(rubric: Dict[str, Any], v5_details: Dict[str, Any], world: Optional[SGWorld],
-               diff_stats: Dict[str, Any], v6_details: Optional[Dict[str, Any]] = None) -> RiskDecision:
+               diff_stats: Dict[str, Any], v6_details: Optional[Dict[str, Any]] = None,
+               target_type: Optional[str] = None) -> RiskDecision:
     pts = rubric.get("points") or {}
     th = rubric.get("thresholds") or {"low_max": 2, "medium_max": 5}
     hard = rubric.get("hard_high_conditions") or {}
     iam_prefixes = tuple(rubric.get("iam_type_prefixes") or ["aws_iam_"])
-    network_types = set(rubric.get("network_types") or [])
+    family_name, in_family = target_family(rubric, target_type)
     factors: List[Dict[str, Any]] = []
     score = 0
     hard_hit: List[str] = []
@@ -67,8 +84,9 @@ def score_risk(rubric: Dict[str, Any], v5_details: Dict[str, Any], world: Option
         factors.append({"factor": h, "value": True, "points": 0, "note": "hard condition → HIGH risk regardless of score"})
 
     # points
-    non_network = [t for t in touched_types if t not in network_types]
-    add("non_network_resource_touched", non_network, pts.get("non_network_resource_touched", 2) if non_network else 0)
+    outside = sorted({t for t in touched_types if not in_family(t)})
+    add("outside_target_family_touched", outside, pts.get("outside_target_family_touched", pts.get("non_network_resource_touched", 2)) if outside else 0,
+        f"target family={family_name}" if outside else "")
     n_touched = len(removed) + len(added) + len(changed)
     if n_touched > 3:
         add("resources_touched", n_touched, pts.get("resources_touched_over_3", 3))
@@ -108,8 +126,14 @@ def score_risk(rubric: Dict[str, Any], v5_details: Dict[str, Any], world: Option
 
     egress_changed = any("egress" in attrs for attrs in changed.values())
     add("egress_changed", egress_changed, pts.get("egress_changed", 1) if egress_changed else 0)
-    non_rule_attr = any(any(a not in ("ingress", "egress") for a in attrs) for attrs in changed.values())
-    add("non_rule_attribute_changed", non_rule_attr, pts.get("non_rule_attribute_changed", 1) if non_rule_attr else 0)
+    non_core: List[str] = []
+    for addr, attrs in (changed.items() if isinstance(changed, dict) else []):
+        rtype = addr.split(".")[0] if not addr.startswith("module.") else addr.split(".")[-2]
+        core = core_attrs_for(rubric, rtype)
+        if core is None:
+            core = {"ingress", "egress"} if rtype == "aws_security_group" else set()
+        non_core += [f"{addr}.{a}" for a in (attrs or []) if a not in core and a not in ("tags", "tags_all", "description")]
+    add("non_core_attribute_changed", non_core, pts.get("non_core_attribute_changed", pts.get("non_rule_attribute_changed", 1)) if non_core else 0)
 
     partial_or_caveat = False
     if v6_details:

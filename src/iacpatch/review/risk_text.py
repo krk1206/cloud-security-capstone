@@ -147,13 +147,14 @@ def diff_hcl(original: Dict[str, str], candidate: Dict[str, str]) -> HclChange:
     return ch
 
 
-def score_risk_text(rubric: Dict[str, Any], change: HclChange) -> RiskDecision:
+def score_risk_text(rubric: Dict[str, Any], change: HclChange, target_type: Optional[str] = None) -> RiskDecision:
     """텍스트 근거만으로 잠정 위험도를 낸다. 미확정 항목은 factors 에 points=0, note='미확정' 으로 남긴다."""
+    from ..policy.risk import core_attrs_for, target_family
     pts = rubric.get("points") or {}
     th = rubric.get("thresholds") or {"low_max": 2, "medium_max": 5}
     hard = rubric.get("hard_high_conditions") or {}
     iam_prefixes = tuple(rubric.get("iam_type_prefixes") or ["aws_iam_"])
-    network_types = set(rubric.get("network_types") or [])
+    family_name, in_family = target_family(rubric, target_type)
     replace_attrs = rubric.get("replace_forcing_attributes") or {}
     factors: List[Dict[str, Any]] = []
     score = 0
@@ -179,8 +180,9 @@ def score_risk_text(rubric: Dict[str, Any], change: HclChange) -> RiskDecision:
     for h in hard_hit:
         factors.append({"factor": h, "value": True, "points": 0, "note": "hard condition → HIGH (점수와 무관)", "basis": "text"})
 
-    non_network = [t for t in types if t not in network_types]
-    add("non_network_resource_touched", non_network, pts.get("non_network_resource_touched", 2) if non_network else 0)
+    outside = sorted({t for t in types if not in_family(t)})
+    add("outside_target_family_touched", outside, pts.get("outside_target_family_touched", pts.get("non_network_resource_touched", 2)) if outside else 0,
+        f"target family={family_name}" if outside else "")
     n_touched = len(change.removed_resources) + len(change.added_resources) + len(change.changed_resources) + len(change.type_changed)
     if n_touched > 3:
         add("resources_touched", n_touched, pts.get("resources_touched_over_3", 3))
@@ -192,21 +194,23 @@ def score_risk_text(rubric: Dict[str, Any], change: HclChange) -> RiskDecision:
     egress = any("egress" in attrs for attrs in change.changed_resources.values())
     add("egress_changed", egress, pts.get("egress_changed", 1) if egress else 0)
     replace_risk = []
-    other_attr = False
-    # SG 규칙 블록(ingress/egress) 안의 속성은 "규칙 변경" 이지 "규칙 밖 속성 변경" 이 아니다
-    rule_attrs = {"ingress", "egress", "description", "tags", "tags_all", "(속성 이름 식별 불가)",
-                  "cidr_blocks", "ipv6_cidr_blocks", "prefix_list_ids", "security_groups", "self", "from_port", "to_port", "protocol",
-                  "cidr_ipv4", "cidr_ipv6", "prefix_list_id", "referenced_security_group_id", "ip_protocol"}
+    non_core: List[str] = []
+    # 규칙 블록(ingress/egress) 안의 속성은 "규칙 변경" 이지 "핵심 밖 속성 변경" 이 아니다 (텍스트 파서는 블록 안 속성 이름도 낼 수 있다)
+    block_inner = {"(속성 이름 식별 불가)", "cidr_blocks", "ipv6_cidr_blocks", "prefix_list_ids", "security_groups", "self", "from_port", "to_port", "protocol",
+                   "cidr_ipv4", "cidr_ipv6", "prefix_list_id", "referenced_security_group_id", "ip_protocol", "description", "tags", "tags_all"}
     for addr, attrs in change.changed_resources.items():
         t = addr.split(".")[0]
+        core = core_attrs_for(rubric, t)
+        if core is None:
+            core = {"ingress", "egress"} if t == "aws_security_group" else set()
         for a in attrs:
             if a in (replace_attrs.get(t) or []):
                 replace_risk.append(f"{addr}.{a}")
-            elif a not in rule_attrs:
-                other_attr = True
+            elif a not in core and a not in block_inner:
+                non_core.append(f"{addr}.{a}")
     add("replace_forcing_attribute_changed", replace_risk, pts.get("replace_forcing_attribute_changed_text_basis", 3) if replace_risk else 0,
         "교체(destroy+create) 가능성 — plan 으로 확정 필요" if replace_risk else "")
-    add("non_rule_attribute_changed", other_attr, pts.get("non_rule_attribute_changed", 1) if other_attr else 0)
+    add("non_core_attribute_changed", non_core, pts.get("non_core_attribute_changed", pts.get("non_rule_attribute_changed", 1)) if non_core else 0)
     add("non_resource_block_changed", change.non_resource_blocks_changed, pts.get("non_resource_block_changed", 2) if change.non_resource_blocks_changed else 0,
         "provider/terraform/variable 등 리소스 밖 블록 변경" if change.non_resource_blocks_changed else "")
     lines = change.added_lines + change.removed_lines
@@ -237,11 +241,12 @@ def score_risk_text(rubric: Dict[str, Any], change: HclChange) -> RiskDecision:
 
 
 def merge_with_plan_based(text_decision: RiskDecision, plan_decision: Optional[RiskDecision]) -> RiskDecision:
-    """plan 기반 판정이 있으면 그것을 우선하고, 텍스트 근거를 factors 뒤에 덧붙인다 (두 등급 중 높은 쪽)."""
+    """plan 기반과 텍스트 기반이 둘 다 있으면 **등급도 점수도 큰 쪽(max)** 을 취한다. 합산하지 않는다 — 같은 변경을 두 시각으로 본 것이라
+    더하면 이중 계산이 되어 점수가 경계(2/5)와 맞지 않게 된다 (v1 에서 IAM 후보가 '점수 6 인데 MEDIUM' 으로 표시되던 원인)."""
     if plan_decision is None:
         return text_decision
     order = {RiskLevel.LOW: 0, RiskLevel.MEDIUM: 1, RiskLevel.HIGH: 2}
     level = plan_decision.risk_level if order[plan_decision.risk_level] >= order[text_decision.risk_level] else text_decision.risk_level
     factors = [dict(f, basis=f.get("basis", "plan")) for f in plan_decision.factors] + [f for f in text_decision.factors if f["factor"] != "undetermined"]
-    return RiskDecision(level, RISK_TO_AUTONOMY_CAP[level], plan_decision.score + text_decision.score, factors,
-                        plan_decision.rubric_version + " [plan basis + text basis]")
+    return RiskDecision(level, RISK_TO_AUTONOMY_CAP[level], max(plan_decision.score, text_decision.score), factors,
+                        plan_decision.rubric_version + " [max(plan basis, text basis)]")
