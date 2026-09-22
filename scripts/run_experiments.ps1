@@ -72,6 +72,10 @@ if ($m.candidates -and $m.candidates.Count -gt 0) {
 Step "7/8 오라클 실험 (스캐너 vs V6, 실제 plan — SG + IAM)"
 RunPy @("scripts\oracle_experiment.py")
 
+Step "8/8 스캐너 사각 탐색 (변형 자동 생성 → Trivy vs 오라클) + 오라클 차등 검증"
+RunPy @("scripts\fuzz_scanner.py")
+RunPy @("scripts\oracle_fuzz.py")
+
 Step "8/8 요약"
 RunPy @("scripts\summarize_experiments.py")
 RunPy @("scripts\why_this_gate.py")

@@ -223,6 +223,11 @@ def summarize(reviews_root: Optional[Path] = None) -> Dict[str, Any]:
         if isinstance(v, dict):
             env_bits.append(f"{v.get('kind') or k} {v.get('version') or '없음'}" + (" (offline plan)" if v.get("offline_plan") else ""))
     cc = _load(ROOT / "experiments/candidate-sets/eval-claude-code/manifest.json") or {}
+    fuzz_md = _read(ROOT / "experiments" / "FUZZ_RESULTS.md")
+    fz = re.search(r"잡혀야 하는 변형 (\d+)개 중 Trivy 사각 \*\*(\d+)개\*\*, 그중 오라클 탐지 \*\*(\d+)개\*\* · UNKNOWN (\d+)개 · 오라클도 놓침 \*\*(\d+)개\*\*", fuzz_md)
+    ofz_md = _read(ROOT / "experiments" / "ORACLE_FUZZ.md")
+    ofz_cases = re.search(r"무작위 케이스 ([\d,]+)건", ofz_md)
+    ofz_mism = re.findall(r"\*\*불일치: (\d+)건\*\*", ofz_md)
     why_md = _read(ROOT / "experiments" / "WHY_THIS_GATE.md")
     sg_blind = re.search(r"Security Group: 실제 plan (\d+)개 중 \*\*(\d+)개\*\*", why_md)
     iam_blind = re.search(r"IAM \(Tier 1\): 실제 plan (\d+)개 중 \*\*(\d+)개\*\*", why_md)
@@ -234,6 +239,8 @@ def summarize(reviews_root: Optional[Path] = None) -> Dict[str, Any]:
         "aws_runs": sum(1 for r in rows if r.get("post_deploy", "-") not in ("-", None)),
         "blind_sg": (int(sg_blind.group(2)), int(sg_blind.group(1))) if sg_blind else None,
         "blind_iam": (int(iam_blind.group(2)), int(iam_blind.group(1))) if iam_blind else None,
+        "fuzz": {"should": int(fz.group(1)), "trivy_blind": int(fz.group(2)), "oracle_caught": int(fz.group(3)), "unknown": int(fz.group(4)), "oracle_miss": int(fz.group(5))} if fz else None,
+        "oracle_fuzz": {"cases": ofz_cases.group(1) if ofz_cases else None, "mismatch": sum(int(x) for x in ofz_mism) if ofz_mism else None},
         "reviews_root": reviews_root,
     }
 
@@ -434,9 +441,12 @@ def build(out_path: Path, reviews_root: Optional[Path] = None) -> Path:
              f"<div class='big'><div class='n'>{blind_n}<span style='font-size:22px;font-weight:600;color:var(--hero-sub)'> / {blind_d}</span></div>"
              "<div class='l'>스캐너는 통과시켰지만 실제 보안 상태는 그대로인 패치 — 오라클(V6)이 잡은 수 / 실제 plan 수</div>"
              f"<div class='m'>SG {S['blind_sg'][0] if S['blind_sg'] else '-'}/{S['blind_sg'][1] if S['blind_sg'] else '-'} · IAM {S['blind_iam'][0] if S['blind_iam'] else '-'}/{S['blind_iam'][1] if S['blind_iam'] else '-'} (experiments/ORACLE_RESULTS.md). "
-             f"파이프라인 seeded 실행에서는 재스캔 PASS ∧ V6 FAIL {S['spof_total']}건.</div></div></div></div>",
+             f"파이프라인 seeded 실행에서는 재스캔 PASS ∧ V6 FAIL {S['spof_total']}건.</div>"
+             + (f"<div class='m' style='margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.14)'>자동 생성 변형 {S['fuzz']['should']}종(잡혀야 하는 것) 중 <b style='color:#fff'>Trivy 사각 {S['fuzz']['trivy_blind']}종</b> → 오라클 탐지 <b style='color:#fff'>{S['fuzz']['oracle_caught']}</b> · 사람에게 {S['fuzz']['unknown']} · 오라클도 놓침 <b style='color:#fff'>{S['fuzz']['oracle_miss']}</b> (experiments/FUZZ_RESULTS.md)</div>" if S.get("fuzz") else "")
+             + (f"<div class='m'>오라클 차등 검증: 무작위 {S['oracle_fuzz']['cases']}건, 기준 구현과 불일치 <b style='color:#fff'>{S['oracle_fuzz']['mismatch']}</b>건 (experiments/ORACLE_FUZZ.md)</div>" if S.get("oracle_fuzz", {}).get("cases") else "")
+             + "</div></div></div>",
              "<nav class='tabs'><a href='#funnel'>깔때기</a><a href='#stops'>어느 계층이 잡았나</a>" + "".join(f"<a href='#{s}'>{esc(SET_SHORT[s])}</a>" for s in SETS)
-             + "<a href='#oracle'>오라클 실험</a><a href='#why'>기업용 한 장</a><a href='#e1'>E1</a><a href='#log'>로그</a><span class='sp'></span><button class='tg' onclick='tg()'>라이트/다크</button></nav>",
+             + "<a href='#fuzz'>스캐너 사각 탐색</a><a href='#ofuzz'>오라클 차등 검증</a><a href='#oracle'>오라클 실험</a><a href='#why'>기업용 한 장</a><a href='#e1'>E1</a><a href='#log'>로그</a><span class='sp'></span><button class='tg' onclick='tg()'>라이트/다크</button></nav>",
              "<div class='banner'><b>이 리포트가 말하지 않는 것</b> — "
              f"AWS 실제 반영·배포 후 검증(V7/V8) 실행 <b>{aws_runs}회</b> · Claude Code(LLM) 후보 <b>{n_llm}건</b> (0 이면 LLM 축은 미측정) · 미검증 계층(NOT_RUN/ERROR) <b>{S['not_run_total']}</b> · "
              "seeded 후보는 알려진 우회 패턴(사람/AI 세션 작성)이지 LLM 이 실제로 내는 빈도가 아니다 · 오라클 UNKNOWN 은 통과가 아니라 사람 검토다.</div>",
@@ -454,6 +464,8 @@ def build(out_path: Path, reviews_root: Optional[Path] = None) -> Path:
              + "<h4>최종 검토 수준</h4>" + _levels_html(S["levels"]) + "</div></div>",
              "<h2>세트별: 재스캔만 믿었을 때 vs 게이트</h2><div class='card'>" + (bar_html or "<p class='muted'>기록 없음</p>") + "</div>",
              *set_blocks,
+             "<h2 id='fuzz'>스캐너 사각 탐색 <small>겉모습만 다른 변형을 자동 생성해 Trivy 와 오라클에 나란히 — experiments/FUZZ_RESULTS.md</small></h2><div class='card'>" + (md_tables_to_html(_read(ROOT / "experiments" / "FUZZ_RESULTS.md")) or "<p class='muted'>아직 실행 전 (scripts/fuzz_scanner.py)</p>") + "</div>",
+             "<h2 id='ofuzz'>오라클 차등 검증 <small>무작위 입력으로 기준 구현과 대조 — experiments/ORACLE_FUZZ.md</small></h2><div class='card'>" + (md_tables_to_html(_read(ROOT / "experiments" / "ORACLE_FUZZ.md")) or "<p class='muted'>아직 실행 전 (scripts/oracle_fuzz.py)</p>") + "</div>",
              "<h2 id='oracle'>오라클 실험 <small>스캐너 vs V6, 실제 plan — experiments/ORACLE_RESULTS.md</small></h2><div class='card'>" + md_tables_to_html(oracle_md) + "</div>",
              "<h2 id='why'>기업용 한 장 <small>왜 스캐너만으로는 안 되나 — experiments/WHY_THIS_GATE.md</small></h2><div class='card'>" + md_tables_to_html(why_md) + "</div>",
              "<h2 id='e1'>E1 <small>후보 출처별 (세트 합산)</small></h2><div class='card'>" + (md_tables_to_html(e1) if e1 else "<p class='muted'>RESULTS_SUMMARY.md 없음</p>") + "</div>",

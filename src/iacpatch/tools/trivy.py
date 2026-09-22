@@ -79,23 +79,25 @@ class TrivyAdapter:
     def available(self) -> bool:
         return which(self.binary) is not None or os.path.exists(self.binary)
 
+    _ENV = {"TRIVY_SKIP_VERSION_CHECK": "true"}   # --version 도 check.trivy.dev 에 접속한다 → 끈다 (네트워크 0)
+
     def version(self) -> str:
         if not self.available():
             return ""
-        r = run([self.binary, "--version"], timeout=60)
+        r = run([self.binary, "--version"], timeout=60, env=self._ENV)
         return (r.stdout.strip().splitlines() or [""])[0].replace("Version:", "").strip()
 
     def scan_dir(self, target_dir: str | Path, output_json: Optional[str | Path] = None,
                  tf_vars: Optional[str] = None, timeout: int = 600) -> TrivyScan:
         argv = [self.binary, "config", str(target_dir), "--format", "json", "--include-non-failures", "--quiet"]
         if self.skip_check_update:
-            argv.append("--skip-check-update")
+            argv += ["--skip-check-update", "--skip-version-check"]   # 체크 번들 갱신·버전 확인(check.trivy.dev) 모두 안 함 = 네트워크 0
         if tf_vars:
             argv += ["--tf-vars", str(tf_vars)]
         if output_json:
             argv += ["--output", str(output_json)]
         try:
-            r = run(argv, timeout=timeout)
+            r = run(argv, timeout=timeout, env=self._ENV)
         except ToolNotFound as e:
             return TrivyScan(False, {}, [], {}, "", str(e), argv)
         if r.timed_out:

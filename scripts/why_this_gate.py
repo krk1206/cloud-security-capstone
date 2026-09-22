@@ -87,6 +87,14 @@ def main() -> int:
     for name, rows in (("SG", sg), ("IAM", iam)):
         ok = [r for r in rows if r[3] == "PASS"]
         L.append(f"- {name}: 정상으로 설계된 후보 {len(ok)}개 중 오라클 PASS {sum(1 for r in ok if r[2] == 'PASS')}개")
+    fuzz_md = (ROOT / "experiments" / "FUZZ_RESULTS.md").read_text(encoding="utf-8") if (ROOT / "experiments" / "FUZZ_RESULTS.md").exists() else ""
+    fz = re.search(r"잡혀야 하는 변형 (\d+)개 중 Trivy 사각 \*\*(\d+)개\*\*, 그중 오라클 탐지 \*\*(\d+)개\*\* · UNKNOWN (\d+)개 · 오라클도 놓침 \*\*(\d+)개\*\*", fuzz_md)
+    L += ["", "## 2b. 겉모습만 바꾼 변형을 자동으로 만들어 넣었을 때 (스캐너 사각 탐색, `scripts/fuzz_scanner.py`)", ""]
+    if fz:
+        L += [f"- 잡혀야 하는 변형 {fz.group(1)}종 중 Trivy 가 못 본 것 **{fz.group(2)}종** → 오라클이 잡은 것 **{fz.group(3)}종**, 사람에게 넘긴 것 {fz.group(4)}종, 오라클도 놓친 것 **{fz.group(5)}종** (`experiments/FUZZ_RESULTS.md`)",
+              "- 재주별(CIDR 분할·별도 규칙 리소스·변수/함수 경유·dynamic/for_each·prefix list·인접 SG·IAM 나열·Resource *·신뢰 정책 …)로 어떤 겉모습이 스캐너를 통과하는지가 표로 남는다. 정답은 변형을 만들 때 구조적으로 정해지므로 사람 라벨이 없다."]
+    else:
+        L.append("- 기록 없음 (scripts/fuzz_scanner.py 미실행)")
     L += ["", "## 3. 파이프라인 전체(정책 → V1~V6 → 검토 수준)를 돌렸을 때", ""]
     for set_id in ("eval-seeded-sg", "eval-seeded-iam"):
         s = latest_set_summary(set_id)
@@ -99,6 +107,7 @@ def main() -> int:
           "- 배포 후 실제 상태 확인(V7/V8)은 코드는 있으나 이 저장소 기록에는 **실행 0회** 다.",
           f"- LLM 이 실제로 기만적 패치를 내는 비율은 아직 측정 전이다 (Claude Code 후보 {n_llm}건).",
           "- IAM 은 Tier 1(Allow 문, `*` 와일드카드, 역할 합산)만 판정한다. Deny/Condition/NotAction/관리형 정책은 '판단 불가 → 사람 검토' 다.",
+          "- 오라클 자체의 집합 연산은 무작위 입력으로 기준 구현과 대조했다 (`experiments/ORACLE_FUZZ.md`, 불일치 0 이어야 함). plan 을 읽어 세계를 만드는 부분은 변형 생성 실험과 fixture 회귀 테스트가 맡는다.",
           "- 같은 검사를 OPA/Sentinel 정책 코드로 직접 작성할 수도 있다. 이 게이트의 가치는 '미리 구현된 실효 상태 오라클 + intent 비교 + 위험도 게이트 + 근거 기록' 을 한 묶음으로 CI 에 붙이는 데 있다.", "",
           "## 5. 기업이 쓴다면 어디에", "",
           "- PR 체크: AI 도구(Copilot/Claude Code/Q Developer 등)가 제안한 IaC 수정 PR 에 이 게이트를 required check 로. 통과 못 하면 근거 표와 함께 차단.",

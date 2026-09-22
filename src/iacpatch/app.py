@@ -102,6 +102,7 @@ def _env() -> dict:
     env["PYTHONPATH"] = str(ROOT / "src") + os.pathsep + env.get("PYTHONPATH", "")
     env["PYTHONIOENCODING"] = "utf-8"
     env.setdefault("TRIVY_SKIP_CHECK_UPDATE", "1")
+    env.setdefault("TRIVY_SKIP_VERSION_CHECK", "true")
     win = platform.system() == "Windows"
     for name, key in (("trivy", "TRIVY_BIN"), ("terraform", "TERRAFORM_BIN")):
         exe = ROOT / "tools" / (name + (".exe" if win else ""))
@@ -131,6 +132,8 @@ def steps(include_cc: bool, fresh: bool = False) -> List[tuple]:
         s.append(("6/8 eval-claude-code — 후보 0건, 건너뜀 (scripts/cc_prompt.py → Claude Code → scripts/cc_add.py 로 채운다)", None))
     s += [
         ("7/8 오라클 실험 (스캐너 vs V6, 실제 plan)", _script_cmd("scripts/oracle_experiment.py")),
+        ("8/8 스캐너 사각 탐색 (변형 자동 생성 → Trivy vs 오라클)", _script_cmd("scripts/fuzz_scanner.py", *extra)),
+        ("8/8 오라클 차등 검증 (무작위 20,000건)", _script_cmd("scripts/oracle_fuzz.py")),
         ("8/8 요약", _script_cmd("scripts/summarize_experiments.py")),
         ("8/8 기업용 한 장 (실측만)", _script_cmd("scripts/why_this_gate.py")),
     ]

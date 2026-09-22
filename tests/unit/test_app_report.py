@@ -50,6 +50,8 @@ class AppTests(unittest.TestCase):
         self.assertIn("eval-iam-rule", titles[4]); self.assertIn("eval-seeded-iam", titles[5])
         self.assertIsNone(s[6][1])                             # 후보 0건이면 건너뜀 (실행하지 않음)
         cmds = [" ".join(c) for _, c in s if c]
+        self.assertTrue(any("fuzz_scanner" in " ".join(c) for _, c in s if c))
+        self.assertTrue(any("oracle_fuzz" in " ".join(c) for _, c in s if c))
         for banned in ("aws ", "apply", "claude", "curl", "git push", "openai", "anthropic"):
             self.assertFalse(any(banned in c for c in cmds), banned)
         self.assertEqual(len(app.steps(include_cc=True)), len(s))

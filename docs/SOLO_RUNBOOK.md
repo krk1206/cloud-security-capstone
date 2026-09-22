@@ -10,7 +10,7 @@
 | 버튼 | 하는 일 |
 |---|---|
 | 도구 설치/확인 | `scripts/setup_tools.*` — trivy/terraform 을 `tools\` 에 받는다 (처음 한 번) |
-| ▶ 전체 실행 | 단위 테스트(0/8) → 실험 8단계(아래 1절과 같음) → `report/index.html` 생성 → 브라우저로 연다 |
+| ▶ 전체 실행 | 단위 테스트(0/8) → 실험 8단계(아래 1절 + 스캐너 사각 탐색 `FUZZ_RESULTS.md` + 오라클 차등 검증 `ORACLE_FUZZ.md`) → `report/index.html` 생성 → 브라우저로 연다 |
 | 리포트만 다시 생성 | 실험은 건너뛰고 `data/reviews/` 기록으로 리포트만 |
 | 리포트 열기 | 마지막 리포트 |
 
