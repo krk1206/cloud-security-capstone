@@ -47,9 +47,13 @@ def _row_from_review(d: Path) -> Optional[Dict[str, Any]]:
         layers[l.get("layer")] = l.get("verdict")
     cand = _load(d / "candidate.json") or {}
     risk = (_load(d / "risk.json") or {}).get("decision") or {}
+    pd = st.get("post_deploy") or {}
+    for k, v in (pd.get("layers") or {}).items():       # 배포 후 축(V7/V8) — 있을 때만
+        layers[k] = v
     return {
         "kind": "review", "run_id": st.get("run_id"), "scenario": st.get("scenario"), "state": st.get("state"),
         "duration_s": _duration_s(st.get("started_at"), st.get("finished_at")),
+        "post_deploy": pd.get("status") or "-",
         "review_level": st.get("review_level"), "origin": cand.get("origin") or st.get("candidate_origin") or "-",
         "generator": cand.get("generator") or "-", "candidate_status": cand.get("status") or "-", "verification_status": st.get("verification_status"),
         "verification_source": st.get("verification_source") or ver.get("source"), "risk": risk.get("risk_level"), "layers": layers,
@@ -189,10 +193,17 @@ def render_table(rows: List[Dict[str, Any]], title: str = "집계", labels: Opti
         L.append(f"- 자동 처리 시간(기록 시작~종료, 사람 승인 대기 제외): {len(durs)}건 합계 {sum(durs):.0f}s, 평균 {sum(durs)/len(durs):.1f}s, 최대 {max(durs):.0f}s"
                  " — 도구 없이 돈 기록은 검증을 건너뛴 시간이므로 도구 있는 기록과 섞어 평균 내지 말 것")
         L.append("")
-    L += ["| run | 시나리오 | 출처 | 상태 | 검토수준 | 검증 | 위험도 | V1 | V2 | V3 | V4 | V5 | V6 | 소요(s) |", "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
+    has_pd = any(r.get("post_deploy", "-") != "-" for r in rows)
+    if has_pd:
+        pds = Counter(r.get("post_deploy", "-") for r in rows)
+        L.append(f"- 배포 후(V7/V8) 상태: {dict(pds)}  (VERIFIED 만 배포 후 검증 통과. '-' 는 배포 후 검증을 하지 않은 기록)")
+        L.append("")
+    L += ["| run | 시나리오 | 출처 | 상태 | 검토수준 | 검증 | 위험도 | V1 | V2 | V3 | V4 | V5 | V6 |" + (" V7 | V8 | 배포후 |" if has_pd else "") + " 소요(s) |",
+          "|---|---|---|---|---|---|---|---|---|---|---|---|---|" + ("---|---|---|" if has_pd else "") + "---|"]
     for r in rows:
         ly = r["layers"]
         d = r.get("duration_s")
+        extra = (" " + " | ".join(str(ly.get(x, "-")) for x in ["V7", "V8"]) + f" | {r.get('post_deploy', '-')} |") if has_pd else ""
         L.append(f"| {r['run_id']} | {r['scenario']} | {r['origin']} | {r['state']} | {r['review_level']} | {r['verification_status']} | {r['risk'] or '-'} | "
-                 + " | ".join(str(ly.get(x, "-")) for x in ["V1", "V2", "V3", "V4", "V5", "V6"]) + f" | {d if d is not None else '-'} |")
+                 + " | ".join(str(ly.get(x, "-")) for x in ["V1", "V2", "V3", "V4", "V5", "V6"]) + " |" + extra + f" {d if d is not None else '-'} |")
     return "\n".join(L) + "\n"

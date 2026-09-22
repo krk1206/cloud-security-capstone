@@ -4,8 +4,8 @@
   oracle      plan JSON + intent 로 V6 만 실행 (디버깅/실험용)
   scan        Trivy 스캔만
   pr          --run <predeploy id> 또는 --review <review id> 기록으로부터 브랜치/커밋/PR 준비. --execute 없으면 명령만 출력
-  postdeploy  V7(AWS 실측) + V8(통신 확인). --execute 없으면 실행할 명령만 출력
-  recover     배포 후 실패 복구 절차 (revert → plan → apply(승인) → V7 재확인)
+  postdeploy  V7(AWS 실측) + V8(통신 확인). --run 또는 --review 로 기록에 연결. --execute 없으면 실행할 명령만 출력
+  recover     배포 후 실패 복구 절차 (원본 복원 → plan → apply(승인) → 수렴 확인). --run 또는 --review
   selfcheck   도구 존재/버전 확인
 
 B·C 3~4주차 (외부 도구·API 없이 파일 입력만으로):
@@ -112,15 +112,18 @@ def cmd_postdeploy(args: argparse.Namespace) -> int:
     from .postdeploy import run_postdeploy
     s = _settings(args)
     res = run_postdeploy(s, args.intent, args.sg_ids, args.v8_checks, execute=args.execute, run_id=args.run,
-                         tf_dir=args.tf_dir)
+                         tf_dir=args.tf_dir, review_id=args.review)
     print(res)
-    return 0
+    return 0 if not res.startswith(("refusing", "intent unusable", "review record")) else 3
 
 
 def cmd_recover(args: argparse.Namespace) -> int:
     from .postdeploy import run_recover
     s = _settings(args)
-    return run_recover(s, args.run, execute=args.execute, tf_dir=args.tf_dir)
+    if not args.review and not (args.run and args.tf_dir):
+        print("--review <review id> 또는 --run <predeploy id> --tf-dir <dir> 가 필요하다")
+        return 2
+    return run_recover(s, args.run, execute=args.execute, tf_dir=args.tf_dir, review_id=args.review)
 
 
 def cmd_findings(args: argparse.Namespace) -> int:
@@ -210,7 +213,8 @@ def build_parser() -> argparse.ArgumentParser:
     sp = sub.add_parser("postdeploy", parents=[common])
     sp.add_argument("--intent", required=True); sp.add_argument("--sg-ids", nargs="*", default=[], help="대상 SG ID (없으면 --tf-dir 의 state/output 에서)")
     sp.add_argument("--tf-dir", help="apply 된 Terraform 디렉터리 (terraform show -json 으로 주소↔ID 매핑)")
-    sp.add_argument("--v8-checks", help="V8 체크 정의 JSON"); sp.add_argument("--run", help="연결할 run id")
+    sp.add_argument("--v8-checks", help="V8 체크 정의 JSON (예: policy/intent/sg-baseline.v8.example.json)"); sp.add_argument("--run", help="연결할 predeploy run id")
+    sp.add_argument("--review", help="연결할 review 기록 id (data/reviews) — tf_dir 을 기록에서 읽고 결과를 기록에 남긴다")
     sp.add_argument("--execute", action="store_true", help="실제 AWS 조회/통신 시도 실행")
     sp.set_defaults(fn=cmd_postdeploy)
 
@@ -240,7 +244,8 @@ def build_parser() -> argparse.ArgumentParser:
     sp.set_defaults(fn=cmd_metrics)
 
     sp = sub.add_parser("recover", parents=[common])
-    sp.add_argument("--run", required=True); sp.add_argument("--tf-dir", required=True); sp.add_argument("--execute", action="store_true")
+    sp.add_argument("--run", help="predeploy run id (baseline_files.json)"); sp.add_argument("--review", help="review 기록 id — original/ 사본으로 복원, tf_dir 은 기록에서")
+    sp.add_argument("--tf-dir", help="복원할 Terraform 디렉터리 (--review 면 생략 가능)"); sp.add_argument("--execute", action="store_true")
     sp.set_defaults(fn=cmd_recover)
     return p
 

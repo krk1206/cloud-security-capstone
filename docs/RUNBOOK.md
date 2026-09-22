@@ -132,8 +132,11 @@ python3 -m iacpatch oracle --plan tests/fixtures/plans/01-cidr-split/plan.json \
 3. GitHub 에서 사람이 리뷰·승인·병합
 4. WSL 에서 사람이 `cd infrastructure/sg-baseline && terraform plan && terraform apply` (프로필 `capstone`)
 5. `python3 -m iacpatch postdeploy --intent policy/intent/sg-baseline.json --tf-dir infrastructure/sg-baseline --aws-profile capstone` (미리보기) → `--execute`
-   - V8 은 `--v8-checks <json>` 으로 체크 정의를 넘겨야 한다 (docs/MODULE_SPEC.md 끝). 인스턴스가 없으면 V8 은 실행 불가.
+   - 실험 기록에서 왔으면 `--review <data/reviews id>`: tf_dir 을 기록에서 읽고, 결과를 기록의 `postdeploy/<시각>/` 와 `state.json.post_deploy` 에 남긴다 (VERIFIED / DEPLOY_FAILED / UNVERIFIED). 배포 전 검토 수준은 바꾸지 않는다. LIGHT/FULL_REVIEW 기록만 받는다.
+   - V8 은 `--v8-checks <json>` 으로 체크 정의를 넘겨야 한다. 예시: `policy/intent/sg-baseline.v8.example.json` (host·observed 를 채워 `sg-baseline.v8.json` 으로 저장). 인스턴스가 없으면 V8 은 실행 불가. 승인 밖 vantage 의 closed 검사가 없으면 V8 은 UNKNOWN 이지 PASS 가 아니다.
+   - 승인 출처: sandbox 용 intent 는 접속 테스트할 PC 의 실제 공인 IP /32 로 따로 만든다 (D-2). 평가용 `10.0.0.0/8` 을 그대로 쓰면 V8 의 approved 검사가 성립하지 않는다.
 6. 실패 시 `python3 -m iacpatch recover --run <id> --tf-dir infrastructure/sg-baseline --aws-profile capstone` (미리보기) → `--execute`
+   - 실험 기록이면 `recover --review <id>`: 기록의 `original/` 사본으로 복원하고 결과를 `state.json.recovery` 에 남긴다.
    - git 되돌리기만으로 복구 완료로 치지 않는다. apply 후 `plan` 이 "변경 없음" 이고 describe 결과가 기록돼야 RECOVERED.
 
 ## 7. 온라인 plan (상태 기준)

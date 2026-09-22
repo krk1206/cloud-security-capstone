@@ -9,14 +9,19 @@ V8  통신 확인: 허용돼야 할 통신(승인 출처에서)이 성공하고,
     변경 없음(drift 없음) 확인 + describe 로 실측 기록 → 그때 RECOVERED.
 
 --execute 없이 호출하면 실제 AWS 조회/통신/apply 를 하지 않고, 실행할 명령만 출력한다.
+
+review 기록(data/reviews, 실험 흐름) 과의 연결: `--review <id>` 를 주면 tf_dir 을 기록에서 읽고, 결과를 기록 안
+`postdeploy/<시각>/` 에 남기며 state.json 의 `post_deploy` 에 V7/V8 판정과 배포 상태(VERIFIED / DEPLOY_FAILED /
+UNVERIFIED) 를 적는다. 배포 전 검토 수준(review_level) 은 바꾸지 않는다 — 배포 후 결과는 별도 축이다.
 """
 from __future__ import annotations
 
+import datetime as _dt
 import json
 import socket
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from .config import Settings, load_json
 from .intent import try_load_intent
@@ -166,14 +171,68 @@ def v8_connectivity(checks_spec: Optional[Dict[str, Any]], intent, execute: bool
 
 
 # ---------------------------------------------------------------------------
+# review 기록(data/reviews) 연결
+# ---------------------------------------------------------------------------
+def _now() -> str:
+    return _dt.datetime.now(_dt.timezone.utc).astimezone().isoformat(timespec="seconds")
+
+
+def load_review_record(settings: Settings, review_id: str) -> Tuple[Optional[Path], Dict[str, Any], str]:
+    """review id(data/reviews/<id>) 또는 기록 폴더 경로 → (폴더, state.json, 오류메시지)."""
+    cand = Path(review_id)
+    d = cand.resolve() if (cand / "state.json").exists() else settings.path("data/reviews") / review_id
+    if not (d / "state.json").exists():
+        return None, {}, f"review record not found: {d}"
+    try:
+        st = json.loads((d / "state.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError) as e:
+        return None, {}, f"review record unreadable: {e}"
+    return d, st, ""
+
+
+def _update_review_state(review_dir: Path, **kw: Any) -> None:
+    p = review_dir / "state.json"
+    st = json.loads(p.read_text(encoding="utf-8"))
+    st.update(kw)
+    p.write_text(json.dumps(st, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
+
+
+def post_deploy_status(report, execute: bool) -> str:
+    """배포 후 축의 상태. 배포 전 review_level 과는 별개다.
+    VERIFIED      : 실행됐고 V7·V8 모두 PASS
+    DEPLOY_FAILED : 실행됐고 FAIL 이 하나라도 있음 → 복구 절차(iacpatch recover) 대상
+    UNVERIFIED    : 실행 안 됨 / UNKNOWN·SKIPPED·ERROR 가 남음 (통과가 아니다)
+    """
+    verdicts = [l.verdict for l in report.layers]
+    if any(v == Verdict.FAIL for v in verdicts):
+        return "DEPLOY_FAILED"
+    if execute and verdicts and all(v == Verdict.PASS for v in verdicts):
+        return "VERIFIED"
+    return "UNVERIFIED"
+
+
+# ---------------------------------------------------------------------------
 def run_postdeploy(settings: Settings, intent_path: str, sg_ids: List[str], v8_checks_path: Optional[str], execute: bool,
-                   run_id: Optional[str] = None, tf_dir: Optional[str] = None) -> str:
+                   run_id: Optional[str] = None, tf_dir: Optional[str] = None, review_id: Optional[str] = None,
+                   cli: Optional[AwsCli] = None) -> str:
     intent, err = try_load_intent(settings.path(intent_path))
     if intent is None:
         return f"intent unusable: {err}"
+    review_dir: Optional[Path] = None
+    if review_id:
+        review_dir, st, rerr = load_review_record(settings, review_id)
+        if review_dir is None:
+            return rerr
+        if not tf_dir:
+            tf_dir = st.get("tf_dir") or None
+        if st.get("review_level") not in ("LIGHT_REVIEW", "FULL_REVIEW"):
+            # 배포됐을 리 없는 기록에 배포 후 결과를 붙이지 않는다 (사람이 우회 apply 했더라도 기록상으로는 거부)
+            return (f"refusing: review {review_dir.name} has review_level={st.get('review_level')!r} "
+                    "(only LIGHT_REVIEW / FULL_REVIEW records can be deployed and post-verified)")
     rec = RunRecord(settings.path(settings.data_dir), label=f"postdeploy:{intent.intent_id}")
     rec.summary["linked_run"] = run_id
-    cli = AwsCli(settings.aws_bin, settings.aws_profile or None, settings.aws_region)
+    rec.summary["linked_review"] = review_dir.name if review_dir else None
+    cli = cli or AwsCli(settings.aws_bin, settings.aws_profile or None, settings.aws_region)
     aliases: Dict[str, str] = {}
     if tf_dir:
         try:
@@ -193,30 +252,77 @@ def run_postdeploy(settings: Settings, intent_path: str, sg_ids: List[str], v8_c
     report = combine("post_deploy", [v7, v8])
     rec.write_json("verification_post.json", report.to_dict())
     rec.finish("DONE" if execute else "PREVIEW", validity=report.to_dict())
+    status = post_deploy_status(report, execute)
     lines = [f"post-deploy run {rec.run_id}: {report.validity.value} — {report.summary}"]
     for l in report.layers:
         lines.append(f"  {l.layer} {l.verdict.value:8s} {l.summary[:300]}")
     if not execute:
         lines.append("  (preview only; re-run with --execute after a human approves AWS read access)")
     lines.append(f"  record: {rec.dir}")
+    if review_dir is not None:
+        sub = review_dir / "postdeploy" / rec.run_id
+        sub.mkdir(parents=True, exist_ok=True)
+        (sub / "verification_post.json").write_text(json.dumps(report.to_dict(), ensure_ascii=False, indent=2, default=str), encoding="utf-8")
+        if raw:
+            (sub / "aws_raw.json").write_text(json.dumps(raw, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
+        entry = {"run_id": rec.run_id, "at": _now(), "executed": execute, "intent": intent.intent_id, "status": status,
+                 "validity": report.validity.value, "layers": {l.layer: l.verdict.value for l in report.layers},
+                 "summary": report.summary[:500], "path": str(sub.relative_to(review_dir))}
+        st = json.loads((review_dir / "state.json").read_text(encoding="utf-8"))
+        hist = list(st.get("post_deploy_history") or []) + [entry]
+        _update_review_state(review_dir, post_deploy=entry, post_deploy_history=hist)
+        lines.append(f"  review : {review_dir.name} post_deploy={status} (V7={entry['layers'].get('V7')}, V8={entry['layers'].get('V8')})")
+        if status == "DEPLOY_FAILED":
+            lines.append(f"  → 복구 절차: python -m iacpatch recover --review {review_dir.name} (미리보기) → --execute (사람 승인)")
     return "\n".join(lines)
 
 
 # ---------------------------------------------------------------------------
 # 복구
 # ---------------------------------------------------------------------------
-def run_recover(settings: Settings, run_id: str, execute: bool, tf_dir: str) -> int:
-    run_dir = settings.path(settings.data_dir) / run_id
-    snap = run_dir / "baseline_files.json"
-    if not snap.exists():
-        print(f"no baseline snapshot in {run_dir}")
-        return 2
-    baseline_files: Dict[str, str] = json.loads(snap.read_text(encoding="utf-8"))
+def _baseline_from_review(review_dir: Path) -> Dict[str, str]:
+    """review 기록의 original/ (패치 전 원본 사본) → {상대경로: 내용}. sha256.json 은 제외."""
+    orig = review_dir / "original"
+    files: Dict[str, str] = {}
+    for p in sorted(orig.rglob("*")):
+        if p.is_file() and p.name != "sha256.json":
+            files[str(p.relative_to(orig))] = p.read_text(encoding="utf-8")
+    return files
+
+
+def run_recover(settings: Settings, run_id: Optional[str], execute: bool, tf_dir: Optional[str], review_id: Optional[str] = None) -> int:
+    review_dir: Optional[Path] = None
+    if review_id:
+        review_dir, st, rerr = load_review_record(settings, review_id)
+        if review_dir is None:
+            print(rerr)
+            return 2
+        tf_dir = tf_dir or st.get("tf_dir")
+        if not tf_dir:
+            print("review record has no tf_dir — pass --tf-dir")
+            return 2
+        baseline_files = _baseline_from_review(review_dir)
+        if not baseline_files:
+            print(f"no original/ snapshot in {review_dir}")
+            return 2
+        label_id = review_dir.name
+    else:
+        if not run_id or not tf_dir:
+            print("--run <id> --tf-dir <dir> 또는 --review <id> 가 필요하다")
+            return 2
+        run_dir = settings.path(settings.data_dir) / run_id
+        snap = run_dir / "baseline_files.json"
+        if not snap.exists():
+            print(f"no baseline snapshot in {run_dir}")
+            return 2
+        baseline_files = json.loads(snap.read_text(encoding="utf-8"))
+        label_id = run_id
     target = settings.path(tf_dir)
     tf = TerraformAdapter(settings.terraform_bin, settings.aws_region)
-    rec = RunRecord(settings.path(settings.data_dir), label=f"recover:{run_id}")
+    rec = RunRecord(settings.path(settings.data_dir), label=f"recover:{label_id}")
     rec.summary["linked_run"] = run_id
-    print(f"recovery for run {run_id} → {target}")
+    rec.summary["linked_review"] = review_dir.name if review_dir else None
+    print(f"recovery for {'review' if review_dir else 'run'} {label_id} → {target}")
     print("step 1: restore pre-patch files (from run record) into the Terraform directory")
     for name in baseline_files:
         print(f"   - {target / name}")
@@ -224,6 +330,8 @@ def run_recover(settings: Settings, run_id: str, execute: bool, tf_dir: str) -> 
     print("step 5: terraform plan -detailed-exitcode must report NO changes, and describe-security-groups is recorded → RECOVERED")
     if not execute:
         rec.finish("RECOVERY_PENDING", note="preview only")
+        if review_dir is not None:
+            _update_review_state(review_dir, recovery={"run_id": rec.run_id, "at": _now(), "status": "RECOVERY_PENDING", "executed": False})
         print("preview only (--execute not given). Nothing was changed.")
         return 0
     for name, content in baseline_files.items():
@@ -232,12 +340,16 @@ def run_recover(settings: Settings, run_id: str, execute: bool, tf_dir: str) -> 
     init = tf.init(target)
     if not init.ok:
         rec.finish("RECOVERY_INCOMPLETE", note=f"init failed: {init.error}")
+        if review_dir is not None:
+            _update_review_state(review_dir, recovery={"run_id": rec.run_id, "at": _now(), "status": "RECOVERY_INCOMPLETE", "executed": True, "note": "init failed"})
         print("init failed:", init.error)
         return 1
     plan = tf.plan(target, plan_file="recover.tfplan")
     rec.step("plan", "OK" if plan.ok else "FAIL", plan.error[:300])
     if not plan.ok:
         rec.finish("RECOVERY_INCOMPLETE", note=f"plan failed: {plan.error}")
+        if review_dir is not None:
+            _update_review_state(review_dir, recovery={"run_id": rec.run_id, "at": _now(), "status": "RECOVERY_INCOMPLETE", "executed": True, "note": "plan failed"})
         print("plan failed:", plan.error)
         return 1
     print(plan.result.stdout[-2000:] if plan.result else "")
@@ -245,6 +357,8 @@ def run_recover(settings: Settings, run_id: str, execute: bool, tf_dir: str) -> 
     rec.step("apply", "OK" if apply.ok else "FAIL", apply.error[:300])
     if not apply.ok:
         rec.finish("RECOVERY_INCOMPLETE", note=f"apply failed: {apply.error}")
+        if review_dir is not None:
+            _update_review_state(review_dir, recovery={"run_id": rec.run_id, "at": _now(), "status": "RECOVERY_INCOMPLETE", "executed": True, "note": "apply failed"})
         print("apply failed:", apply.error)
         return 1
     # 수렴 확인: 다시 plan 했을 때 변경이 없어야 한다
@@ -263,5 +377,8 @@ def run_recover(settings: Settings, run_id: str, execute: bool, tf_dir: str) -> 
         described = False
     status = "RECOVERED" if (converged and described) else "RECOVERY_INCOMPLETE"
     rec.finish(status, converged=converged, described=described)
+    if review_dir is not None:
+        _update_review_state(review_dir, recovery={"run_id": rec.run_id, "at": _now(), "status": status, "executed": True,
+                                                   "converged": converged, "described": described})
     print(f"{status} (plan converged={converged}, aws state recorded={described}) — record {rec.dir}")
     return 0 if status == "RECOVERED" else 1

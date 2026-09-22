@@ -33,8 +33,9 @@
 |---|---|---|---|
 | 실제 LLM API 제공자 (anthropic / openai / openai_compatible) | `generator/llm_providers.py` | 코드 작성, **미실행**. 키 없음·제공업체 미정. 키 없이 호출하면 error 로 끝나는 것만 확인 | 제공업체 결정 + 키(환경변수) + 첫 실행 기록 |
 | V7 AWS 실측 (describe-security-groups / network-interfaces / prefix-list 전개 → 오라클) | `postdeploy.py`, `tools/awscli.py` | 코드 + FakeCli 단위 테스트. **실제 AWS 미호출** | 샌드박스 apply 후 `postdeploy --execute` (사람 승인) |
-| V8 통신 확인 (허용 성공 + 승인 밖 vantage 에서 실패) | `postdeploy.py` | 로컬 소켓 단위 테스트만. 실제 인스턴스 없음 | EC2 인스턴스 + 승인 밖 관측 지점(예: 별도 SG 의 임시 EC2, 핫스팟) + 체크 JSON |
-| 복구 절차 (파일 복원 → plan → apply → 수렴 확인 + describe 기록) | `postdeploy.run_recover` | 미리보기 모드만 실행 | 샌드박스에서 `--execute` (사람 승인) |
+| V8 통신 확인 (허용 성공 + 승인 밖 vantage 에서 실패) | `postdeploy.py` | 로컬 소켓 단위 테스트만. 실제 인스턴스 없음. 체크 정의 예시 `policy/intent/sg-baseline.v8.example.json` (09-22) | EC2 인스턴스 + 승인 밖 관측 지점(예: 별도 SG 의 임시 EC2, 핫스팟) + 체크 JSON |
+| 복구 절차 (파일 복원 → plan → apply → 수렴 확인 + describe 기록) | `postdeploy.run_recover` | 미리보기 모드만 실행. 09-22: `--review <id>` 로 실험 기록의 `original/` 에서 복원 가능(단위 테스트) | 샌드박스에서 `--execute` (사람 승인) |
+| 배포 후 결과를 실험 기록에 연결 (`postdeploy --review`) | `postdeploy.py` | 09-22 구현. FakeCli 로 VERIFIED / DEPLOY_FAILED / UNVERIFIED 경로 단위 테스트. metrics 표에 V7/V8/배포후 열. **실제 AWS 실행 0회** | A 가 sandbox apply 후 `--execute` |
 | PR 생성 (브랜치/커밋/push/REST) | `tools/github.py` | 미리보기 모드(명령 출력)만 실행. push 미실행. 2026-09-22: `--review <id>` 로 실험 기록(data/reviews)도 받음 — LIGHT/FULL_REVIEW 만 허용, 단위 테스트 4건 | 저장소 권한 + `--execute` (사람) |
 | GitHub Actions `patch-verify.yml` | `.github/workflows/` | 작성만. Actions 에서 미실행 | push 후 첫 실행 확인 (Trivy 설치 스크립트 URL 포함) |
 | 온라인 plan (상태 기준, `plan_actions_delete/replace` 실측) | `tools/terraform.py --online` | 오프라인만 실행 | AWS 프로필 |
