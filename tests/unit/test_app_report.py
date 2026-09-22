@@ -73,5 +73,49 @@ class AppTests(unittest.TestCase):
         self.assertIn(b"-m iacpatch.app", raw)
 
 
+class FingerprintTests(unittest.TestCase):
+    def test_code_digest_ignores_runner_and_report_modules(self):
+        from iacpatch import fingerprint
+        d1 = fingerprint.code_digest(ROOT)
+        # 실행기/리포트 모듈은 판정과 무관 → 지문에 포함되지 않는다 (같은 트리를 두 번 읽어도 같은 값)
+        self.assertEqual(d1, fingerprint.code_digest(ROOT))
+        self.assertEqual(len(d1), 64)
+        self.assertIn("app.py", fingerprint._NON_JUDGING)
+        self.assertIn("report_html.py", fingerprint._NON_JUDGING)
+
+    def test_tree_digest_changes_with_content_and_ignores_terraform_dir(self):
+        from iacpatch import fingerprint
+        with tempfile.TemporaryDirectory() as td:
+            d = Path(td); (d / "main.tf").write_text("a", encoding="utf-8")
+            h1 = fingerprint.tree_digest(d)
+            (d / ".terraform").mkdir(); (d / ".terraform" / "x").write_text("junk", encoding="utf-8")
+            (d / "plan.json").write_text("{}", encoding="utf-8")
+            self.assertEqual(h1, fingerprint.tree_digest(d))           # .terraform/, plan.json 무시
+            (d / "main.tf").write_text("b", encoding="utf-8")
+            self.assertNotEqual(h1, fingerprint.tree_digest(d))        # 내용이 바뀌면 다른 지문
+
+    def test_provider_template_restore_uses_links_and_keeps_lock(self):
+        from iacpatch.tools.terraform import TerraformAdapter
+        with tempfile.TemporaryDirectory() as td:
+            t = Path(td) / "tpl"; (t / ".terraform" / "providers" / "r" / "h" / "aws" / "1.0" / "os_arch").mkdir(parents=True)
+            (t / ".terraform" / "providers" / "r" / "h" / "aws" / "1.0" / "os_arch" / "terraform-provider-aws").write_bytes(b"bin")
+            (t / ".terraform.lock.hcl").write_text("lock", encoding="utf-8")
+            tf = TerraformAdapter("terraform-not-needed", template_dir=t)
+            wd = Path(td) / "wd"; wd.mkdir()
+            self.assertTrue(tf.restore_provider_template(wd))
+            prov = wd / ".terraform" / "providers" / "r" / "h" / "aws" / "1.0" / "os_arch" / "terraform-provider-aws"
+            self.assertEqual(prov.read_bytes(), b"bin")
+            self.assertEqual((wd / ".terraform.lock.hcl").read_text(encoding="utf-8"), "lock")
+            self.assertEqual(tf.last_template_action, "restored")
+            # 템플릿이 없으면 False (init 이 평소대로)
+            tf2 = TerraformAdapter("terraform-not-needed", template_dir=Path(td) / "none")
+            self.assertFalse(tf2.restore_provider_template(wd))
+            # 같은 lock 이면 다시 저장하지 않는다
+            self.assertFalse(tf.save_provider_template(wd))
+            (wd / ".terraform.lock.hcl").write_text("lock2", encoding="utf-8")
+            self.assertTrue(tf.save_provider_template(wd))
+            self.assertEqual((t / ".terraform.lock.hcl").read_text(encoding="utf-8"), "lock2")
+
+
 if __name__ == "__main__":
     unittest.main()

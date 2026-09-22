@@ -4,6 +4,7 @@
     python -m iacpatch.app --console  # 콘솔 강제
     python -m iacpatch.app --report-only   # 실험은 건너뛰고 리포트만 다시 만들어 연다
     python -m iacpatch.app --no-open       # 브라우저를 열지 않는다
+    python -m iacpatch.app --fresh         # 이전 기록 재사용 없이 전부 다시 (기본은 바뀐 후보만 다시 돈다)
 
 exe 로 만들 때(팀 PC, Windows): packaging/build_exe.ps1 → dist/IaCPatch.exe 를 저장소 루트에 두고 더블클릭.
 exe 는 실행기일 뿐이고 저장소 폴더(policy/, scenarios/, experiments/, tools/)가 옆에 있어야 한다.
@@ -112,19 +113,20 @@ def _env() -> dict:
     return env
 
 
-def steps(include_cc: bool) -> List[tuple]:
-    """scripts/run_experiments.sh 의 8 단계와 같은 순서. (제목, 명령 또는 None=건너뜀)"""
+def steps(include_cc: bool, fresh: bool = False) -> List[tuple]:
+    """scripts/run_experiments.sh 의 8 단계와 같은 순서. (제목, 명령 또는 None=건너뜀). fresh=True 면 이전 기록 재사용 없이 전부 다시 돌린다."""
     rcs = "scripts/run_candidate_set.py"
+    extra = ["--fresh"] if fresh else []
     s = [
         ("0/8 단위 테스트 (tests/unit, 도구 불필요)", _unittest_cmd()),
         ("1/8 A 의 9 케이스 결과 재현 확인", _script_cmd("experiments/candidate-sets/a-probe-dev/check_a_results.py")),
-        ("2/8 eval-a-probe-rule (규칙 기반, SG)", _script_cmd(rcs, "experiments/candidate-sets/eval-a-probe-rule/manifest.json")),
-        ("3/8 eval-seeded-sg (오라클 유무, SG)", _script_cmd(rcs, "experiments/candidate-sets/eval-seeded-sg/manifest.json")),
-        ("4/8 eval-iam-rule (규칙 기반, IAM)", _script_cmd(rcs, "experiments/candidate-sets/eval-iam-rule/manifest.json")),
-        ("5/8 eval-seeded-iam (오라클 유무, IAM)", _script_cmd(rcs, "experiments/candidate-sets/eval-seeded-iam/manifest.json")),
+        ("2/8 eval-a-probe-rule (규칙 기반, SG)", _script_cmd(rcs, "experiments/candidate-sets/eval-a-probe-rule/manifest.json", *extra)),
+        ("3/8 eval-seeded-sg (오라클 유무, SG)", _script_cmd(rcs, "experiments/candidate-sets/eval-seeded-sg/manifest.json", *extra)),
+        ("4/8 eval-iam-rule (규칙 기반, IAM)", _script_cmd(rcs, "experiments/candidate-sets/eval-iam-rule/manifest.json", *extra)),
+        ("5/8 eval-seeded-iam (오라클 유무, IAM)", _script_cmd(rcs, "experiments/candidate-sets/eval-seeded-iam/manifest.json", *extra)),
     ]
     if include_cc:
-        s.append(("6/8 eval-claude-code (LLM 후보)", _script_cmd(rcs, "experiments/candidate-sets/eval-claude-code/manifest.json")))
+        s.append(("6/8 eval-claude-code (LLM 후보)", _script_cmd(rcs, "experiments/candidate-sets/eval-claude-code/manifest.json", *extra)))
     else:
         s.append(("6/8 eval-claude-code — 후보 0건, 건너뜀 (scripts/cc_prompt.py → Claude Code → scripts/cc_add.py 로 채운다)", None))
     s += [
@@ -144,7 +146,7 @@ def has_cc_candidates() -> bool:
         return False
 
 
-def run_all(log: Callable[[str], None], progress: Callable[[int, int], None], report_only: bool = False, open_browser: bool = True) -> Path:
+def run_all(log: Callable[[str], None], progress: Callable[[int, int], None], report_only: bool = False, open_browser: bool = True, fresh: bool = False) -> Path:
     """실험 8단계 + 리포트. 각 단계의 출력은 log() 로 흘려보내고 experiments/run_experiments.log 에도 남긴다."""
     env = _env()
     logf = ROOT / "experiments" / "run_experiments.log"
@@ -157,7 +159,9 @@ def run_all(log: Callable[[str], None], progress: Callable[[int, int], None], re
             log(line); lf.write(line + "\n")
         if not ts["terraform"]["ok"]:
             log("terraform 이 없으면 V3~V6 이 NOT_RUN 이 된다. scripts/setup_tools.bat 를 먼저 돌려라.")
-        todo = [] if report_only else steps(has_cc_candidates())
+        todo = [] if report_only else steps(has_cc_candidates(), fresh=fresh)
+        if todo:
+            log("재사용: " + ("끔 — 전부 다시 돌린다 (--fresh)" if fresh else "켬 — 입력·정책·코드·도구가 같은 후보는 이전 기록을 쓴다 (처음 한 번은 전부 돈다)"))
         total = len(todo) + 1
         for i, (title, argv) in enumerate(todo, 1):
             progress(i - 1, total)
@@ -213,9 +217,11 @@ def gui() -> int:
     txt.pack(fill="both", expand=True, padx=10, pady=(4, 10))
     last_report: List[Optional[Path]] = [ROOT / "report" / "index.html" if (ROOT / "report" / "index.html").exists() else None]
 
+    fresh_var = tk.BooleanVar(value=False)
+
     def worker(report_only: bool):
         try:
-            out = run_all(lambda s: q.put(("log", s)), lambda i, n: q.put(("prog", i, n)), report_only=report_only, open_browser=True)
+            out = run_all(lambda s: q.put(("log", s)), lambda i, n: q.put(("prog", i, n)), report_only=report_only, open_browser=True, fresh=fresh_var.get())
             q.put(("done", out))
         except Exception as e:
             q.put(("log", f"오류: {e}")); q.put(("done", None))
@@ -223,7 +229,7 @@ def gui() -> int:
     def start(report_only: bool):
         for b in (b_run, b_rep, b_tools):
             b.state(["disabled"])
-        txt.delete("1.0", "end"); status.set("실행 중… (SG+IAM 세트 전체는 PC 에서 1시간 안팎)")
+        txt.delete("1.0", "end"); status.set("실행 중… (처음 한 번은 후보 38개를 전부 돌린다. 이후에는 바뀐 후보만)")
         threading.Thread(target=worker, args=(report_only,), daemon=True).start()
 
     def setup_tools():
@@ -250,6 +256,7 @@ def gui() -> int:
     b_run = ttk.Button(btns, text="▶ 전체 실행 (실험 8단계 + 리포트)", command=lambda: start(False)); b_run.pack(side="left", padx=(0, 6))
     b_rep = ttk.Button(btns, text="리포트만 다시 생성", command=lambda: start(True)); b_rep.pack(side="left", padx=(0, 6))
     ttk.Button(btns, text="리포트 열기", command=open_report).pack(side="left")
+    ttk.Checkbutton(btns, text="전부 다시 돌리기 (이전 기록 재사용 안 함)", variable=fresh_var).pack(side="left", padx=(14, 0))
 
     def pump():
         try:
@@ -277,12 +284,12 @@ def gui() -> int:
     return 0
 
 
-def console(report_only: bool, open_browser: bool) -> int:
+def console(report_only: bool, open_browser: bool, fresh: bool = False) -> int:
     def log(s: str) -> None:
         print(s, flush=True)
     def prog(i: int, n: int) -> None:
         pass
-    out = run_all(log, prog, report_only=report_only, open_browser=open_browser)
+    out = run_all(log, prog, report_only=report_only, open_browser=open_browser, fresh=fresh)
     print(f"\n완료. 리포트: {out}")
     return 0
 
@@ -304,6 +311,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--console", action="store_true", help="창 없이 콘솔로")
     ap.add_argument("--report-only", action="store_true", help="실험은 건너뛰고 리포트만")
     ap.add_argument("--no-open", action="store_true", help="브라우저를 열지 않음")
+    ap.add_argument("--fresh", action="store_true", help="이전 기록 재사용 없이 전부 다시 돌림")
     a = ap.parse_args(argv)
     if not a.console:
         try:
@@ -311,7 +319,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             return gui()
         except Exception as e:  # tkinter 없음 / 디스플레이 없음
             print(f"(창을 열 수 없어 콘솔로 진행: {e})")
-    return console(a.report_only, not a.no_open)
+    return console(a.report_only, not a.no_open, fresh=a.fresh)
 
 
 if __name__ == "__main__":

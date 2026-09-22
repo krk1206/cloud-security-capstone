@@ -24,6 +24,9 @@ manifest.json 형식 (docs/EXPERIMENT_GUIDE.md):
 - source ∈ claude-code | rule_based | seeded | human ...  (후보를 누가/무엇이 만들었는지. 집계 표의 E1 비교 축)
 - local_tools (세트 또는 --local-tools): trivy/terraform 이 있으면 V1~V4 를 로컬 실행. 없는 계층은 NOT_RUN
 - 결과: <set 폴더>/labels.json, <set 폴더>/results.md (+ results-history/<시각>-<호스트>.md 누적), 기록은 data/reviews/<id>/ (scenario = "<set_id>/<candidate id>")
+- 재사용(기본 켜짐): 후보마다 지문(원본·후보·입력 스캔·intent·정책·iacpatch 코드·도구 버전의 sha256)을 만들고, 같은 지문으로 끝난 기록이
+  data/reviews 에 있으면 다시 돌리지 않고 그 기록을 표에 넣는다 (run 열이 원래 실행 시각). 무엇 하나라도 바뀌면 다시 돈다.
+  `--fresh` 로 전부 다시 돌린다. 재사용 건수는 results.md 머리에 적힌다.
 """
 from __future__ import annotations
 
@@ -40,8 +43,53 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from iacpatch.config import load_settings  # noqa: E402
+from iacpatch.fingerprint import code_digest, combine, file_digest, tree_digest  # noqa: E402
 from iacpatch.metrics import collect, render_table  # noqa: E402
 from iacpatch.review.flow import ReviewOptions, run_review  # noqa: E402
+
+
+def _tool_versions(settings) -> dict:
+    """지문용 도구 버전 (로컬 도구 실행일 때만). 없으면 None 으로 — 그것도 지문의 일부다."""
+    from iacpatch.tools.terraform import TerraformAdapter
+    from iacpatch.tools.trivy import TrivyAdapter
+    tr = TrivyAdapter(settings.trivy_bin)
+    info = TerraformAdapter(settings.terraform_bin, settings.aws_region).info()
+    return {"trivy": tr.version() if tr.available() else None, "trivy_skip_check_update": bool(tr.skip_check_update),
+            "terraform": [info.kind, info.version] if info.available else None}
+
+
+def _candidate_digest(cand: str) -> str:
+    if cand.startswith("manual:"):
+        p = Path(cand[7:])
+        return tree_digest(p) if p.is_dir() else file_digest(p)
+    return cand    # mock:<fixture> / rule_based — 내용은 코드·원본 지문이 대신한다
+
+
+def _fingerprint(opt: ReviewOptions, code_hash: str, policy_hash: str, tools: dict) -> str:
+    return combine({
+        "v": 1, "scenario": opt.scenario, "rule": opt.rule, "file": opt.filename, "resource": opt.resource, "line": opt.line,
+        "tf_dir": tree_digest(ROOT / opt.tf_dir) if opt.tf_dir else None, "candidate": _candidate_digest(opt.candidate),
+        "trivy_json": file_digest(opt.trivy_json), "intent": file_digest(opt.intent), "verification": file_digest(opt.verification),
+        "baseline_plan": file_digest(opt.baseline_plan), "candidate_plan": file_digest(opt.candidate_plan),
+        "local_tools": opt.local_tools, "tools": tools if opt.local_tools else None, "policy": policy_hash, "code": code_hash,
+    })
+
+
+_TERMINAL = {"REVIEW_REQUIRED", "VALIDATION_FAILED", "POLICY_BLOCKED", "CANDIDATE_INVALID", "INFO_INSUFFICIENT", "NO_FINDING", "AMBIGUOUS_FINDING"}
+
+
+def _find_reusable(out_root: Path, fp: str):
+    """같은 지문으로 끝난 기록 중 가장 최근 것. INPUT_ERROR(도구·입력 문제일 수 있음)는 재사용하지 않는다. 없으면 None."""
+    best = None
+    for st in out_root.glob("*/state.json"):
+        try:
+            d = json.loads(st.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if d.get("fingerprint") == fp and d.get("state") in _TERMINAL and (d.get("finished_at") or d.get("state") != "REVIEW_REQUIRED"):
+            if best is None or str(d.get("run_id")) > str(best.get("run_id")):
+                best = d
+    return best
 
 
 def _resolve(p, set_dir: Path):
@@ -57,6 +105,7 @@ def main() -> int:
     ap.add_argument("--out", default="data/reviews")
     ap.add_argument("--local-tools", dest="local_tools", action="store_true", help="trivy/terraform 이 있으면 V1~V4 로컬 실행")
     ap.add_argument("--results-dir", dest="results_dir", help="results.md / results-history 를 쓸 폴더 (기본: 세트 폴더). 테스트는 임시 폴더를 준다")
+    ap.add_argument("--fresh", action="store_true", help="지문이 같은 이전 기록이 있어도 전부 다시 돌린다")
     args = ap.parse_args()
     mpath = ROOT / args.manifest if not Path(args.manifest).is_absolute() else Path(args.manifest)
     m = json.loads(mpath.read_text(encoding="utf-8"))
@@ -66,6 +115,10 @@ def main() -> int:
     local_tools = bool(args.local_tools or m.get("local_tools"))
     labels = {}
     run_ids = []
+    reused = []
+    code_hash = code_digest(ROOT)
+    policy_hash = combine({k: file_digest(ROOT / v) for k, v in (("policy", s.policy_file), ("rubric", s.rubric_file), ("cis", s.cis_file))})
+    tools = _tool_versions(s) if local_tools else None
 
     def pick(c, key, default=None):
         return c[key] if key in c else m.get(key, default)
@@ -82,9 +135,15 @@ def main() -> int:
             candidate_note=c.get("note", ""), verification=_resolve(pick(c, "verification"), set_dir),
             baseline_plan=_resolve(pick(c, "baseline_plan"), set_dir), candidate_plan=_resolve(c.get("candidate_plan"), set_dir),
             intent=_resolve(pick(c, "intent"), set_dir), out_dir=str(out_root), local_tools=local_tools)
+        opt.fingerprint = _fingerprint(opt, code_hash, policy_hash, tools)
+        labels[scenario] = {"expected": c.get("expected", ""), "source": c.get("source", ""), "expected_risk": c.get("expected_risk", "")}
+        prev = None if args.fresh else _find_reusable(out_root, opt.fingerprint)
+        if prev is not None:
+            run_ids.append(str(prev["run_id"])); reused.append(str(prev["run_id"]))
+            print(f"{cid:20s} 재사용 ← {prev['run_id']} ({str(prev.get('finished_at', ''))[:19]}) {prev.get('state', '')} level={prev.get('review_level') or '-'}")
+            continue
         res = run_review(s, opt)
         run_ids.append(res.run_id)
-        labels[scenario] = {"expected": c.get("expected", ""), "source": c.get("source", ""), "expected_risk": c.get("expected_risk", "")}
         lvl = res.level.value if res.level else "-"
         layers = {l.layer: l.verdict.value for l in (res.validity.layers if res.validity else [])}
         print(f"{cid:20s} {res.state.value:20s} level={lvl:13s} V1={layers.get('V1', '-'):8s} V6={layers.get('V6', '-'):8s} "
@@ -94,7 +153,9 @@ def main() -> int:
     tools_note = "V1~V4 로컬 도구 실행 (--local-tools)" if local_tools else "검증 결과는 파일로 받은 것만 (도구 미실행)"
     env_line = _env_line(rows, out_root)
     table = render_table(rows, title=f"세트 {m['set_id']} 결과 ({len(rows)}건) — {tools_note}", labels=labels)
-    table = table.replace("\n\n", f"\n\n- 실행 환경: {env_line}\n", 1)
+    reuse_line = (f"- 이번 실행: 새로 돌림 {len(run_ids) - len(reused)}건, 이전 기록 재사용 {len(reused)}건 "
+                  f"(재사용 = 원본·후보·입력 스캔·intent·정책·코드·도구 버전이 전부 같은 기록. run 열이 원래 실행 시각. `--fresh` 로 강제 재실행)")
+    table = table.replace("\n\n", f"\n\n- 실행 환경: {env_line}\n{reuse_line}\n", 1)
     res_dir = Path(args.results_dir) if args.results_dir else set_dir
     res_dir.mkdir(parents=True, exist_ok=True)
     (res_dir / "results.md").write_text(table, encoding="utf-8")

@@ -93,7 +93,7 @@ def run_predeploy(settings: Settings, target_dir: str, intent_path: str, scenari
                   intent_override: Optional[IntentSpec] = None) -> PipelineResult:
     rec = RunRecord(settings.path(settings.data_dir), label=f"predeploy:{scenario_id}")
     rec.write_json("settings.json", settings.to_dict())
-    tf = TerraformAdapter(settings.terraform_bin, settings.aws_region)
+    tf = TerraformAdapter(settings.terraform_bin, settings.aws_region, template_dir=settings.tf_template_dir())
     trivy = TrivyAdapter(settings.trivy_bin)
     policy = load_json(settings.path(settings.policy_file))
     rubric = load_json(settings.path(settings.rubric_file))

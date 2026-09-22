@@ -16,9 +16,16 @@ verification-v1 JSON 으로 남긴다. 도구가 없으면 그 계층은 NOT_RUN
   local_verify/trivy_before.json, trivy_after.json
   local_verify/plan_baseline.json, plan_candidate.json  (terraform 성공 시)
   local_verify/tools.json          도구 경로·버전
+
+원본(baseline) 캐시: 같은 세트의 후보들은 원본(tf_dir)이 같으므로 원본 trivy 스캔과 원본 plan 은 한 번만 만들면 된다.
+  키 = 원본 파일 내용 + var 파일 + 도구 버전 + 오프라인 override 텍스트. 캐시는 data/cache/baseline/<키>/ 에 두고,
+  적중하면 run 폴더에 복사해 기록은 그대로 자기완결적으로 남긴다 (notes 에 '캐시 재사용' 표시). IACPATCH_NO_CACHE=1 로 끈다.
+  후보 쪽(trivy_after, plan_candidate)은 캐시하지 않는다 — 후보마다 다르고, 그게 검증 대상이다.
 """
 from __future__ import annotations
 
+import datetime as _dt
+import hashlib
 import json
 import shutil
 from dataclasses import dataclass, field
@@ -26,8 +33,9 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from ..config import Settings
+from ..fingerprint import tree_digest
 from ..models import Finding, LayerResult, Verdict
-from ..tools.terraform import TerraformAdapter
+from ..tools.terraform import OFFLINE_OVERRIDE, TerraformAdapter
 from ..tools.trivy import TrivyAdapter, TrivyScan, parse_findings, scan_summary
 from ..verify.layers import v1_target_finding, v2_finding_diff, v3_validate, v4_plan
 from .verification_input import candidate_digest
@@ -50,6 +58,13 @@ def _scan_from_report(report: Dict[str, Any]) -> TrivyScan:
     return TrivyScan(True, report, parse_findings(report), scan_summary(report), str((report.get("Trivy") or {}).get("Version") or ""))
 
 
+def _baseline_key(tf_dir: Path, var_file: Optional[str], tools: Dict[str, Any], region: str) -> str:
+    h = hashlib.sha256()
+    h.update(tree_digest(tf_dir).encode())
+    h.update(json.dumps({"var_file": var_file, "tools": tools, "region": region, "override": OFFLINE_OVERRIDE}, sort_keys=True).encode("utf-8"))
+    return h.hexdigest()[:24]
+
+
 def run_local_verification(settings: Settings, tf_dir: Path, candidate_files: Dict[str, str], target: Finding,
                            policy: Dict[str, Any], out_dir: Path, input_report: Optional[Dict[str, Any]] = None) -> LocalVerifyResult:
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -65,11 +80,52 @@ def run_local_verification(settings: Settings, tf_dir: Path, candidate_files: Di
     if (tf_dir / "terraform.tfvars").exists():
         var_file = "terraform.tfvars"
 
-    # ---------------------------------------------------------------- V1 / V2 (trivy)
+    # ---------------------------------------------------------------- 원본(baseline) 캐시 준비
     trivy = TrivyAdapter(settings.trivy_bin)
+    tf = TerraformAdapter(settings.terraform_bin, settings.aws_region, template_dir=settings.tf_template_dir())
+    info = tf.info()
+    cache_root = settings.baseline_cache_dir()
+    cache: Optional[Path] = None
+    if cache_root is not None:
+        key_tools = {"trivy": trivy.version() if trivy.available() else None, "trivy_skip_check_update": bool(trivy.skip_check_update),
+                     "terraform": (info.kind, info.version) if info.available else None}
+        cache = cache_root / _baseline_key(Path(tf_dir), var_file, key_tools, settings.aws_region)
+        cache.mkdir(parents=True, exist_ok=True)
+
+    def _cache_hit(name: str) -> Optional[Path]:
+        if cache is not None and (cache / name).exists():
+            return cache / name
+        return None
+
+    def _cache_put(name: str, src: Path) -> None:
+        if cache is not None and src.exists():
+            try:
+                shutil.copy2(src, cache / name)
+                (cache / "meta.json").write_text(json.dumps({"tf_dir": str(tf_dir), "created_at": _dt.datetime.now().isoformat(timespec="seconds"),
+                                                              "tools": tools}, ensure_ascii=False, indent=2), encoding="utf-8")
+            except OSError:
+                pass
+
+    def _cache_note(name: str) -> str:
+        meta = {}
+        try:
+            meta = json.loads((cache / "meta.json").read_text(encoding="utf-8")) if cache is not None else {}
+        except (OSError, ValueError):
+            pass
+        return f"원본(baseline) {name}: 캐시 재사용 ({cache.name if cache else ''}, 최초 생성 {meta.get('created_at', '?')}) — 원본·도구가 같을 때만 적중"
+
+    # ---------------------------------------------------------------- V1 / V2 (trivy)
     if trivy.available():
         tools["trivy"] = {"binary": trivy.binary, "version": trivy.version(), "skip_check_update": trivy.skip_check_update}
-        before = trivy.scan_dir(base_wd, out_dir / "trivy_before.json", tf_vars=(str(base_wd / var_file) if var_file else None))
+        hit = _cache_hit("trivy_before.json") if trivy.skip_check_update else None    # 체크 번들을 갱신하는 설정이면 캐시 안 씀
+        if hit is not None:
+            shutil.copy2(hit, out_dir / "trivy_before.json")
+            before = _scan_from_report(json.loads(hit.read_text(encoding="utf-8")))
+            notes.append(_cache_note("trivy 스캔"))
+        else:
+            before = trivy.scan_dir(base_wd, out_dir / "trivy_before.json", tf_vars=(str(base_wd / var_file) if var_file else None))
+            if before.ok and trivy.skip_check_update:
+                _cache_put("trivy_before.json", out_dir / "trivy_before.json")
         after = trivy.scan_dir(cand_wd, out_dir / "trivy_after.json", tf_vars=(str(cand_wd / var_file) if var_file else None))
         layers.append(v1_target_finding(target, before, after))
         layers.append(v2_finding_diff(before, after, policy.get("v2_block_severities", ["CRITICAL", "HIGH"]), policy.get("v2_ignore_rules", [])))
@@ -89,21 +145,28 @@ def run_local_verification(settings: Settings, tf_dir: Path, candidate_files: Di
         layers.append(_not_run("V2", "새 finding 발생 여부 (Trivy 전후 비교)", why))
 
     # ---------------------------------------------------------------- V3 / V4 (terraform, offline plan)
-    tf = TerraformAdapter(settings.terraform_bin, settings.aws_region)
-    info = tf.info()
     baseline_plan: Optional[Path] = None
     candidate_plan: Optional[Path] = None
     if info.available:
         label = f"{info.kind or 'terraform'} {info.version}".strip()
         tools["terraform"] = {"binary": info.binary, "version": info.version, "kind": info.kind, "offline_plan": True}
-        base_steps = tf.plan_pipeline(base_wd, True, var_file=var_file, write_plan_json_to=out_dir / "plan_baseline.json")
+        hit = _cache_hit("plan_baseline.json")
+        if hit is not None:
+            shutil.copy2(hit, out_dir / "plan_baseline.json")
+            baseline_plan = out_dir / "plan_baseline.json"
+            notes.append(_cache_note("plan"))
+        else:
+            base_steps = tf.plan_pipeline(base_wd, True, var_file=var_file, write_plan_json_to=out_dir / "plan_baseline.json")
+            if (out_dir / "plan_baseline.json").exists() and base_steps.get("show") and base_steps["show"].ok:
+                baseline_plan = out_dir / "plan_baseline.json"
+                _cache_put("plan_baseline.json", baseline_plan)
+            else:
+                notes.append("원본 plan 생성 실패: " + _first_error(base_steps))
         cand_steps = tf.plan_pipeline(cand_wd, True, var_file=var_file, write_plan_json_to=out_dir / "plan_candidate.json")
+        if tf.last_template_action:
+            tools["terraform"]["provider_template"] = tf.last_template_action
         layers.append(v3_validate(cand_steps, label))
         layers.append(v4_plan(cand_steps, label, True))
-        if (out_dir / "plan_baseline.json").exists() and base_steps.get("show") and base_steps["show"].ok:
-            baseline_plan = out_dir / "plan_baseline.json"
-        else:
-            notes.append("원본 plan 생성 실패: " + _first_error(base_steps))
         if (out_dir / "plan_candidate.json").exists() and cand_steps.get("show") and cand_steps["show"].ok:
             candidate_plan = out_dir / "plan_candidate.json"
         if info.kind == "opentofu":

@@ -35,6 +35,7 @@ class Settings:
     prompt_version: str = "sg_v1"
     max_attempts: int = 2
     target_rule: str = "AVD-AWS-0107"
+    cache_dir: str = "data/cache"         # provider 템플릿·원본(baseline) 스캔/plan 캐시. IACPATCH_NO_CACHE=1 이면 전부 끔 (판정과 무관, 속도만)
     extra: Dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -44,6 +45,16 @@ class Settings:
     def path(self, rel: str) -> Path:
         p = Path(rel)
         return p if p.is_absolute() else Path(self.repo_root) / p
+
+    def cache_enabled(self) -> bool:
+        return os.environ.get("IACPATCH_NO_CACHE", "") not in ("1", "true", "True")
+
+    def tf_template_dir(self) -> Optional[Path]:
+        """terraform provider 템플릿 위치 (없으면 None → 매번 평소대로 init)."""
+        return self.path(self.cache_dir) / "tf-template" if self.cache_enabled() else None
+
+    def baseline_cache_dir(self) -> Optional[Path]:
+        return self.path(self.cache_dir) / "baseline" if self.cache_enabled() else None
 
 
 def find_repo_root(start: Optional[str] = None) -> Path:
@@ -70,7 +81,7 @@ def load_settings(repo_root: Optional[str] = None, overrides: Optional[Dict[str,
         "terraform_bin": "TERRAFORM_BIN", "trivy_bin": "TRIVY_BIN", "aws_bin": "AWS_BIN", "aws_profile": "AWS_PROFILE",
         "aws_region": "AWS_REGION", "llm_provider": "LLM_PROVIDER", "llm_model": "LLM_MODEL", "llm_base_url": "LLM_BASE_URL",
         "llm_mock_fixture": "LLM_MOCK_FIXTURE", "prompt_version": "IACPATCH_PROMPT_VERSION", "data_dir": "IACPATCH_DATA_DIR",
-        "tf_var_file": "IACPATCH_TF_VAR_FILE",
+        "tf_var_file": "IACPATCH_TF_VAR_FILE", "cache_dir": "IACPATCH_CACHE_DIR",
     }
     for k, envname in env_map.items():
         v = os.environ.get(envname)

@@ -7,6 +7,11 @@
 - offline 모드: AWS 자격증명이 없는 환경(CI, 샌드박스)에서 plan 을 만들기 위해 provider override 파일을
   복사본에만 추가한다 (skip_credentials_validation 등). 이 plan 은 "상태 없음 → 전부 create" 이므로
   V5 는 planned_values 구조 비교로 동작하고, 실제 배포 경로에서는 상태가 있는 plan 을 써야 한다.
+- provider 템플릿(template_dir): `terraform init` 은 작업 복사본마다 provider 바이너리(AWS 는 수백 MB)를 `.terraform/providers/`
+  에 설치한다. 리눅스는 플러그인 캐시로 심볼릭 링크를 걸어 빠르지만 Windows 는 **복사**라 후보마다 수 분이 걸렸다(팀 PC 실측:
+  후보당 3~4분). 그래서 처음 성공한 init 의 `.terraform/providers/` + lock 파일을 템플릿으로 남기고, 다음 작업 복사본에는
+  init 전에 하드링크(같은 볼륨, 권한 불필요)로 되살린다. init 은 "이미 설치됨" 을 확인만 하므로 복사가 없다.
+  판정 논리와는 무관하다 (같은 바이너리, 같은 plan).
 """
 from __future__ import annotations
 
@@ -34,6 +39,16 @@ provider "aws" {
 """
 
 COPY_IGNORE = shutil.ignore_patterns(".terraform", "*.tfstate", "*.tfstate.*", "*.tfplan", "plan.bin", "plan.json", ".git")
+LOCK_FILENAME = ".terraform.lock.hcl"
+_LOCK_MISMATCH_HINTS = ("lock file", "Inconsistent dependency", "does not match configured version constraint", "locked provider")
+
+
+def _link_or_copy(src: str, dst: str) -> None:
+    """하드링크(즉시, 같은 볼륨) → 안 되면 복사. Windows 에서 심볼릭 링크는 권한이 필요하지만 하드링크는 아니다."""
+    try:
+        os.link(src, dst)
+    except OSError:
+        shutil.copy2(src, dst)
 
 
 @dataclass
@@ -53,9 +68,62 @@ class StepOutput:
 
 
 class TerraformAdapter:
-    def __init__(self, binary: Optional[str] = None, region: str = "ap-northeast-2"):
+    def __init__(self, binary: Optional[str] = None, region: str = "ap-northeast-2", template_dir: Optional[str | Path] = None):
         self.binary = binary or os.environ.get("TERRAFORM_BIN") or "terraform"
         self.region = region
+        self.template_dir = Path(template_dir) if template_dir else None
+        self.last_template_action = ""      # "restored" | "saved" | "" (기록용)
+
+    # -- provider 템플릿 (init 의 provider 복사를 없앤다) ---------------------------
+    def restore_provider_template(self, workdir: str | Path) -> bool:
+        """템플릿의 .terraform/providers/ 와 lock 파일을 작업 복사본에 하드링크로 되살린다. 실패하면 False (init 이 평소대로 설치)."""
+        if not self.template_dir:
+            return False
+        src = self.template_dir / ".terraform" / "providers"
+        if not src.is_dir():
+            return False
+        try:
+            wd = Path(workdir)
+            dst = wd / ".terraform" / "providers"
+            if dst.exists():
+                shutil.rmtree(dst)
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copytree(src, dst, symlinks=True, copy_function=_link_or_copy)
+            tlock, wlock = self.template_dir / LOCK_FILENAME, wd / LOCK_FILENAME
+            if tlock.exists() and not wlock.exists():
+                shutil.copy2(tlock, wlock)
+            self.last_template_action = "restored"
+            return True
+        except OSError:
+            return False
+
+    def save_provider_template(self, workdir: str | Path) -> bool:
+        """init 성공 뒤 호출. 템플릿이 없거나 lock 파일이 달라졌으면(새 provider/버전) 이 복사본의 providers/ 를 템플릿으로 남긴다."""
+        if not self.template_dir:
+            return False
+        wd = Path(workdir)
+        wsrc, wlock = wd / ".terraform" / "providers", wd / LOCK_FILENAME
+        if not wsrc.is_dir():
+            return False
+        tlock = self.template_dir / LOCK_FILENAME
+        same_lock = tlock.exists() and wlock.exists() and tlock.read_bytes() == wlock.read_bytes()
+        if (self.template_dir / ".terraform" / "providers").is_dir() and same_lock:
+            return False
+        try:
+            tmp = self.template_dir.parent / (self.template_dir.name + ".tmp")
+            if tmp.exists():
+                shutil.rmtree(tmp)
+            (tmp / ".terraform").mkdir(parents=True)
+            shutil.copytree(wsrc, tmp / ".terraform" / "providers", symlinks=True, copy_function=_link_or_copy)
+            if wlock.exists():
+                shutil.copy2(wlock, tmp / LOCK_FILENAME)
+            if self.template_dir.exists():
+                shutil.rmtree(self.template_dir)
+            os.replace(tmp, self.template_dir)
+            self.last_template_action = "saved"
+            return True
+        except OSError:
+            return False
 
     # -- 환경 ------------------------------------------------------------
     def info(self) -> TerraformInfo:
@@ -107,7 +175,19 @@ class TerraformAdapter:
         return StepOutput(r.ok, r, "" if r.ok else (r.stderr.strip() or r.stdout.strip())[:4000])
 
     def init(self, workdir: str | Path, timeout: int = 900) -> StepOutput:
-        return self._run(["init", "-backend=false", "-input=false", "-no-color"], workdir, timeout)
+        """init. 템플릿이 있으면 provider 를 먼저 되살리고(복사 없음), 성공하면 템플릿을 갱신한다.
+        되살린 lock 파일이 이 구성의 버전 제약과 안 맞으면 lock 파일을 지우고 한 번 더 init 한다."""
+        restored = self.restore_provider_template(workdir)
+        out = self._run(["init", "-backend=false", "-input=false", "-no-color"], workdir, timeout)
+        if not out.ok and restored and any(h in (out.error or "") for h in _LOCK_MISMATCH_HINTS):
+            try:
+                (Path(workdir) / LOCK_FILENAME).unlink(missing_ok=True)
+            except OSError:
+                pass
+            out = self._run(["init", "-backend=false", "-input=false", "-no-color"], workdir, timeout)
+        if out.ok:
+            self.save_provider_template(workdir)
+        return out
 
     def fmt_check(self, workdir: str | Path) -> StepOutput:
         out = self._run(["fmt", "-check", "-diff", "-no-color"], workdir, 120)

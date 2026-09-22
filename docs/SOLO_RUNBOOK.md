@@ -16,6 +16,7 @@
 
 - 창이 안 뜨는 환경(tkinter 없음)에서는 자동으로 콘솔로 진행한다. 콘솔 강제: `IaCPatch.bat --console`, 리포트만: `--report-only`, 브라우저 안 열기: `--no-open`.
 - 로그: `experiments/run_experiments.log`. 리포트는 `report/` (git 에 안 올라감).
+- **속도 (2026-09-22 수정)**: 팀 PC 에서 후보 하나에 3~4분 걸리던 원인은 Windows 에서 `terraform init` 이 후보마다 AWS provider(수백 MB)를 두 번씩 복사하던 것. 이제 (1) 처음 한 번 설치한 provider 를 `data/cache/tf-template/` 에 두고 하드링크로 되살려 복사를 없앴고, (2) 세트의 원본(baseline) 스캔·plan 은 한 번만 만들어 `data/cache/baseline/` 에 두며, (3) 원본·후보·intent·정책·코드·도구 버전이 전부 같은 후보는 이전 기록을 그대로 쓴다 (results.md 머리에 "재사용 N건"). 판정 코드는 그대로다. 샌드박스 실측: 후보당 27초 → 8초, 아무것도 안 바뀐 재실행은 0.3초. 전부 다시 돌리려면 창의 "전부 다시 돌리기" 체크 또는 `--fresh`. 캐시를 통째로 끄려면 환경변수 `IACPATCH_NO_CACHE=1`.
 - exe 로 만들려면 `packaging\build_exe.bat` (PyInstaller, Windows 에서 1회) → 저장소 루트에 `IaCPatch.exe`. **exe 는 실행기**라 저장소 폴더째로 옮겨야 한다 (policy/, scenarios/, tests/, tools/ 를 옆에서 찾는다). 실험 스크립트는 exe 가 자기 자신을 `--exec` 로 다시 띄워 돌리므로 그 PC 에 Python 이 없어도 된다. **샌드박스에는 Windows 가 없어 exe 빌드는 미검증** — 팀 PC 에서 첫 빌드 뒤 결과를 `docs/worklog/` 에 적을 것.
 - 하지 않는 것: LLM API 호출, Claude Code 자동 호출, AWS 접속, `terraform apply`, `git push` (D-5, D-11). 실험 결과의 의미와 한계는 리포트 맨 위 노란 상자에 적혀 있다.
 

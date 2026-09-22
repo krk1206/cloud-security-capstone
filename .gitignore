@@ -18,6 +18,7 @@
 .iacpatch-work/
 __pycache__/
 data/reviews/*
+data/cache/
 data/runs/*
 experiments/run_experiments.log
 iacpatch.config.json

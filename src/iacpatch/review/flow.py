@@ -60,6 +60,7 @@ class ReviewOptions:
     out_dir: Optional[str] = None       # 기본 data/reviews
     mock_dir: Optional[str] = None
     local_tools: bool = False           # trivy/terraform 이 있으면 V1~V4 를 로컬에서 실행 (없으면 NOT_RUN). --verification 이 있으면 그쪽 우선
+    fingerprint: Optional[str] = None   # 입력·정책·코드·도구의 sha256 (scripts/run_candidate_set.py 가 계산). 같은 지문의 기록은 재사용된다
 
 
 @dataclass
@@ -132,6 +133,8 @@ def run_review(settings: Settings, opt: ReviewOptions) -> ReviewResult:
     root = Path(opt.out_dir) if opt.out_dir else settings.path("data/reviews")
     run = _Run(root, opt.scenario)
     run.set(tf_dir=opt.tf_dir)          # `iacpatch pr --review` 가 후보 파일을 되돌려 놓을 위치 (저장소 상대 경로)
+    if opt.fingerprint:
+        run.set(fingerprint=opt.fingerprint)
     policy = load_json(settings.path(settings.policy_file))
     rubric = load_json(settings.path(settings.rubric_file))
     tf_dir = settings.path(opt.tf_dir)

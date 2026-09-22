@@ -318,7 +318,7 @@ def run_recover(settings: Settings, run_id: Optional[str], execute: bool, tf_dir
         baseline_files = json.loads(snap.read_text(encoding="utf-8"))
         label_id = run_id
     target = settings.path(tf_dir)
-    tf = TerraformAdapter(settings.terraform_bin, settings.aws_region)
+    tf = TerraformAdapter(settings.terraform_bin, settings.aws_region, template_dir=settings.tf_template_dir())
     rec = RunRecord(settings.path(settings.data_dir), label=f"recover:{label_id}")
     rec.summary["linked_run"] = run_id
     rec.summary["linked_review"] = review_dir.name if review_dir else None
