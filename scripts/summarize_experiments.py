@@ -50,7 +50,7 @@ def main() -> int:
     L = ["# 실험 결과 요약 (자동 생성)", "",
          f"- 생성: {_dt.datetime.now().isoformat(timespec='seconds')} @ {platform.node() or '?'}",
          "- 이 파일은 **이 컴퓨터의 `data/reviews/`** 만 합산한다. 다른 컴퓨터에서 돌린 기록은 각 세트의 `results-history/<시각>-<호스트>.md` 를 볼 것 "
-         "(예: `DESKTOP-*` = B 의 PC, `vm` = 개발 샌드박스 — 샌드박스는 registry 차단으로 V3/V4 가 ERROR 다).",
+         "(예: `DESKTOP-*` = B 의 PC(Terraform 1.16.1), `vm` = 개발 샌드박스(OpenTofu 1.10.6 오프라인 plan). 두 환경의 SG 결과는 2026-09-21/22 에 일치했다).",
          "- 후보 출처가 `claude-code` 가 아닌 숫자는 LLM 성능이 아니다 (규칙 기반 = 기준선, seeded = 알려진 패턴 탐지 능력).",
          "- NOT_RUN/ERROR 는 검증이 안 된 것이지 통과가 아니다. 그 계층이 남아 있으면 해당 세트의 E2 는 미완이다.", ""]
     e1 = defaultdict(lambda: {"total": 0, "candidate_produced": 0, "as_expected": 0})

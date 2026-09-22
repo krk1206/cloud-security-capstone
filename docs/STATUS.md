@@ -44,7 +44,7 @@
 
 | 항목 | 이유 / 계획 |
 |---|---|
-| IAM 과다 권한 시나리오 | 범위·검증 방법만 명세 (`docs/IAM_SCOPE.md`). 현재는 IAM 리소스가 바뀌면 위험도 HIGH → REPORT_ONLY 로 강제되고, 대상 룰이 IAM 이면 UNSUPPORTED_RULE |
+| IAM 과다 권한 시나리오 | **Tier 1 배포 전 슬라이스 구현·실측 (2026-09-22)**: 대상 룰 AVD-AWS-0345, IAM intent(D-7), IAM Intent Oracle(V6), 규칙 기반 IAM 분기, seeded 13 + 규칙 기반 5 (`docs/IAM_SCOPE.md` 머리). 배포 후 V7(IAM 실측)은 미구현 |
 | S3 / 컨테이너 CVE / EKS / 대시보드 | 계획대로 핵심 흐름 완성 전 착수하지 않음 |
 | Rule-based vs LLM 생성 비교 실험, Oracle 유무 검증 효과 비교 | 실험 경로는 갖춰짐(`--generator rule_based`, `scripts/run_fixture_matrix.py`). 실제 LLM 출력이 있어야 시작 가능. 개발용(`scenarios/dev`)·평가용(`scenarios/eval`) 분리 폴더만 마련 |
 | MTTR(사람 승인 대기 제외 자동 처리 시간) 측정 | `timings.json` 에 단계별 시간이 기록되지만(예: 샌드박스에서 predeploy 약 36초, 그중 plan 2회 34초) 실제 LLM/AWS 단계가 없어 수치로 쓸 수 없음 |
