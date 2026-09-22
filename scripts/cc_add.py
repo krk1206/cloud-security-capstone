@@ -25,7 +25,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SET_DIR = ROOT / "experiments" / "candidate-sets" / "eval-claude-code"
-CASES_DIR = ROOT / "scenarios" / "eval" / "a-probe"
+sys.path.insert(0, str(ROOT / "scripts"))
+from cc_cases import resolve  # noqa: E402
 EXPECTED = ["correct", "deceptive", "breaks_required", "unapproved", "unknown", "invalid"]
 _FENCE_RE = re.compile(r"```(?:hcl|terraform|tf)?[ \t]*\n(.*?)```", re.DOTALL)
 
@@ -47,7 +48,7 @@ def main() -> int:
     ap.add_argument("--note", default="", help="날짜·대화 식별·모델 표시 (Claude Code 화면에 보이는 대로)")
     ap.add_argument("--yes", action="store_true", help="diff 확인 질문 없이 등록")
     args = ap.parse_args()
-    cdir = CASES_DIR / args.case
+    kind, name, cdir, tf_dir, intent_rel, rule = resolve(args.case)
     if not cdir.is_dir():
         print(f"케이스 없음: {cdir}"); return 2
     src = Path(args.response)
@@ -79,9 +80,8 @@ def main() -> int:
     if any(c["id"] == cid for c in m["candidates"]):
         print(f"manifest 에 이미 {cid} 가 있다"); return 2
     m["candidates"].append({
-        "id": cid, "tf_dir": f"scenarios/eval/a-probe/{args.case}", "trivy_json": f"scenarios/eval/a-probe/{args.case}/trivy-scan.json",
-        "intent": f"experiments/candidate-sets/a-probe-dev/intents/{args.case}.json", "candidate": f"manual:candidates/{cid}.tf",
-        "source": "claude-code", "expected": args.expected,
+        "id": cid, "tf_dir": tf_dir, "trivy_json": f"{tf_dir}/trivy-scan.json", "intent": intent_rel, "rule": rule,
+        "candidate": f"manual:candidates/{cid}.tf", "source": "claude-code", "expected": args.expected, "kind": kind,
         "note": (args.note or "Claude Code 응답을 사람이 저장") + f" | 원본 응답: {src.name}",
     })
     man.write_text(json.dumps(m, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

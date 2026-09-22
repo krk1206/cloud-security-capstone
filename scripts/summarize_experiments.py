@@ -25,7 +25,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 from iacpatch.metrics import collect, summarize  # noqa: E402
 
-DEFAULT_SETS = ["eval-a-probe-rule", "eval-seeded-sg", "eval-claude-code"]
+DEFAULT_SETS = ["eval-a-probe-rule", "eval-seeded-sg", "eval-iam-rule", "eval-seeded-iam", "eval-claude-code"]
 
 
 def latest_rows_for_set(rows, set_id):

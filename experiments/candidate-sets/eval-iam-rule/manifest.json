@@ -1,0 +1,59 @@
+{
+  "set_id": "eval-iam-rule",
+  "_note": "E1 의 규칙 기반(baseline) 축 — IAM. scenarios/eval/iam-probe 5 케이스 × 규칙 기반 생성기. intent 승인 집합은 eval-seeded-iam 과 같은 고정값(D-7). expected 는 2026-09-22 실행 전 고정 (D-3). Trivy 0.74.0 은 5 케이스 모두 AVD-AWS-0345 로 잡는다(변수 기본값·data 문서 해소).",
+  "rule": "AVD-AWS-0345",
+  "intent": "experiments/candidate-sets/eval-seeded-iam/intent.json",
+  "local_tools": true,
+  "candidates": [
+    {
+      "id": "00-literal-list",
+      "tf_dir": "scenarios/eval/iam-probe/00-literal-list",
+      "trivy_json": "scenarios/eval/iam-probe/00-literal-list/trivy-scan.json",
+      "resource": "aws_iam_policy.worker",
+      "candidate": "rule_based",
+      "expected": "correct",
+      "source": "rule_based",
+      "expected_reason": "단일 Allow 문, 리터럴 리스트 Action/Resource → 규칙 기반이 승인 목록으로 치환할 수 있다"
+    },
+    {
+      "id": "01-var-actions",
+      "tf_dir": "scenarios/eval/iam-probe/01-var-actions",
+      "trivy_json": "scenarios/eval/iam-probe/01-var-actions/trivy-scan.json",
+      "resource": "aws_iam_policy.worker",
+      "candidate": "rule_based",
+      "expected": "unsupported",
+      "source": "rule_based",
+      "expected_reason": "Action = var.worker_actions (변수 경유). Trivy 는 기본값을 해소해 잡지만 규칙 기반은 리터럴만 다룬다 → NOT_SUPPORTED 가 정답"
+    },
+    {
+      "id": "02-two-statements",
+      "tf_dir": "scenarios/eval/iam-probe/02-two-statements",
+      "trivy_json": "scenarios/eval/iam-probe/02-two-statements/trivy-scan.json",
+      "resource": "aws_iam_policy.worker",
+      "candidate": "rule_based",
+      "expected": "unsupported",
+      "source": "rule_based",
+      "expected_reason": "Statement 2개(s3:* + logs). 규칙 기반은 단일 문만 → NOT_SUPPORTED"
+    },
+    {
+      "id": "03-data-policy-document",
+      "tf_dir": "scenarios/eval/iam-probe/03-data-policy-document",
+      "trivy_json": "scenarios/eval/iam-probe/03-data-policy-document/trivy-scan.json",
+      "resource": "data.aws_iam_policy_document.worker",
+      "candidate": "rule_based",
+      "expected": "unsupported",
+      "source": "rule_based",
+      "expected_reason": "data.aws_iam_policy_document 경유. Trivy 는 data 블록을 지목한다 → 규칙 기반 NOT_SUPPORTED"
+    },
+    {
+      "id": "04-string-action",
+      "tf_dir": "scenarios/eval/iam-probe/04-string-action",
+      "trivy_json": "scenarios/eval/iam-probe/04-string-action/trivy-scan.json",
+      "resource": "aws_iam_policy.worker",
+      "candidate": "rule_based",
+      "expected": "correct",
+      "source": "rule_based",
+      "expected_reason": "Action 이 문자열 리터럴 \"s3:*\" → 규칙 기반이 리스트로 치환"
+    }
+  ]
+}

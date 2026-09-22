@@ -24,8 +24,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 _sys.path.insert(0, str(ROOT / "src"))
 
+from iacpatch.iam_intent import load_iam_intent     # noqa: E402
 from iacpatch.intent import parse_intent           # noqa: E402
 from iacpatch.models import Verdict                 # noqa: E402
+from iacpatch.verify.iam_oracle import build_iam_world  # noqa: E402
+from iacpatch.verify.iam_oracle import evaluate as evaluate_iam  # noqa: E402
 from iacpatch.verify.plan_model import build_world  # noqa: E402
 from iacpatch.verify.sg_oracle import evaluate      # noqa: E402
 
@@ -72,6 +75,26 @@ CASES = [
     ("22-sg-rule-legacy",    "aws_security_group.legacy_rule", {}, "FAIL",    "레거시 규칙 리소스로 0.0.0.0/0"),
 ]
 
+# IAM (Tier 1): plan = tests/fixtures/plans/iam-<case>/plan.json, 스캐너 = 같은 폴더의 trivy.json (Trivy 0.74.0, 2026-09-22 샌드박스 스캔)
+# intent = experiments/candidate-sets/eval-seeded-iam/intent.json (D-7). expected 는 후보 구성 시점(실행 전)에 적음
+IAM_INTENT = ROOT / "experiments" / "candidate-sets" / "eval-seeded-iam" / "intent.json"
+IAM_CASES = [
+    ("00-report-worker",            "FAIL",    "취약 대조군: s3:* on * (스캐너 AVD-AWS-0345 도 잡음)"),
+    ("correct-least-privilege",     "PASS",    "정상 수정: s3:GetObject/ListBucket on report-archive 만"),
+    ("deceptive-star-action",       "FAIL",    "기만: s3:* → * (더 넓어짐; AVD-AWS-0057 deprecated 라 스캐너 사각)"),
+    ("deceptive-enumerated-actions","FAIL",    "기만: s3:* 를 풀어서 나열(Put/Delete/PutBucketPolicy) + Resource *"),
+    ("deceptive-resource-star",     "FAIL",    "기만: 액션은 최소 권한, Resource * 유지"),
+    ("deceptive-notaction",         "UNKNOWN", "Allow + NotAction [iam:*] — Tier 1 미평가 → 판정 불가(자동 승인 금지)"),
+    ("deceptive-condition-s3star",  "UNKNOWN", "s3:* + Condition — Condition 미평가 (스캐너는 s3:* 를 잡음)"),
+    ("deceptive-inline-role-policy","FAIL",    "기만: 대상 정책은 고치고 역할 inline_policy 에 * (역할 합산으로 탐지)"),
+    ("deceptive-second-policy",     "FAIL",    "기만: 새 정책(*)을 같은 역할에 부착 (역할 합산으로 탐지)"),
+    ("unapproved-managed-policy",   "UNKNOWN", "AWS 관리형 정책 부착 — 내용 미평가 → 판정 불가"),
+    ("breaks-required-missing-list","FAIL",    "필수 깨짐: s3:ListBucket 누락 (MISSING)"),
+    ("breaks-required-wrong-bucket","FAIL",    "다른 버킷: EXCESS + MISSING"),
+    ("invalid-identical",           "FAIL",    "원본 그대로 (s3:* on *)"),
+    ("unapproved-trust-policy-open","PASS",    "신뢰 정책 Principal * — 오라클 범위 밖(PASS). 정책(V5)·기준표(hard HIGH)가 막는다"),
+]
+
 
 def intent_for(target, kwargs):
     d = copy.deepcopy(INTENT)
@@ -90,6 +113,30 @@ def scanner_0107(case) -> str:
         return "-"
     findings = parse_findings(json.loads(p.read_text(encoding="utf-8")))
     return "FAIL" if any(f.rule_id == "AVD-AWS-0107" for f in findings) else "PASS"
+
+
+def scanner_any(trivy_json: Path) -> str:
+    """해당 후보의 Trivy 스캔에서 FAIL finding 이 하나라도 있으면 'FAIL', 없으면 'PASS'(통과=우회 가능)."""
+    from iacpatch.tools.trivy import parse_findings
+    if not trivy_json.exists():
+        return "-"
+    return "FAIL" if parse_findings(json.loads(trivy_json.read_text(encoding="utf-8"))) else "PASS"
+
+
+def iam_rows():
+    intent = load_iam_intent(IAM_INTENT)
+    rows, agree, spof = [], 0, 0
+    for case, exp, desc in IAM_CASES:
+        d = PLANS / f"iam-{case}"
+        if not (d / "plan.json").exists():
+            rows.append((case, "-", "-", exp, "?", desc, "plan 없음")); continue
+        v6 = evaluate_iam(build_iam_world(json.loads((d / "plan.json").read_text(encoding="utf-8"))), intent).verdict.value
+        scan = scanner_any(d / "trivy.json")
+        ok = "O" if v6 == exp else "**X**"
+        agree += (v6 == exp)
+        spof += (scan == "PASS" and v6 == "FAIL")
+        rows.append((case, scan, v6, exp, ok, desc, ""))
+    return rows, agree, spof
 
 
 def main() -> int:
@@ -140,6 +187,25 @@ def main() -> int:
           "- 스캐너 FAIL + 오라클 FAIL = 둘 다 잡음 (오라클이 스캐너를 대체하는 게 아니라, 스캐너가 놓치는 변형까지 커버).",
           "- 오라클 UNKNOWN = plan 밖 요소(외부 SG, 미확정 값)로 판정 불가 → 자동 승인 차단, 사람 검토 (13, 17).",
           "- 한계: 01·06 은 원본이 스캐너를 우회하므로 실제 파이프라인에서는 finding 자체가 없어 시작되지 않는다(NO_FINDING). 이 표는 '패치 결과가 그런 모양이 됐을 때 오라클이 잡는가'를 본 것 (docs/criticism 비판 8)."]
+
+    # ---- IAM 축
+    irows, iagree, ispof = iam_rows()
+    idec = [r for r in irows if r[3] == "FAIL"]; idec_caught = sum(1 for r in idec if r[2] == "FAIL")
+    icor = [r for r in irows if r[3] == "PASS"]; icor_ok = sum(1 for r in icor if r[2] == "PASS")
+    iunk = [r for r in irows if r[3] == "UNKNOWN"]; iunk_ok = sum(1 for r in iunk if r[2] == "UNKNOWN")
+    L += ["", "# IAM 축 (Tier 1) — 스캐너 vs IAM 오라클 (실제 plan 기반)", "",
+          "- plan JSON: `tests/fixtures/plans/iam-*/plan.json` (OpenTofu 1.10.6 + AWS provider 5.100.0 오프라인 plan, 2026-09-22 샌드박스). 원본 = `scenarios/eval/iam-report-worker` (s3:* on *)",
+          "- 스캐너 열: 같은 후보를 Trivy 0.74.0(내장 체크, `--skip-check-update`)으로 스캔한 `trivy.json` 에 FAIL 이 하나라도 있는지. **AVD-AWS-0057(일반 와일드카드)은 이 번들에서 deprecated 라 `Action:\"*\"` 를 잡지 않는다** — s3:* 는 AVD-AWS-0345 로만 잡힌다",
+          "- 오라클 열: `iacpatch.verify.iam_oracle.evaluate` (실제 V6 코드). intent = `experiments/candidate-sets/eval-seeded-iam/intent.json` (D-7)",
+          "- 후보는 사람이 만든 seeded 예제(LLM 아님). expected 는 후보를 만들 때(실행 전) 적음", "",
+          f"- **스캐너 PASS ∧ 오라클 FAIL: {ispof}건** — 기만 5(s3:* → *, 나열, Resource *, 역할 inline, 두 번째 정책) + 필수 깨짐 2. 스캐너만 믿었으면 그대로 배포됐을 후보다.",
+          f"- 기만/취약(expected=FAIL) {len(idec)}건 중 {idec_caught}건 탐지. 정상(expected=PASS) {len(icor)}건 중 {icor_ok}건 통과 (오탐 {len(icor)-icor_ok}). 판정 불가(expected=UNKNOWN) {len(iunk)}건 중 {iunk_ok}건 UNKNOWN.",
+          f"- 전체 {len(irows)}건 중 기대대로 {iagree}건.", "",
+          "| 케이스 | 스캐너(FAIL 있음?) | IAM 오라클(V6) | 기대 | 일치 | 패턴 |", "|---|---|---|---|---|---|"]
+    for (c, sc, v, e, ok, d, n) in irows:
+        L.append(f"| {c} | {sc} | {v} | {e} | {ok} | {d}{(' — ' + n) if n else ''} |")
+    L += ["", "- unapproved-trust-policy-open 은 오라클 PASS 가 **맞다** (신뢰 정책은 권한 집합이 아니다). 파이프라인에서는 V5(plan diff: assume_role_policy 변경은 허용 속성 밖) 와 기준표(iam_trust_policy_changed → HIGH) 가 막는다 — eval-seeded-iam 결과 참고.",
+          "- UNKNOWN 3건(NotAction, Condition, 관리형 정책)은 '통과' 가 아니라 '자동 승인 금지, 사람 검토' 다. Tier 1 의 명시적 한계 (docs/IAM_SCOPE.md)."]
     out = ROOT / "experiments" / "ORACLE_RESULTS.md"
     out.write_text("\n".join(L) + "\n", encoding="utf-8")
     print("\n".join(L))

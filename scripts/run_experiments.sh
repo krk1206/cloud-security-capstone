@@ -7,10 +7,12 @@
 # 하는 일 (순서대로):
 #   0. tools/ 에 받아둔 trivy/terraform 을 잡는다 (없으면 PATH, 그것도 없으면 그 계층은 NOT_RUN)
 #   1. A 의 Trivy 우회 실험 9 케이스 결과가 이 컴퓨터에서 재현되는지 (A_RESULTS_CHECK.md)
-#   2. eval-a-probe-rule  : A 9 케이스 × 규칙 기반 후보 (E1 기준선)
-#   3. eval-seeded-sg     : 00-baseline × seeded 11 후보 (E2)
-#   4. eval-claude-code   : Claude Code 후보 (manifest 에 항목이 있을 때만)
-#   5. experiments/RESULTS_SUMMARY.md 로 합산
+#   2. eval-a-probe-rule  : A 9 케이스 × 규칙 기반 후보 (E1 기준선, SG)
+#   3. eval-seeded-sg     : 00-baseline × seeded 11 후보 (E2, SG)
+#   4. eval-iam-rule      : IAM 5 케이스 × 규칙 기반 후보 (E1 기준선, IAM)
+#   5. eval-seeded-iam    : iam-report-worker × seeded 13 후보 (E2, IAM)
+#   6. eval-claude-code   : Claude Code 후보 (manifest 에 항목이 있을 때만)
+#   7. 오라클 실험 (실제 plan) → 8. experiments/RESULTS_SUMMARY.md 로 합산
 # 하지 않는 일: LLM API 호출, Claude Code 자동 호출, AWS 접속/생성, git push. terraform 은 오프라인 plan 만.
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -37,16 +39,22 @@ LOG="$ROOT/experiments/run_experiments.log"; echo "run_experiments $(date -Is)" 
 run() { "$@" 2>&1 | tee -a "$LOG"; }
 step() { echo; echo "================ $1" | tee -a "$LOG"; }
 
-step "1/5 A 의 9 케이스 결과 재현 확인"
+step "1/8 A 의 9 케이스 결과 재현 확인"
 run $PY experiments/candidate-sets/a-probe-dev/check_a_results.py
 
-step "2/5 eval-a-probe-rule (규칙 기반 기준선)"
+step "2/8 eval-a-probe-rule (규칙 기반 기준선, SG)"
 run $PY scripts/run_candidate_set.py experiments/candidate-sets/eval-a-probe-rule/manifest.json
 
-step "3/5 eval-seeded-sg (오라클 유무 재료)"
+step "3/8 eval-seeded-sg (오라클 유무 재료, SG)"
 run $PY scripts/run_candidate_set.py experiments/candidate-sets/eval-seeded-sg/manifest.json
 
-step "4/5 eval-claude-code (LLM 후보)"
+step "4/8 eval-iam-rule (규칙 기반 기준선, IAM)"
+run $PY scripts/run_candidate_set.py experiments/candidate-sets/eval-iam-rule/manifest.json
+
+step "5/8 eval-seeded-iam (오라클 유무 재료, IAM)"
+run $PY scripts/run_candidate_set.py experiments/candidate-sets/eval-seeded-iam/manifest.json
+
+step "6/8 eval-claude-code (LLM 후보)"
 if $PY - <<'EOF'
 import json, sys
 m = json.load(open("experiments/candidate-sets/eval-claude-code/manifest.json", encoding="utf-8"))
@@ -58,10 +66,10 @@ else
   echo "후보 0건 — scripts/cc_prompt.py 로 프롬프트 뽑아 Claude Code 에서 받고, scripts/cc_add.py 로 등록하면 여기서 돈다"
 fi
 
-step "5/6 오라클 실험 (스캐너 vs V6, 실제 plan)"
+step "7/8 오라클 실험 (스캐너 vs V6, 실제 plan — SG + IAM)"
 run $PY scripts/oracle_experiment.py
 
-step "6/6 요약"
+step "8/8 요약"
 run $PY scripts/summarize_experiments.py
 echo
 echo "결과 파일:"

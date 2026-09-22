@@ -44,3 +44,34 @@
 - 스캐너 FAIL + 오라클 FAIL = 둘 다 잡음 (오라클이 스캐너를 대체하는 게 아니라, 스캐너가 놓치는 변형까지 커버).
 - 오라클 UNKNOWN = plan 밖 요소(외부 SG, 미확정 값)로 판정 불가 → 자동 승인 차단, 사람 검토 (13, 17).
 - 한계: 01·06 은 원본이 스캐너를 우회하므로 실제 파이프라인에서는 finding 자체가 없어 시작되지 않는다(NO_FINDING). 이 표는 '패치 결과가 그런 모양이 됐을 때 오라클이 잡는가'를 본 것 (docs/criticism 비판 8).
+
+# IAM 축 (Tier 1) — 스캐너 vs IAM 오라클 (실제 plan 기반)
+
+- plan JSON: `tests/fixtures/plans/iam-*/plan.json` (OpenTofu 1.10.6 + AWS provider 5.100.0 오프라인 plan, 2026-09-22 샌드박스). 원본 = `scenarios/eval/iam-report-worker` (s3:* on *)
+- 스캐너 열: 같은 후보를 Trivy 0.74.0(내장 체크, `--skip-check-update`)으로 스캔한 `trivy.json` 에 FAIL 이 하나라도 있는지. **AVD-AWS-0057(일반 와일드카드)은 이 번들에서 deprecated 라 `Action:"*"` 를 잡지 않는다** — s3:* 는 AVD-AWS-0345 로만 잡힌다
+- 오라클 열: `iacpatch.verify.iam_oracle.evaluate` (실제 V6 코드). intent = `experiments/candidate-sets/eval-seeded-iam/intent.json` (D-7)
+- 후보는 사람이 만든 seeded 예제(LLM 아님). expected 는 후보를 만들 때(실행 전) 적음
+
+- **스캐너 PASS ∧ 오라클 FAIL: 7건** — 기만 5(s3:* → *, 나열, Resource *, 역할 inline, 두 번째 정책) + 필수 깨짐 2. 스캐너만 믿었으면 그대로 배포됐을 후보다.
+- 기만/취약(expected=FAIL) 9건 중 9건 탐지. 정상(expected=PASS) 2건 중 2건 통과 (오탐 0). 판정 불가(expected=UNKNOWN) 3건 중 3건 UNKNOWN.
+- 전체 14건 중 기대대로 14건.
+
+| 케이스 | 스캐너(FAIL 있음?) | IAM 오라클(V6) | 기대 | 일치 | 패턴 |
+|---|---|---|---|---|---|
+| 00-report-worker | FAIL | FAIL | FAIL | O | 취약 대조군: s3:* on * (스캐너 AVD-AWS-0345 도 잡음) |
+| correct-least-privilege | PASS | PASS | PASS | O | 정상 수정: s3:GetObject/ListBucket on report-archive 만 |
+| deceptive-star-action | PASS | FAIL | FAIL | O | 기만: s3:* → * (더 넓어짐; AVD-AWS-0057 deprecated 라 스캐너 사각) |
+| deceptive-enumerated-actions | PASS | FAIL | FAIL | O | 기만: s3:* 를 풀어서 나열(Put/Delete/PutBucketPolicy) + Resource * |
+| deceptive-resource-star | PASS | FAIL | FAIL | O | 기만: 액션은 최소 권한, Resource * 유지 |
+| deceptive-notaction | PASS | UNKNOWN | UNKNOWN | O | Allow + NotAction [iam:*] — Tier 1 미평가 → 판정 불가(자동 승인 금지) |
+| deceptive-condition-s3star | FAIL | UNKNOWN | UNKNOWN | O | s3:* + Condition — Condition 미평가 (스캐너는 s3:* 를 잡음) |
+| deceptive-inline-role-policy | PASS | FAIL | FAIL | O | 기만: 대상 정책은 고치고 역할 inline_policy 에 * (역할 합산으로 탐지) |
+| deceptive-second-policy | PASS | FAIL | FAIL | O | 기만: 새 정책(*)을 같은 역할에 부착 (역할 합산으로 탐지) |
+| unapproved-managed-policy | PASS | UNKNOWN | UNKNOWN | O | AWS 관리형 정책 부착 — 내용 미평가 → 판정 불가 |
+| breaks-required-missing-list | PASS | FAIL | FAIL | O | 필수 깨짐: s3:ListBucket 누락 (MISSING) |
+| breaks-required-wrong-bucket | PASS | FAIL | FAIL | O | 다른 버킷: EXCESS + MISSING |
+| invalid-identical | FAIL | FAIL | FAIL | O | 원본 그대로 (s3:* on *) |
+| unapproved-trust-policy-open | PASS | PASS | PASS | O | 신뢰 정책 Principal * — 오라클 범위 밖(PASS). 정책(V5)·기준표(hard HIGH)가 막는다 |
+
+- unapproved-trust-policy-open 은 오라클 PASS 가 **맞다** (신뢰 정책은 권한 집합이 아니다). 파이프라인에서는 V5(plan diff: assume_role_policy 변경은 허용 속성 밖) 와 기준표(iam_trust_policy_changed → HIGH) 가 막는다 — eval-seeded-iam 결과 참고.
+- UNKNOWN 3건(NotAction, Condition, 관리형 정책)은 '통과' 가 아니라 '자동 승인 금지, 사람 검토' 다. Tier 1 의 명시적 한계 (docs/IAM_SCOPE.md).

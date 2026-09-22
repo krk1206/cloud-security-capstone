@@ -3,7 +3,7 @@
 #   powershell -ExecutionPolicy Bypass -File scripts\run_experiments.ps1 [-NoTools]
 #
 # 하는 일: tools\ 의 trivy.exe/terraform.exe 를 잡고 → A 결과 재현 확인 → eval-a-probe-rule → eval-seeded-sg
-#          → eval-claude-code(후보 있을 때) → experiments\RESULTS_SUMMARY.md
+#          → eval-iam-rule → eval-seeded-iam → eval-claude-code(후보 있을 때) → 오라클 실험 → experiments\RESULTS_SUMMARY.md
 # 하지 않는 일: LLM API 호출, Claude Code 자동 호출, AWS 접속/생성, git push. terraform 은 오프라인 plan 만.
 param([switch]$NoTools)
 $ErrorActionPreference = "Continue"
@@ -46,16 +46,22 @@ if ($NoTools) {
 
 function Step($t) { Write-Host ""; Write-Host "================ $t" }
 
-Step "1/5 A 의 9 케이스 결과 재현 확인"
+Step "1/8 A 의 9 케이스 결과 재현 확인"
 RunPy @("experiments\candidate-sets\a-probe-dev\check_a_results.py")
 
-Step "2/5 eval-a-probe-rule (규칙 기반 기준선)"
+Step "2/8 eval-a-probe-rule (규칙 기반 기준선, SG)"
 RunPy @("scripts\run_candidate_set.py", "experiments\candidate-sets\eval-a-probe-rule\manifest.json")
 
-Step "3/5 eval-seeded-sg (오라클 유무 재료)"
+Step "3/8 eval-seeded-sg (오라클 유무 재료, SG)"
 RunPy @("scripts\run_candidate_set.py", "experiments\candidate-sets\eval-seeded-sg\manifest.json")
 
-Step "4/5 eval-claude-code (LLM 후보)"
+Step "4/8 eval-iam-rule (규칙 기반 기준선, IAM)"
+RunPy @("scripts\run_candidate_set.py", "experiments\candidate-sets\eval-iam-rule\manifest.json")
+
+Step "5/8 eval-seeded-iam (오라클 유무 재료, IAM)"
+RunPy @("scripts\run_candidate_set.py", "experiments\candidate-sets\eval-seeded-iam\manifest.json")
+
+Step "6/8 eval-claude-code (LLM 후보)"
 $m = Get-Content (Join-Path $Root "experiments\candidate-sets\eval-claude-code\manifest.json") -Raw -Encoding UTF8 | ConvertFrom-Json
 if ($m.candidates -and $m.candidates.Count -gt 0) {
     RunPy @("scripts\run_candidate_set.py", "experiments\candidate-sets\eval-claude-code\manifest.json")
@@ -63,10 +69,10 @@ if ($m.candidates -and $m.candidates.Count -gt 0) {
     Write-Host "후보 0건 - scripts\cc_prompt.py 로 프롬프트 뽑아 Claude Code 에서 받고, scripts\cc_add.py 로 등록하면 여기서 돈다"
 }
 
-Step "5/6 오라클 실험 (스캐너 vs V6, 실제 plan)"
+Step "7/8 오라클 실험 (스캐너 vs V6, 실제 plan — SG + IAM)"
 RunPy @("scripts\oracle_experiment.py")
 
-Step "6/6 요약"
+Step "8/8 요약"
 RunPy @("scripts\summarize_experiments.py")
 Write-Host ""
 Write-Host "결과 파일:"
