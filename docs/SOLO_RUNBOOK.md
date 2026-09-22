@@ -60,7 +60,7 @@ python3 scripts/cc_prompt.py --all        # experiments/candidate-sets/eval-clau
 
 ## 4. 선택: 그 다음 단계 (이 문서 범위 밖)
 
-- **PR 만들기** (C): `python3 -m iacpatch pr --run <data/runs id>` 미리보기 → GitHub 토큰이 있는 PC 에서 `--execute`. 실험 숫자에는 필요 없다.
+- **PR 만들기** (C): 실험 기록에서 바로 — `python -m iacpatch pr --review <data/reviews id>` 미리보기(명령만 출력, 원본 안 건드림) → `pr_body.md` 확인 → GitHub 권한 있는 PC 에서 `--execute` (또는 출력된 `pr_commands.sh` 를 직접). 검토 수준이 LIGHT_REVIEW/FULL_REVIEW 인 기록만 받고 BLOCKED/PENDING 은 거부한다. 첫 후보는 B PC 실측의 `eval-a-probe-rule/00-baseline`(LIGHT_REVIEW) 기록이 적당하다. 실험 숫자에는 필요 없다.
 - **AWS 샌드박스 배포·V7·V8** (A): `docs/RUNBOOK.md` 6절. 요금·계정이 필요하고 사람 승인 뒤에만. 그때 승인 출처는 접속 테스트할 실제 공인 IP /32 로 sandbox 용 intent 를 따로 만든다 (D-2).
 
 ## 5. 막히면

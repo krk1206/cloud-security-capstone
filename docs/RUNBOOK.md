@@ -11,7 +11,7 @@
 | 데모 (정상 패치) | `scripts/predeploy_demo.sh` / `scripts\predeploy_demo.bat` | terraform + trivy |
 | 데모 (기만적 패치 차단) | `scripts/predeploy_demo.sh sg_baseline_cidr_split` | terraform + trivy |
 | 실제 LLM 으로 실행 | 아래 3절 | + API 키(환경변수) |
-| PR 만들기 | `python -m iacpatch pr --run <id>` (미리보기) → `--execute` | git 원격 권한, GITHUB_TOKEN(선택) |
+| PR 만들기 | `python -m iacpatch pr --run <predeploy id>` 또는 `--review <review id>` (미리보기) → `--execute` | git 원격 권한, GITHUB_TOKEN(선택) |
 | 배포 후 검증 | `python -m iacpatch postdeploy ...` (미리보기) → `--execute` | AWS CLI 프로필 |
 | 복구 | `python -m iacpatch recover --run <id> --tf-dir infrastructure/sg-baseline` → `--execute` | AWS CLI 프로필 |
 
@@ -128,7 +128,7 @@ python3 -m iacpatch oracle --plan tests/fixtures/plans/01-cidr-split/plan.json \
 ## 6. 운영 경로 전체 (사람 승인 포함)
 
 1. `predeploy` → `data/runs/<id>/pr_body.md` 검토
-2. `python3 -m iacpatch pr --run <id>` (명령 미리보기) → 검토 후 `--execute` 또는 출력된 `pr_commands.sh` 를 직접 실행
+2. `python3 -m iacpatch pr --run <id>` (명령 미리보기) → 검토 후 `--execute` 또는 출력된 `pr_commands.sh` 를 직접 실행. `review` 흐름(실험 기록)에서 왔으면 `--review <data/reviews id>` — LIGHT_REVIEW/FULL_REVIEW 만 허용
 3. GitHub 에서 사람이 리뷰·승인·병합
 4. WSL 에서 사람이 `cd infrastructure/sg-baseline && terraform plan && terraform apply` (프로필 `capstone`)
 5. `python3 -m iacpatch postdeploy --intent policy/intent/sg-baseline.json --tf-dir infrastructure/sg-baseline --aws-profile capstone` (미리보기) → `--execute`

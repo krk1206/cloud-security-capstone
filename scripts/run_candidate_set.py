@@ -56,6 +56,7 @@ def main() -> int:
     ap.add_argument("manifest")
     ap.add_argument("--out", default="data/reviews")
     ap.add_argument("--local-tools", dest="local_tools", action="store_true", help="trivy/terraform 이 있으면 V1~V4 로컬 실행")
+    ap.add_argument("--results-dir", dest="results_dir", help="results.md / results-history 를 쓸 폴더 (기본: 세트 폴더). 테스트는 임시 폴더를 준다")
     args = ap.parse_args()
     mpath = ROOT / args.manifest if not Path(args.manifest).is_absolute() else Path(args.manifest)
     m = json.loads(mpath.read_text(encoding="utf-8"))
@@ -94,15 +95,17 @@ def main() -> int:
     env_line = _env_line(rows, out_root)
     table = render_table(rows, title=f"세트 {m['set_id']} 결과 ({len(rows)}건) — {tools_note}", labels=labels)
     table = table.replace("\n\n", f"\n\n- 실행 환경: {env_line}\n", 1)
-    (set_dir / "results.md").write_text(table, encoding="utf-8")
+    res_dir = Path(args.results_dir) if args.results_dir else set_dir
+    res_dir.mkdir(parents=True, exist_ok=True)
+    (res_dir / "results.md").write_text(table, encoding="utf-8")
     # 환경별 실행 이력 (샌드박스 실행과 팀 WSL 실행이 서로 덮어쓰지 않게)
     import datetime as _dt, platform
-    hist = set_dir / "results-history"
+    hist = res_dir / "results-history"
     hist.mkdir(exist_ok=True)
     stamp = _dt.datetime.now().strftime("%Y%m%d-%H%M%S")
     (hist / f"{stamp}-{platform.node() or 'host'}.md").write_text(table, encoding="utf-8")
     print(table)
-    print(f"→ {set_dir / 'results.md'}  (이력: {hist})")
+    print(f"→ {res_dir / 'results.md'}  (이력: {hist})")
     return 0
 
 

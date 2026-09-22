@@ -3,7 +3,7 @@
   predeploy   스캔 → 패치 후보 → V1~V6 → 위험도 → 게이트 → PR 본문 (apply/push/PR 생성은 하지 않음)
   oracle      plan JSON + intent 로 V6 만 실행 (디버깅/실험용)
   scan        Trivy 스캔만
-  pr          run record 로부터 브랜치/커밋/PR 준비. --execute 없으면 명령만 출력
+  pr          --run <predeploy id> 또는 --review <review id> 기록으로부터 브랜치/커밋/PR 준비. --execute 없으면 명령만 출력
   postdeploy  V7(AWS 실측) + V8(통신 확인). --execute 없으면 실행할 명령만 출력
   recover     배포 후 실패 복구 절차 (revert → plan → apply(승인) → V7 재확인)
   selfcheck   도구 존재/버전 확인
@@ -101,7 +101,11 @@ def cmd_oracle(args: argparse.Namespace) -> int:
 def cmd_pr(args: argparse.Namespace) -> int:
     from .tools.github import prepare_pr
     s = _settings(args)
-    return prepare_pr(s, args.run, execute=args.execute, base_branch=args.base, remote=args.remote, draft=args.draft)
+    if bool(args.run) == bool(args.review):
+        print("--run <predeploy run id> 또는 --review <review run id> 중 하나만 지정")
+        return 2
+    return prepare_pr(s, args.run, execute=args.execute, base_branch=args.base, remote=args.remote, draft=args.draft,
+                      review_id=args.review, tf_dir=args.pr_tf_dir)
 
 
 def cmd_postdeploy(args: argparse.Namespace) -> int:
@@ -197,7 +201,9 @@ def build_parser() -> argparse.ArgumentParser:
     sp.set_defaults(fn=cmd_oracle)
 
     sp = sub.add_parser("pr", parents=[common])
-    sp.add_argument("--run", required=True); sp.add_argument("--base", default="main"); sp.add_argument("--remote", default="origin")
+    sp.add_argument("--run", help="predeploy 기록 id (data/runs)"); sp.add_argument("--review", help="review 기록 id (data/reviews) — 실험 흐름의 기록")
+    sp.add_argument("--tf-dir", dest="pr_tf_dir", help="review 기록에 tf_dir 이 없을 때(구 기록) 저장소 상대 경로 지정")
+    sp.add_argument("--base", default="main"); sp.add_argument("--remote", default="origin")
     sp.add_argument("--draft", action="store_true"); sp.add_argument("--execute", action="store_true", help="실제 브랜치 push + PR 생성 (GITHUB_TOKEN 필요)")
     sp.set_defaults(fn=cmd_pr)
 

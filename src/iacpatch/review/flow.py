@@ -131,6 +131,7 @@ class _Run:
 def run_review(settings: Settings, opt: ReviewOptions) -> ReviewResult:
     root = Path(opt.out_dir) if opt.out_dir else settings.path("data/reviews")
     run = _Run(root, opt.scenario)
+    run.set(tf_dir=opt.tf_dir)          # `iacpatch pr --review` 가 후보 파일을 되돌려 놓을 위치 (저장소 상대 경로)
     policy = load_json(settings.path(settings.policy_file))
     rubric = load_json(settings.path(settings.rubric_file))
     tf_dir = settings.path(opt.tf_dir)
