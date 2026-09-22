@@ -2,6 +2,8 @@
 
 > **처음 보신다면 [`한장요약.md`](한장요약.md)부터 읽어주세요.** (3분)
 > **실험을 직접 돌리려면 [`docs/SOLO_RUNBOOK.md`](docs/SOLO_RUNBOOK.md)** — 도구 받기 → `scripts/run_experiments.*` 한 방 → Claude Code 후보 채우기.
+> **한 번 클릭:** 저장소 루트의 `IaCPatch.bat` (Python 3 만 있으면 됨) → 창에서 **▶ 전체 실행** → 단위 테스트 + 실험 8단계 + `report/index.html` 이 브라우저로 열린다. exe 는 `packaging\build_exe.bat`.
+> **지도교수 9/22 질문에 대한 답:** [`docs/WHY_8_LAYERS.md`](docs/WHY_8_LAYERS.md) (8계층 근거), [`docs/PATCH_GENERATION.md`](docs/PATCH_GENERATION.md) (패치 생성 방식), [`docs/TRIVY_CIS_MAPPING.md`](docs/TRIVY_CIS_MAPPING.md) (차주 매핑표 뼈대).
 
 
 ## LLM이 생성한 AWS IaC 보안 수정의 실효성 검증 시스템 구현

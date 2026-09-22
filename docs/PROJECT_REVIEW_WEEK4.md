@@ -173,6 +173,25 @@
 
 **이번 주에 하면 안 되는 것:** S3 오라클 코드, Container/EKS, LangGraph, 대시보드, 자동 PR 실행, IAM Tier 2, 새 스캐너 추가.
 
+### 11.1 지도교수 9/22 메모 반영 — 이번 주 추가 + 차주(5주차, 9/29~10/5)
+
+메모 원문 항목 → 우리 대응:
+
+| 교수 메모 | 대응 | 담당 |
+|---|---|---|
+| "제목 확정 빨리할 것" — 메모 문구 "AI가 생성한 테라폼 보안패치의 실효성 검증 자동화 검증 구현" | `docs/DECISIONS.md` D-12 후보(**'검증' 한 번**으로 정리). 팀 회의에서 OK → 교수께 원문 그대로가 맞는지 확인 → README·운영계획서 통일 | B, 이번 주 |
+| "의도적 결함 Terraform → Trivy 스캔 → 등급 → 높은 등급이면 실패 → 실 코드 반영 방지" | 배포 전 게이트(V1/V2 → BLOCKED → PR 거부)는 있음. **CI required check(trivy 등급 게이트) 는 Actions 실행 0회** → C-1 에 포함. 정리: `docs/TRIVY_CIS_MAPPING.md` 2절 | C |
+| "AI 에이전트로 실험 자동화 → harness 활용 제약사항 만들 것" | `CLAUDE.md` + `.claude/settings.json` + `scripts/cc_batch.sh`(미검증) — `docs/AI_CONSTRAINTS.md`. 차주까지 cc_batch 첫 실행 기록 | B |
+| "보안패치 어떻게 구현?" | `docs/PATCH_GENERATION.md` (생성 경로 3개 + 같은 검증) | B (각자 읽고 설명 연습) |
+| "기본 기술 스택 공부가 되도록 AI 활용 조정 / 요구사항 주면 Terraform 만들 수준" | `docs/LEARNING_OUTCOMES.md` 체크리스트 + A 의 `infrastructure/sandbox-net/` 직접 작성 (11절 A-1·A-2) | A·B·C |
+| "Terraform 으로 만들 수 있는 취약점의 한계? → 권한·접근 허용 범위 오류로 범위 / 이 정도에 자동화 도구까지 필요한가? 표준 가이드 있는가?" | 범위 = SG·IAM·S3 (D-10). "왜 자동화" 의 답은 `experiments/WHY_THIS_GATE.md`(스캐너 통과 ∧ 실제 개방 5+8건) + 표준 근거 `docs/STANDARDS_MAPPING.md`(SK쉴더스·CIS·Security Hub) | 발표 준비 |
+| "SK쉴더스 테라폼 보안가이드 참고" | `docs/STANDARDS_MAPPING.md` 2절 담당표(A SG / B IAM / C S3) — **원문 PDF 로 채움** | A·B·C, 이번 주 |
+| **차주 1: "Trivy ↔ CIS AWS 벤치마크 매핑테이블 작성"** | 뼈대 + Trivy 자체 선언 태그(실측) `docs/TRIVY_CIS_MAPPING.md` (`scripts/trivy_check_meta.py`). CIS 원문 열은 **사람이** 채움(판 확정 → 번호·제목 원문 그대로 → 확인자) | B, 차주 |
+| **차주 2: "실효성 검증(v2계층) 구현"** | 교수의 '2계층' = (1층) Trivy 스캔·등급 게이트, (2층) 실효성 검증 — 우리 V6(+V5) 에 해당하며 SG·IAM Tier 1 은 **이미 구현·실측**. 차주 할 일: ① 사람이 만든 `ground-truth/` 3쌍에 그대로 돌려 표 만들기, ② 계층 근거 설명 연습(`docs/WHY_8_LAYERS.md`), ③ CI 등급 게이트 첫 실행. **확인 필요:** 메모의 "v2" 가 우리 V2(새 finding 검사)를 뜻하는지 '두 번째 계층' 인지 교수께 확인 | B·C, 차주 |
+| "8개 계층이 어디서 나온 건지 근거와 대응 논리" | `docs/WHY_8_LAYERS.md` — 5(TerraProbe L1~L5) + 1(V6, 실측 근거) + 2(V7/V8). 각자 담당 계층을 자기 말로 설명할 수 있어야 함 (`docs/walkthroughs/`) | A·B·C |
+
+한 번 클릭 실행기(`IaCPatch.bat`, D-13)는 발표·시연용 껍데기이고 판정 코드는 그대로다. 기능 추가로 세지 않는다.
+
 ## 12. Windows → WSL 실행 구조 (최소)
 
 ```

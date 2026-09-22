@@ -1,27 +1,30 @@
 
+!*.tfvars.example
+!data/reviews/README.md
+!data/runs/README.md
+!tools/README.md
+# AWS
 # Terraform
+# iacpatch
+# 혼자 실험용 도구 (scripts/setup_tools.*) — 바이너리는 커밋하지 않는다
 **/.terraform/
+*.pyc
+*.tfplan
 *.tfstate
 *.tfstate.*
-*.tfplan
 *.tfvars
-!*.tfvars.example
-
-# AWS
 *credentials*.csv
-
-# iacpatch
-data/runs/*
-!data/runs/README.md
-iacpatch.config.json
-__pycache__/
-*.pyc
-.iacpatch-work/
-data/reviews/*
-!data/reviews/README.md
-
-# 혼자 실험용 도구 (scripts/setup_tools.*) — 바이너리는 커밋하지 않는다
-tools/*
-!tools/README.md
-experiments/run_experiments.log
 .claude/settings.local.json
+.iacpatch-work/
+__pycache__/
+data/reviews/*
+data/runs/*
+experiments/run_experiments.log
+iacpatch.config.json
+report/
+tools/*
+# exe 빌드 산출물 (packaging/build_exe.ps1) — 바이너리는 커밋하지 않는다
+packaging/build/
+packaging/dist/
+packaging/*.spec
+/IaCPatch.exe

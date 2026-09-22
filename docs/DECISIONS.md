@@ -15,12 +15,13 @@
 | D-9 | 2026-09-22 | 위험도 기준표 **v2 확정안** (`docs/RISK_RUBRIC_V2.md`, `policy/risk_rubric.json` risk-v2): `outside_target_family_touched`(대상 가족 기준), `non_core_attribute_changed`(타입별 핵심 속성), plan/텍스트 병합 max, IAM floor·신뢰 정책 hard(D-6). 등급 일치율 실험(`expected_risk`) 추가 | v1 은 SG 전용 표현이라 IAM 정책 변경에 부당한 점수(+2, +1)가 붙고 병합 합산으로 점수가 경계와 안 맞았다. 팀 OK 전까지 '확정안'. 실행 결과를 보고 값을 바꾸지 않기 위해 지금 고정 후보를 낸다 | B (팀 확인 필요) |
 | D-10 | 2026-09-22 | **범위 확정(4주차 재검토, `docs/PROJECT_REVIEW_WEEK4.md` 5절)**: SG(됨)·IAM Tier 1(배포 전 됨)·Public S3(6~7주차) 세 유형만. Container CVE·EKS/Kubernetes·LangChain/LangGraph·대시보드·유료 LLM API = **하지 않음**. PR→승인→apply→V7/V8 1회 실측이 이번 달 최우선. 사람이 만든 ground truth(`ground-truth/`)를 분리하고 AI 작성 세트는 작성 주체를 명시 | 지도교수 9/22(남는 것·직접 쓰기·교차검증·제약)와 9/8 대화(피벗 금지·V6·seeded)를 병합. 기능 추가보다 제거 우선 | B (팀 확인 필요) |
 | D-11 | 2026-09-22 | Claude Code 사용 제약을 저장소에 고정: `CLAUDE.md` + `.claude/settings.json`(apply/destroy/aws/sudo/push/자격증명 거부), 후보 생성은 `scripts/cc_batch.sh`(사람 시작, 도구 금지, 빈 디렉터리) 또는 수동 붙여넣기 | 지도교수 9/22 "AI 제약을 잘 걸어라". D-5 의 연장 | B |
-
+| D-12 | 2026-09-22 | **제목 후보 (교수 9/22 메모 기준, 팀·교수 확인 필요)**: 국문 **AI가 생성한 테라폼 보안패치의 실효성 검증 자동화 구현**, 영문 *Implementation of Automated Effectiveness Verification for AI-Generated Terraform Security Patches*. 확정되면 D-1 을 대체한다 | 교수 메모 원문은 "AI가 생성한 테라폼 보안패치의 실효성 검증 자동화 **검증** 구현" 으로 '검증' 이 두 번 들어 있어 받아 적는 과정의 오기로 보고 한 번으로 정리했다 — **원문 그대로가 맞는지 교수께 확인**. 'LLM' → 'AI', 'AWS IaC' → '테라폼', '시스템' → '자동화' 로 바뀐 것은 교수 표현을 따른 것. 앱 창 제목·리포트 제목은 이 후보로 먼저 바꿔 둠 (확정 전이면 되돌리기 쉬움) | B (팀·교수 확인 필요) |
+| D-13 | 2026-09-22 | 실험·리포트를 **한 번 클릭**으로 묶는다: `IaCPatch.bat` → `iacpatch.app` (tkinter 창, 없으면 콘솔) → 단위 테스트 + `scripts/run_experiments.sh` 와 같은 8단계 + `report/index.html`. exe 는 `packaging/build_exe.ps1`(PyInstaller, Windows). 리포트 숫자는 전부 `data/reviews/`·`experiments/` 기록에서만 계산하고 만들어내지 않는다 | B 지시 9/22 ("한 번 딸깍하고 전부, 남들이 보는 시선"). GUI 는 결과를 보여 주는 껍데기이고 판정 코드는 바뀌지 않았다. exe 빌드는 샌드박스에 Windows 가 없어 **미검증** | B |
 
 ## 아직 안 정한 것
 
 - 위험도 기준표 고정 — 확정안 `docs/RISK_RUBRIC_V2.md` (2026-09-22) 에 팀 OK 만 남음. 평가용 LLM 후보 세트 돌리기 전에
-- 제목 확정: 운영계획서 "AI 생성 IaC 보안 패치의 실효성 검증 자동화 파이프라인 설계 및 구현" vs D-1 vs 9/22 교수 언급 "AI 가 생성한 Terraform 보안 패치의 실효성 검증 자동화 구현" — 하나로
+- 제목 확정: D-12 후보를 교수께 확인 (메모 원문의 '검증' 중복 여부) → 확정 즉시 README·운영계획서·발표 자료 통일. "제목 확정 빨리할 것" (교수 9/22)
 - TerraProbe 인용 출처(원문 링크·수치) 확보 전 인용 금지
 - Claude Code 후보 프롬프트 고정본 승인 (`experiments/candidate-sets/eval-claude-code/prompt.md` 초안) 과 케이스당 반복 횟수
 - V8 체크 정의와 sandbox 용 intent (실제 공인 IP)

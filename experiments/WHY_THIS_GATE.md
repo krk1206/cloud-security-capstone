@@ -34,7 +34,7 @@
 ## 3. 파이프라인 전체(정책 → V1~V6 → 검토 수준)를 돌렸을 때
 
 - eval-seeded-sg: 재스캔(V1)만 믿었으면 통과 7건 → 게이트 통과 2건 (기대 라벨 일치 11/11) — 실행 환경: host=vm, python=3.11.15, trivy=0.74.0, terraform=1.10.6
-- eval-seeded-iam: 재스캔(V1)만 믿었으면 통과 9건 → 게이트 통과 2건 (기대 라벨 일치 13/13) — 실행 환경: host=vm, python=3.11.15, trivy=0.74.0, terraform=1.10.6
+- eval-seeded-iam: 재스캔(V1)만 믿었으면 통과 9건 → 게이트 통과 1건 (기대 라벨 일치 13/13) — 실행 환경: host=vm, python=3.11.15, trivy=0.74.0, terraform=1.10.6
 
 ## 4. 이 게이트가 하지 않는 것 (정직하게)
 

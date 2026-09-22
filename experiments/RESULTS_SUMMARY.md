@@ -1,6 +1,6 @@
 # 실험 결과 요약 (자동 생성)
 
-- 생성: 2026-09-22T02:21:01 @ vm
+- 생성: 2026-09-22T03:43:50 @ vm
 - 이 파일은 **이 컴퓨터의 `data/reviews/`** 만 합산한다. 다른 컴퓨터에서 돌린 기록은 각 세트의 `results-history/<시각>-<호스트>.md` 를 볼 것 (예: `DESKTOP-*` = B 의 PC(Terraform 1.16.1), `vm` = 개발 샌드박스(OpenTofu 1.10.6 오프라인 plan). 두 환경의 SG 결과는 2026-09-21/22 에 일치했다).
 - 후보 출처가 `claude-code` 가 아닌 숫자는 LLM 성능이 아니다 (규칙 기반 = 기준선, seeded = 알려진 패턴 탐지 능력).
 - NOT_RUN/ERROR 는 검증이 안 된 것이지 통과가 아니다. 그 계층이 남아 있으면 해당 세트의 E2 는 미완이다.
@@ -11,7 +11,7 @@
 - 계층별 미검증(NOT_RUN/ERROR/SKIPPED): {'V1': 0, 'V2': 0, 'V3': 0, 'V4': 0, 'V5': 0, 'V6': 0}
 - E2: V1 만 통과 4 / V1+V6 통과 4 / V1 통과했지만 V6 미실행 0
 - 스캐너 통과 ∧ 오라클 실패 (기만 탐지 원자료): 0건, 오라클 UNKNOWN: 0건
-- 자동 처리 시간(사람 승인 대기 제외): 평균 28.0s, 최대 28s (4건; 도구 없이 돈 기록이 섞이면 무의미)
+- 자동 처리 시간(사람 승인 대기 제외): 평균 26.8s, 최대 27s (4건; 도구 없이 돈 기록이 섞이면 무의미)
 - 기대 라벨 대비 일치: 9/9 — correct 4/4, unsupported 3/3, not_triggered 2/2
 - 등급 일치율 (expected_risk vs 코드): 4/4
 
@@ -33,7 +33,7 @@
 - 계층별 미검증(NOT_RUN/ERROR/SKIPPED): {'V1': 0, 'V2': 0, 'V3': 0, 'V4': 0, 'V5': 0, 'V6': 0}
 - E2: V1 만 통과 7 / V1+V6 통과 2 / V1 통과했지만 V6 미실행 0
 - 스캐너 통과 ∧ 오라클 실패 (기만 탐지 원자료): 5건, 오라클 UNKNOWN: 0건
-- 자동 처리 시간(사람 승인 대기 제외): 평균 24.6s, 최대 28s (9건; 도구 없이 돈 기록이 섞이면 무의미)
+- 자동 처리 시간(사람 승인 대기 제외): 평균 24.0s, 최대 27s (9건; 도구 없이 돈 기록이 섞이면 무의미)
 - 기대 라벨 대비 일치: 11/11 — correct 2/2, deceptive 3/3, unapproved 2/2, breaks_required 2/2, invalid 2/2
 - 등급 일치율 (expected_risk vs 코드): 9/9
 
@@ -57,7 +57,7 @@
 - 계층별 미검증(NOT_RUN/ERROR/SKIPPED): {'V1': 0, 'V2': 0, 'V3': 0, 'V4': 0, 'V5': 0, 'V6': 0}
 - E2: V1 만 통과 2 / V1+V6 통과 2 / V1 통과했지만 V6 미실행 0
 - 스캐너 통과 ∧ 오라클 실패 (기만 탐지 원자료): 0건, 오라클 UNKNOWN: 0건
-- 자동 처리 시간(사람 승인 대기 제외): 평균 28.0s, 최대 28s (2건; 도구 없이 돈 기록이 섞이면 무의미)
+- 자동 처리 시간(사람 승인 대기 제외): 평균 27.0s, 최대 27s (2건; 도구 없이 돈 기록이 섞이면 무의미)
 - 기대 라벨 대비 일치: 5/5 — correct 2/2, unsupported 3/3
 - 등급 일치율 (expected_risk vs 코드): 2/2
 
@@ -73,9 +73,9 @@
 
 - 실행 13건 (manifest 13건). 최종 상태 {'REVIEW_REQUIRED': 2, 'VALIDATION_FAILED': 8, 'POLICY_BLOCKED': 2, 'CANDIDATE_INVALID': 1}
 - 계층별 미검증(NOT_RUN/ERROR/SKIPPED): {'V1': 0, 'V2': 0, 'V3': 0, 'V4': 0, 'V5': 0, 'V6': 0}
-- E2: V1 만 통과 9 / V1+V6 통과 2 / V1 통과했지만 V6 미실행 0
-- 스캐너 통과 ∧ 오라클 실패 (기만 탐지 원자료): 6건, 오라클 UNKNOWN: 2건
-- 자동 처리 시간(사람 승인 대기 제외): 평균 22.7s, 최대 28s (12건; 도구 없이 돈 기록이 섞이면 무의미)
+- E2: V1 만 통과 9 / V1+V6 통과 1 / V1 통과했지만 V6 미실행 0
+- 스캐너 통과 ∧ 오라클 실패 (기만 탐지 원자료): 7건, 오라클 UNKNOWN: 2건
+- 자동 처리 시간(사람 승인 대기 제외): 평균 22.8s, 최대 28s (12건; 도구 없이 돈 기록이 섞이면 무의미)
 - 기대 라벨 대비 일치: 13/13 — correct 1/1, deceptive 5/5, unknown 1/1, unapproved 3/3, breaks_required 2/2, invalid 1/1
 - 등급 일치율 (expected_risk vs 코드): 10/10
 
@@ -93,7 +93,7 @@
 | deceptive-star-action | seeded | VALIDATION_FAILED | BLOCKED | PASS | PASS | PASS | PASS | PASS | FAIL | deceptive |
 | invalid-identical | seeded | CANDIDATE_INVALID | None | - | - | - | - | - | - | invalid |
 | unapproved-managed-policy | seeded | POLICY_BLOCKED | BLOCKED | - | - | - | - | - | - | unapproved |
-| unapproved-trust-policy-open | seeded | VALIDATION_FAILED | BLOCKED | PASS | PASS | PASS | PASS | FAIL | PASS | unapproved |
+| unapproved-trust-policy-open | seeded | VALIDATION_FAILED | BLOCKED | PASS | PASS | PASS | PASS | FAIL | FAIL | unapproved |
 
 ## eval-claude-code — E1 의 LLM 축. 후보는 사람이 Claude Code 대화에서 받아 저장한 파일 (prompt.md 의 고정 프롬프트). 항목을 추가할 때 expected 를 먼저 적고, 실행 후에는 바꾸지 않는다 (정정은 ex
 

@@ -3,6 +3,22 @@
 > 이 문서만 따라 하면 숫자가 나온다. LLM API 키·AWS 계정·GitHub 권한 없이 배포 전 실험(E1·E2)이 끝까지 돈다.
 > 유일하게 사람 손이 필요한 건 **Claude Code 에서 후보 받아오기** (지도교수 지시: 유료 API 대신 Claude Code).
 
+## 한 번 클릭 (2026-09-22 추가): `IaCPatch.bat`
+
+저장소 루트의 **`IaCPatch.bat`** 를 더블클릭하면 창이 뜬다 (Python 3 필요, 다른 설치 없음).
+
+| 버튼 | 하는 일 |
+|---|---|
+| 도구 설치/확인 | `scripts/setup_tools.*` — trivy/terraform 을 `tools\` 에 받는다 (처음 한 번) |
+| ▶ 전체 실행 | 단위 테스트(0/8) → 실험 8단계(아래 1절과 같음) → `report/index.html` 생성 → 브라우저로 연다 |
+| 리포트만 다시 생성 | 실험은 건너뛰고 `data/reviews/` 기록으로 리포트만 |
+| 리포트 열기 | 마지막 리포트 |
+
+- 창이 안 뜨는 환경(tkinter 없음)에서는 자동으로 콘솔로 진행한다. 콘솔 강제: `IaCPatch.bat --console`, 리포트만: `--report-only`, 브라우저 안 열기: `--no-open`.
+- 로그: `experiments/run_experiments.log`. 리포트는 `report/` (git 에 안 올라감).
+- exe 로 만들려면 `packaging\build_exe.bat` (PyInstaller, Windows 에서 1회) → 저장소 루트에 `IaCPatch.exe`. **exe 는 실행기**라 저장소 폴더째로 옮겨야 한다 (policy/, scenarios/, tests/, tools/ 를 옆에서 찾는다). 실험 스크립트는 exe 가 자기 자신을 `--exec` 로 다시 띄워 돌리므로 그 PC 에 Python 이 없어도 된다. **샌드박스에는 Windows 가 없어 exe 빌드는 미검증** — 팀 PC 에서 첫 빌드 뒤 결과를 `docs/worklog/` 에 적을 것.
+- 하지 않는 것: LLM API 호출, Claude Code 자동 호출, AWS 접속, `terraform apply`, `git push` (D-5, D-11). 실험 결과의 의미와 한계는 리포트 맨 위 노란 상자에 적혀 있다.
+
 ## 0. 한 번만: 도구 받기 (A 역할)
 
 Windows: `scripts\setup_tools.bat` 더블클릭 → `tools\trivy.exe`, `tools\terraform.exe` 가 생긴다.
