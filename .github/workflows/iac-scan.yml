@@ -2,8 +2,6 @@ name: IaC Security Scan
 
 on:
   pull_request:
-    paths:
-      - 'infrastructure/**'
   push:
     branches: [main]
     paths:
@@ -22,6 +20,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Install Trivy
         run: |
@@ -35,7 +35,7 @@ jobs:
           sudo apt-get install -y trivy
           trivy --version
 
-      - name: Scan (human readable)
+      - name: Scan (human readable, report only)
         run: |
           trivy config infrastructure/sg-baseline \
             --tf-vars infrastructure/sg-baseline/terraform.tfvars.example
@@ -54,3 +54,24 @@ jobs:
           name: trivy-scan-results
           path: scan-results/
           retention-days: 14
+
+      # PR 게이트: 이 PR 에서 바뀐 infrastructure/ 하위 폴더만 검사한다.
+      # (main 에 의도적 결함 시나리오가 있는 동안 팀원의 코드 PR 이 기존 결함 때문에 막히지 않게 함)
+      - name: Gate - fail on HIGH/CRITICAL (pull requests only, changed infra dirs)
+        if: github.event_name == 'pull_request'
+        run: |
+          BASE="${{ github.event.pull_request.base.sha }}"
+          CHANGED=$(git diff --name-only "$BASE"...HEAD -- infrastructure/ | xargs -r -n1 dirname | sort -u)
+          if [ -z "$CHANGED" ]; then
+            echo "infrastructure/ 변경 없음 - 게이트 생략"
+            exit 0
+          fi
+          RC=0
+          for d in $CHANGED; do
+            [ -d "$d" ] || continue
+            echo "== gate: $d"
+            TFVARS=""
+            [ -f "$d/terraform.tfvars.example" ] && TFVARS="--tf-vars $d/terraform.tfvars.example"
+            trivy config "$d" $TFVARS --severity HIGH,CRITICAL --exit-code 1 || RC=1
+          done
+          exit $RC
