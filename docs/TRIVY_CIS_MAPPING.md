@@ -1,4 +1,7 @@
-# Trivy ↔ CIS AWS Foundations Benchmark 매핑표 (차주 과제 — 뼈대 + 실측 열, 2026-09-22)
+# Trivy ↔ CIS AWS Foundations Benchmark 매핑표 — 실측 열 + 우리 계층 열 (2026-09-22, 09-28 갱신)
+
+> **사람용 매핑표 원본은 A 가 쓴 [`docs/cis-mapping.md`](cis-mapping.md) v0.2 (2026-09-28, 45개 룰, Trivy 메타 + Security Hub 교차 확인, 출처 표기 †/‡)** 다. 이 문서는 (1) `trivy` 바이너리에서 기계로 뽑은 태그(실측, 재현 가능)와 (2) 각 룰을 우리 검증 계층 중 무엇이 잡는지만 유지한다. 두 문서의 숫자가 다르면 A 의 표가 기준이고, 기계 추출값과 다른 곳은 A 가 이미 "Trivy 메타데이터 오류 의심" 으로 적어 두었다(AWS-0145). 파이프라인이 읽는 기계용 사본은 `policy/cis_mapping.json` (A 의 v0.2 값으로 09-28 갱신, verified=false = CIS 원문 미대조).
+> 룰 ID 표기: A 의 표는 Trivy 출력 그대로 `AWS-0107`, 이 브랜치의 코드·정책은 `AVD-AWS-0107` 로 정규화한다(같은 룰). 통일 여부는 팀 결정 항목 (docs/WHITELIST_VS_POLICY.md 와 함께).
 
 지도교수 9/22: "차주: 트리비 ↔ CIS AWS 벤치마크 매핑테이블 작성." 그리고 "표준 가이드 같은 게 있는가? → SK쉴더스 테라폼 보안가이드 참고."
 
@@ -29,7 +32,7 @@ python3 scripts/trivy_check_meta.py AVD-AWS-0107
 
 전체 목록: `experiments/trivy-check-metadata/trivy-0.74.0-aws.md` (팀 PC 의 trivy.exe 로 다시 뽑아 같은지 확인할 것 — 버전이 다르면 태그도 다를 수 있다).
 
-## 1. 매핑표 본체 (B 가 CIS 원문으로 채운다 — 빈 칸을 지어내지 않는다)
+## 1. 매핑표 본체 — A 의 `docs/cis-mapping.md` 로 대체됨 (아래 표는 '우리 계층' 열만 참고)
 
 CIS 원문은 CIS 사이트에서 무료 등록 후 PDF 를 받는다. **판(version) 을 먼저 정하고** 그 판의 번호로만 적는다 (판마다 번호가 다르다: 1.2.0 의 4.1/4.2 가 1.4.0 이후 5.x 로 옮겨진 것으로 알려져 있으나 **원문에서 확인**).
 
