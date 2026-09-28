@@ -311,7 +311,7 @@ function tilesFromSummary(S, el){
     ['good', `${S.label_agree}/${S.label_total}`, '기대 라벨 일치', '후보 세트 4개'],
     [S.not_run_total?'warn':'good', S.not_run_total, '미검증 계층', S.not_run_total?'도구 없이 돈 기록':'전부 실행됨'],
     [S.n_llm?'good':'warn', S.n_llm, 'LLM 후보'+(S.n_llm?'':' (미측정)'), 'Claude Code 출력'],
-    ['accent', fz.blind!=null?`${fz.caught}/${fz.blind}`:'–', '스캐너 사각 중 오라클 탐지', '변형 자동 생성'],
+    ['accent', fz.trivy_blind!=null?`${fz.oracle_caught}/${fz.trivy_blind}`:'–', '스캐너 사각 중 오라클 탐지', fz.trivy_blind!=null?`변형 ${fz.should}종 중 Trivy 사각 ${fz.trivy_blind} · 오라클도 놓침 ${fz.oracle_miss}`:'변형 자동 생성 (아직 실행 전)'],
     [S.aws_runs?'good':'warn', S.aws_runs||0, 'AWS 배포 후 검증(V7/V8)', '0 이면 아직'],
   ].map(([k,n,l,m])=>`<div class="tile ${k}"><div class="n">${esc(n)}</div><div class="l">${esc(l)}</div><div class="m">${esc(m)}</div></div>`).join('');
 }

@@ -332,6 +332,7 @@ def run_all(log: Callable[[str], None], progress: Callable[[int, int], None], re
                 log(f"  (종료 코드 {rc} — 이 단계는 실패. 로그를 확인)"); lf.write(f"exit={rc}\n")
         progress(total - 1, total)
         log("\n================ 리포트 생성")
+        lf.flush()   # 리포트가 이 로그의 끝 80줄을 읽는다 — 버퍼에 남아 있으면 '로그 없음' 으로 나온다 (팀 PC 실측 09-29)
         from iacpatch.report_html import build
         out = build(Path(report_out) if report_out else ROOT / "report" / "index.html")
         log(f"→ {out}"); lf.write(f"report: {out}\n")
