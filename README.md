@@ -32,6 +32,7 @@
 
 **관련 문서**
 - [`docs/BC_WEEK3-4_STATUS.md`](docs/BC_WEEK3-4_STATUS.md) — **B·C 3~4주차 현황**, [`docs/CODE_TOUR.md`](docs/CODE_TOUR.md) — 코드 투어, [`docs/IO_SPEC_A_B_C.md`](docs/IO_SPEC_A_B_C.md) — A→B→C 입출력 명세, [`docs/RISK_RUBRIC_DRAFT.md`](docs/RISK_RUBRIC_DRAFT.md) — 잠정 위험도 기준표, [`docs/INTENT_ORACLE_PLAN.md`](docs/INTENT_ORACLE_PLAN.md) — Intent Oracle 명세·테스트 계획, [`docs/EXPERIMENT_GUIDE.md`](docs/EXPERIMENT_GUIDE.md) — **실험 방법(쉬운 버전)**
+- [`docs/PLAN_2026-09-22.md`](docs/PLAN_2026-09-22.md) — **운영계획서(공식 계획) 요지 ↔ 저장소 현황**, [`docs/CI_FIRST_RUN.md`](docs/CI_FIRST_RUN.md) — Actions 첫 실행 기록(exe 빌드 실패 3회 → 성공)
 - [`docs/STATUS.md`](docs/STATUS.md) — 전체 구현 현황 (2026-09-13 기준), [`docs/RUNBOOK.md`](docs/RUNBOOK.md) — 실행 방법, [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — 코드 구조, [`docs/DOC_CORRECTIONS.md`](docs/DOC_CORRECTIONS.md) — 문서 정정 기록
 - [`criticism and rebuttal.md`](criticism%20and%20rebuttal.md) — 받은 비판과 답변
 - [`RoadMap.md`](RoadMap.md) — 동작 시나리오와 용어집

@@ -13,8 +13,24 @@ push 는 B 가 GitHub Desktop 으로 했다 (A 계정 `krk1206` 로 로그인 �
 | 4 | IaC Security Scan #6 | 9fd2985 | 성공 (Trivy IaC Scan 24s, 아티팩트 trivy-scan-results) | 27s | [36456065463](https://github.com/krk1206/cloud-security-capstone/actions/runs/36456065463) |
 | 5 | IaCPatch verify #2 | 9fd2985 | **성공** — unit 9s, experiments 4m 9s, 아티팩트 `iacpatch-report-2` (360 KB) | 4m 25s | [36456065586](https://github.com/krk1206/cloud-security-capstone/actions/runs/36456065586) |
 | 6 | Build IaCPatch.exe #2 | 9fd2985 | **실패** — 콘솔판·창 없는 판 빌드 둘 다 성공(각 exe 생성), "Smoke test (console exe …)" 단계 exit 1 | 1m 12s | [36456065448](https://github.com/krk1206/cloud-security-capstone/actions/runs/36456065448) |
+| 9 | Build IaCPatch.exe #4 | 2c5903a | **성공** (2m 37s) — 아래 표. 아티팩트 `IaCPatch-portable` 45.4 MB | 2m 37s | [36463339980](https://github.com/krk1206/cloud-security-capstone/actions/runs/36463339980) |
+| 10 | iac-scan / verify (#4 시점) | 2c5903a | 성공 — PR 체크 4/4 초록, "No conflicts with base branch" | | PR #4 |
 
-확인 필요: verify 가 PR 에 다는 고정 댓글(`<!-- iacpatch-ci-summary -->`, 후보 세트 표)이 실제로 달렸는지 — 로그인 없이 PR 댓글을 못 읽었다. PR 페이지에서 `github-actions` 댓글 유무를 보면 된다.
+### Build #4 — 브랜치 `ci-logs` 에서 읽은 실측 (2026-09-28 18:1x UTC, `git fetch origin ci-logs`)
+
+| 단계 | 결과 | 근거 (로그 원문) |
+|---|---|---|
+| 러너 Python(3.12)으로 단위 테스트, Windows | success | `win-unittest.log`: `Ran 206 tests in 48.732s` / `OK (skipped=8)` |
+| 콘솔 exe `--selfcheck` | exit 0 | `root D:\a\…\cloud-security-capstone`, `frozen True (_MEIPASS=C:\Users\RUNNER~1\…\_MEI0000149c2)`, `python 3.14.7 Windows 2025Server`, trivy·terraform 없음, `selfcheck : OK` (55개 모듈 exe 안 존재 확인) |
+| 콘솔 exe `--exec scripts/pyver.py` | exit 0 | |
+| 콘솔 exe `--console --report-only --no-open` | exit 0 | `설치 상태 검사 OK (python 3.14.7)` → `report\index.html written: 68143 bytes` |
+| 창 없는 exe (Start-Process -Wait) | success | `exe-console.log`: 같은 출력, 리포트 생성 |
+| exe 안에서 단위 테스트 (참고용) | success | `exe-unittest.log`: `Ran 206 tests in 22.667s` / `OK (skipped=10)` |
+
+exe 의 python 이 3.14.7 인 것은 `build_exe.ps1` 이 `py -3`(런처 → 러너의 최신 Python)를 먼저 잡기 때문 — 팀 PC(3.14.7)와 같다. 러너 단위 테스트는 setup-python 의 3.12.
+러너에는 trivy·terraform 이 없어 exe 의 도구 층은 NOT_RUN 으로 지나갔다 — exe 의 도구 층 실측은 팀 PC(`tools\` 받은 뒤)에서.
+
+verify 의 고정 댓글(`<!-- iacpatch-ci-summary -->`, 후보 세트 표)은 B 의 화면 캡처로 달린 것을 확인(17:2x). exe 빌드 댓글(`<!-- iacpatch-exe-build -->`)도 #3 부터 달림.
 
 ## exe 빌드가 두 번 실패한 이유 (Actions 로그는 로그인 없이 못 읽어 샌드박스에서 재현)
 
