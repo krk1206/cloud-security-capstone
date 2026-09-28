@@ -32,12 +32,28 @@ if ($LASTEXITCODE -ne 0) { Write-Host "pyinstaller 설치 실패"; exit 1 }
 
 $mode = if ($Console) { "--console" } else { "--windowed" }
 $name = if ($Console) { "IaCPatch-console" } else { "IaCPatch" }   # 콘솔판은 검은 창에 로그가 보여서 문제 진단용. 둘 다 만들어 둘 수 있다
+
+# iacpatch 의 모든 모듈을 exe 에 넣는다. 실험 스크립트(scripts/*.py)는 exe 가 자기 자신을 --exec 로 띄워 돌리므로, 진입점(app.py)에서
+# 직접 import 하지 않는 모듈(fuzz, verify 일부…)도 전부 들어가야 한다.
+#  - --collect-submodules 는 spec 을 만드는 시점에 iacpatch 를 import 할 수 있어야 동작하는데 --paths 는 그 뒤(Analysis)에야 적용된다
+#    → PYTHONPATH 로 src\ 를 먼저 보이게 한다 (build-exe #2·#3 실측: 이게 없어서 iacpatch.fuzz 가 빠져 스모크가 죽음, 2026-09-28).
+#  - 그래도 빠지는 일이 없게 src\iacpatch\**\*.py 를 전부 --hidden-import 로도 준다. exe 의 --selfcheck 가 빠진 모듈이 없는지 검사한다.
+$env:PYTHONPATH = "$Root\src"
+& $PyExe @($PyPre + @("-c", "import iacpatch.fuzz.runner, iacpatch.web.server, iacpatch.rubric_demo"))
+if ($LASTEXITCODE -ne 0) { Write-Host "src\iacpatch 를 import 할 수 없다 (PYTHONPATH=$env:PYTHONPATH)"; exit 1 }
+$hidden = @()
+Get-ChildItem -Path "$Root\src\iacpatch" -Recurse -Filter *.py | Where-Object { $_.Name -ne "__main__.py" } | ForEach-Object {
+  $rel = $_.FullName.Substring("$Root\src\".Length) -replace "\.py$", ""
+  $mod = ($rel -replace "\\", ".") -replace "\.__init__$", ""
+  $hidden += @("--hidden-import", $mod)
+}
+Write-Host ("hidden imports: " + ($hidden.Count / 2) + " modules")
 # 경로는 전부 절대경로로 준다. --specpath 를 쓰면 PyInstaller 가 --add-data 의 상대경로를 spec 폴더(packaging\) 기준으로 풀어서
 # "packaging\src\iacpatch\generator\prompts 를 찾을 수 없다" 로 실패한다 (팀 PC 첫 빌드에서 실측, 2026-09-22).
 $args = @("-m", "PyInstaller", "--noconfirm", "--clean", "--onefile", $mode,
           "--name", $name,
           "--paths", "$Root\src",
-          "--collect-submodules", "iacpatch",
+          "--collect-submodules", "iacpatch") + $hidden + @(
           "--add-data", "$Root\src\iacpatch\generator\prompts;iacpatch\generator\prompts",
           "--add-data", "$Root\src\iacpatch\web\static;iacpatch\web\static",
           "--distpath", "$Root\packaging\dist", "--workpath", "$Root\packaging\build", "--specpath", "$Root\packaging",

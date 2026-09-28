@@ -62,9 +62,10 @@ class PrFromReviewTests(unittest.TestCase):
         rc = prepare_pr(self.settings, review_id=str(res.run_dir))    # 기록 폴더 경로로도 받는다
         self.assertEqual(rc, 0)
         script = (res.run_dir / "pr_commands.sh").read_text(encoding="utf-8")
-        self.assertIn(f"{res.run_dir / 'candidate' / 'main.tf'} {ROOT / TF_DIR / 'main.tf'}", script)
+        rd = res.run_dir.resolve()   # prepare_pr 는 기록 경로를 resolve() 해서 쓴다 — Windows 의 임시 폴더는 짧은 이름(RUNNER~1)과 긴 이름이 다르다 (CI 실측 2026-09-28)
+        self.assertIn(f"{rd / 'candidate' / 'main.tf'} {ROOT / TF_DIR / 'main.tf'}", script)
         self.assertIn("git push -u origin iacpatch/pr-t-", script)
-        self.assertIn(f"--body-file {res.run_dir / 'pr_body.md'}", script)
+        self.assertIn(f"--body-file {rd / 'pr_body.md'}", script)
         msg = (res.run_dir / "commit_message.txt").read_text(encoding="utf-8")
         self.assertIn("[iacpatch] pr-t: AVD-AWS-0107 on aws_security_group.", msg)   # 리소스 이름은 시나리오의 것
         self.assertNotIn("[approval required]", msg)                 # LIGHT_REVIEW 는 승인 표시 없음

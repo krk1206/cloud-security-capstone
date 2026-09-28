@@ -189,13 +189,40 @@ def selfcheck() -> List[str]:
             obj = getattr(m, name)
             if attr and not hasattr(obj, attr):
                 raise AttributeError(attr)
-        except Exception as e:  # ImportError / AttributeError = 옛 파일이 남아 있음
-            problems.append(f"{mod}.{name}{'.' + attr if attr else ''} 없음 ({type(e).__name__}) — 옛 파일이 남아 있음")
+        except Exception as e:  # ImportError / AttributeError = 옛 파일이 남아 있음 (exe 면 = exe 에 모듈이 안 들어감)
+            problems.append(f"{mod}.{name}{'.' + attr if attr else ''} 없음 ({type(e).__name__}: {e}) — "
+                            + ("exe 에 이 모듈이 안 들어갔다 (packaging/build_exe.ps1 의 PYTHONPATH·--collect-submodules)" if FROZEN else "옛 파일이 남아 있음"))
     for rel in ("scripts/fuzz_scanner.py", "scripts/oracle_fuzz.py", "scripts/run_candidate_set.py", "tests/unit/test_fuzz.py", "policy/risk_rubric.json",
                 "tests/fixtures/plan-pairs/README.md", "src/iacpatch/web/static/index.html"):
         if not (ROOT / rel).exists():
             problems.append(f"{rel} 없음")
+    problems += _frozen_bundle_gaps()
     return problems
+
+
+def _frozen_bundle_gaps() -> List[str]:
+    """exe 안에서: 저장소 src/iacpatch 의 모든 모듈이 exe 에 들어갔는지 하나씩 import 해 본다 (스크립트는 --exec 로 exe 안에서 돌기 때문에
+    빠진 모듈이 하나라도 있으면 그 단계가 죽는다). build-exe #2·#3 이 여기서 죽었다: --collect-submodules 가 src/ 를 못 봐 iacpatch.fuzz 가 빠짐."""
+    if not FROZEN:
+        return []
+    pkg = ROOT / "src" / "iacpatch"
+    if not pkg.is_dir():
+        return []
+    import importlib
+    gaps: List[str] = []
+    for py in sorted(pkg.rglob("*.py")):
+        rel = py.relative_to(pkg.parent).with_suffix("")
+        parts = list(rel.parts)
+        if parts[-1] == "__main__":     # iacpatch/__main__.py 는 import 하면 CLI 가 실행된다
+            continue
+        if parts[-1] == "__init__":
+            parts = parts[:-1]
+        mod = ".".join(parts)
+        try:
+            importlib.import_module(mod)
+        except Exception as e:
+            gaps.append(f"exe 에 {mod} 없음 ({type(e).__name__}: {e})")
+    return gaps
 
 
 def _selfcheck_cli() -> int:

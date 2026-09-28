@@ -28,6 +28,22 @@ push 는 B 가 GitHub Desktop 으로 했다 (A 계정 `krk1206` 로 로그인 �
 | 7 | IaC Security Scan / verify #3 | a033666 | 성공 (3개 초록: iac-scan 23s, verify unit, verify experiments) | | PR #4 체크 화면 |
 | 8 | Build IaCPatch.exe #3 | a033666 | **실패** — 러너 Python 단위 테스트(step 4) exit 1, 콘솔 exe 스모크(step 6) exit 1. 빌드 자체는 성공. 결과 표·로그 끝부분이 PR 댓글로 달림 (로그인 없이는 못 읽음 → B 가 펼쳐서 캡처) | 1m 18s | [36460764934](https://github.com/krk1206/cloud-security-capstone/actions/runs/36460764934) |
 
+### Build #3 의 로그 (B 가 PR 댓글을 펼쳐 붙여 줌) — 진짜 원인
+
+`smoke.log` 끝부분:
+
+```
+설치 상태 검사 실패 — 실험을 돌리지 않는다:
+  - iacpatch.fuzz.runner.run_variants 없음 (ModuleNotFoundError) — 옛 파일이 남아 있음
+RuntimeError: 설치 상태 검사 실패 (위 목록). ...
+[PYI-8472:ERROR] Failed to execute script 'app' due to unhandled exception!
+```
+
+즉 **exe 안에 `iacpatch.fuzz` 패키지가 안 들어갔다.** `packaging/build_exe.ps1` 의 `--collect-submodules iacpatch` 는 spec 을 만드는 시점에 `iacpatch` 를 import 할 수 있어야 동작하는데, `--paths src` 는 그 뒤(Analysis 단계)에야 적용돼서 조용히 아무것도 안 모았다. 진입점(app.py)에서 직접 import 되는 모듈(web.server, report_html, review.*, …)만 들어가고, 스크립트가 쓰는 `fuzz.*` 는 빠졌다. #2 도 같은 자리에서 죽었을 것이다(같은 검사가 상대 import 줄보다 먼저 돈다) — 상대 import 도 실제 버그였지만(더블클릭 → 화면 경로) #2 의 직접 원인은 이것.
+수정: 빌드 전에 `PYTHONPATH=src` 를 주고(collect-submodules 가 동작), 그래도 빠지지 않게 `src\iacpatch\**\*.py` 55개를 전부 `--hidden-import` 로도 넘긴다. exe 의 `--selfcheck` 와 실행 시 설치 검사가 "저장소의 모든 iacpatch 모듈이 exe 안에 있는가" 를 import 로 확인한다(`_frozen_bundle_gaps`). 오류 문구도 exe 일 때는 "exe 에 모듈이 안 들어갔다" 로 바꿈.
+
+`win-unittest.log`(러너 Python, Windows): 206 중 1 실패 — `test_pr_from_review.test_light_review_record_prepares_pr_preview`. `prepare_pr` 가 기록 경로를 `resolve()` 해 긴 이름(`C:\Users\runneradmin\…`)으로 쓰는데 테스트는 임시 폴더의 짧은 이름(`C:\Users\RUNNER~1\…`)과 비교했다 → 테스트 쪽을 `resolve()` 로 맞춤. 코드 문제 아님.
+
 Build #3 뒤 추가: 스모크가 `--selfcheck`(루트·exe 여부·임시 폴더·도구·설치 검사)부터 찍고 명령마다 종료 코드 표식을 남기며, 결과 표와 **로그 전문을 브랜치 `ci-logs` 에 push** 한다 — 브랜치는 로그인 없이 `git fetch origin ci-logs` 로 읽힌다 (Actions 로그·PR 댓글은 로그인 필요). 이 브랜치는 어떤 워크플로도 다시 돌리지 않는다.
 
 ## 워크플로 단계 (build-exe.yml, 수정 후)
