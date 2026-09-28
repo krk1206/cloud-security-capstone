@@ -133,6 +133,6 @@
       "expected_risk_basis": "assume_role_policy 변경 = hard HIGH"
     }
   ],
-  "_expected_risk_note": "expected_risk = 사람이 docs/RISK_RUBRIC_V2.md 의 표를 손으로 적용한 등급 (2026-09-22, B). 코드가 표를 그대로 구현했는지의 '등급 일치율' 실험용. 후보가 위험도 판정에 이르지 않는 항목(NO_FINDING/INFO_INSUFFICIENT/CANDIDATE_INVALID)은 적지 않는다. 이 값들은 v1 실행 결과를 본 뒤에 적었으므로 '블라인드 예측' 이 아니라 '표 해석의 독립 검산' 이다.",
+  "_expected_risk_note": "expected_risk = docs/RISK_RUBRIC_V2.md 의 표를 코드와 별도로 읽고 적은 등급. 작성 주체: B 의 Claude 세션(AI, 2026-09-22) — 사람(B)의 손 검산은 아직 0건이라 '사람 검산' 이라고 부르지 않는다 (2026-09-28 정정). B 가 항목마다 직접 검산하고 확인 날짜를 적으면 그때부터 사람 검산. 코드가 표를 그대로 구현했는지의 '등급 일치율' 실험용. 후보가 위험도 판정에 이르지 않는 항목(NO_FINDING/INFO_INSUFFICIENT/CANDIDATE_INVALID)은 적지 않는다. 이 값들은 v1 실행 결과를 본 뒤에 적었으므로 '블라인드 예측' 이 아니라 '표 해석의 독립 검산' 이다.",
   "_authorship_note": "이 세트의 후보 파일은 B 의 Claude(AI) 세션에서 작성됐다(교차검증 원칙에 따라 명시). '알려진 우회 패턴' 탐지력 측정용이며, 사람이 직접 만드는 ground truth(vulnerable/ + expected_safe/)는 별도 세트로 만든다 (docs/PROJECT_REVIEW_WEEK4.md 18절)."
 }

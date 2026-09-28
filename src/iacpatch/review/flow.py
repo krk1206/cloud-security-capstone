@@ -240,7 +240,10 @@ def run_review(settings: Settings, opt: ReviewOptions) -> ReviewResult:
     # ------------------------------------------------------------------ 3. 검증 결과 연결
     cand_sources = dict(original)
     cand_sources.update(cand.files)
-    verification_path, baseline_plan, candidate_plan = opt.verification, opt.baseline_plan, opt.candidate_plan
+    # 파일 경로는 저장소 루트 기준으로 확정한다 (현재 작업 폴더에 따라 V5/V6 가 '파일 없음' 이 되던 문제 — 2026-09-28, 웹 화면/exe 는 cwd 가 다를 수 있음)
+    _abs = lambda x: str(settings.path(x)) if x else None
+    verification_path, baseline_plan, candidate_plan = _abs(opt.verification), _abs(opt.baseline_plan), _abs(opt.candidate_plan)
+    intent_path = _abs(opt.intent)
     local_notes: List[str] = []
     if opt.local_tools and not verification_path:
         # 도구가 있으면 V1~V4 를 지금 실행 (predeploy 와 같은 코드). 없으면 NOT_RUN 으로 기록된다
@@ -254,11 +257,11 @@ def run_review(settings: Settings, opt: ReviewOptions) -> ReviewResult:
         local_notes = ["V1~V4 를 로컬 도구로 실행했다 (run 폴더 local_verify/). 도구가 없는 계층은 NOT_RUN"] + lv.notes
         run.set(local_tools=lv.tools)
     try:
-        linked: LinkedVerification = link_verification(cand.files, verification_path, baseline_plan, candidate_plan, opt.intent,
+        linked: LinkedVerification = link_verification(cand.files, verification_path, baseline_plan, candidate_plan, intent_path,
                                                        policy, cand_sources)
     except VerificationInputError as e:
         run.error(str(e))
-        linked = link_verification(cand.files, None, baseline_plan, candidate_plan, opt.intent, policy, cand_sources)
+        linked = link_verification(cand.files, None, baseline_plan, candidate_plan, intent_path, policy, cand_sources)
         linked.notes.append(f"검증 결과 파일을 쓰지 못했다: {e}")
     linked.notes = local_notes + linked.notes
     validity = combine("pre_deploy", linked.layers)

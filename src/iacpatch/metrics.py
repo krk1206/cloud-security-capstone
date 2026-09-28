@@ -159,7 +159,7 @@ def summarize(rows: List[Dict[str, Any]], labels: Optional[Dict[str, Any]] = Non
                 detail[exp]["as_expected"] += 1
                 by_source[src]["as_expected"] += 1
         out["labeled"] = {"total": total, "as_expected": agree, "by_label": dict(detail), "by_source": dict(by_source)}
-        # 등급 일치율: 사람이 기준표를 손으로 적용한 expected_risk vs 코드가 낸 risk (위험도 판정이 있는 실행만)
+        # 등급 일치율: 기준표를 따로 읽고 적은 expected_risk(작성 주체는 manifest 의 _expected_risk_note 참조) vs 코드가 낸 risk (위험도 판정이 있는 실행만)
         g_total = g_agree = 0
         mism: List[str] = []
         for r in rows:
@@ -201,7 +201,7 @@ def render_table(rows: List[Dict[str, Any]], title: str = "집계", labels: Opti
             L.append(f"  - 기대={k}: {v['as_expected']}/{v['total']}")
         ga = s.get("grade_agreement") or {}
         if ga.get("total"):
-            L.append(f"- 등급 일치율 (사람이 기준표를 손으로 적용한 expected_risk vs 코드 판정): {ga['agree']}/{ga['total']}"
+            L.append(f"- 등급 일치율 (기준표를 따로 읽고 적은 expected_risk vs 코드 판정 — 작성 주체는 manifest 참조): {ga['agree']}/{ga['total']}"
                      + (" — 불일치: " + "; ".join(ga["mismatches"][:5]) if ga["mismatches"] else ""))
         if lb.get("by_source"):
             L.append("- 후보 출처별 (E1 비교):")

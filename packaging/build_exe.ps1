@@ -1,9 +1,10 @@
 ﻿# IaCPatch.exe 만들기 (Windows, 팀 PC 에서 1회). 결과: 저장소 루트의 IaCPatch.exe
 #
 #   powershell -NoProfile -ExecutionPolicy Bypass -File packaging\build_exe.ps1
-#   powershell ... -File packaging\build_exe.ps1 -Console     # 검은 콘솔 창도 같이 뜨는 버전 (로그가 안 보일 때 진단용)
+#   powershell ... -File packaging\build_exe.ps1 -Console     # 검은 콘솔 창도 같이 뜨는 버전 (주소·오류가 보여서 진단용)
+#   GitHub Actions 도 같은 빌드를 한다: .github/workflows/build-exe.yml (Windows 러너) → Actions 아티팩트 / 태그 push 시 Release
 #
-# exe 는 "실행기" 다. 저장소 폴더(policy\, scenarios\, experiments\, tests\, tools\)가 옆에 있어야 하고,
+# exe 는 "실행기" 다 (더블클릭 → 127.0.0.1 로컬 서버 → 기본 브라우저에 화면). 저장소 폴더(policy\, scenarios\, experiments\, tests\, tools\)가 옆에 있어야 하고,
 # 실험 스크립트는 exe 가 자기 자신을 `--exec` 로 다시 띄워 돌리므로 PC 에 python 이 없어도 된다.
 # trivy.exe / terraform.exe 는 exe 안에 넣지 않는다 (창의 "도구 설치/확인" 버튼 → tools\).
 # 하지 않는 것: LLM API, Claude Code 자동 호출, AWS, terraform apply, git push (D-5, D-11).
@@ -37,6 +38,7 @@ $args = @("-m", "PyInstaller", "--noconfirm", "--clean", "--onefile", $mode,
           "--paths", "$Root\src",
           "--collect-submodules", "iacpatch",
           "--add-data", "$Root\src\iacpatch\generator\prompts;iacpatch\generator\prompts",
+          "--add-data", "$Root\src\iacpatch\web\static;iacpatch\web\static",
           "--distpath", "$Root\packaging\dist", "--workpath", "$Root\packaging\build", "--specpath", "$Root\packaging",
           "$Root\src\iacpatch\app.py")
 & $PyExe @($PyPre + $args)
@@ -44,5 +46,5 @@ if ($LASTEXITCODE -ne 0) { Write-Host "빌드 실패"; exit 1 }
 
 Copy-Item "packaging\dist\IaCPatch.exe" "$Root\IaCPatch.exe" -Force
 Write-Host ""
-Write-Host "완료: $Root\IaCPatch.exe  (더블클릭 → 창 → '전체 실행')"
+Write-Host "완료: $Root\IaCPatch.exe  (더블클릭 → 브라우저에 화면이 열린다)"
 Write-Host "주의: exe 만 다른 폴더로 옮기면 안 된다. 저장소 폴더째로 복사해야 policy\, scenarios\, tests\, tools\ 를 찾는다."

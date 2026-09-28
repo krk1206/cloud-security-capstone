@@ -435,7 +435,7 @@ def build(out_path: Path, reviews_root: Optional[Path] = None) -> Path:
     parts = [f"<!doctype html><html lang='ko'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>"
              f"<title>IaCPatch 실행 리포트</title><style>{CSS}</style></head><body><div class='wrap'>",
              "<div class='hero'><div class='in'><div><div class='kicker'>IaCPatch · 실행 리포트</div>"
-             "<h1>AI가 생성한 테라폼 보안패치의 실효성 검증 자동화</h1>"
+             "<h1>AI가 생성한 테라폼 보안 패치의 실효성 검증 자동화 구현</h1>"
              "<p>Trivy 가 통과시킨 패치를 그대로 믿지 않는다. 8계층 검증(재스캔 → 새 finding → validate → plan → plan 차이 → 실효 상태 오라클 → 배포 후 상태 → 기능)과 위험도 기준표가 각 후보에 사람이 어떤 검토를 해야 하는지를 정한다. 아래 숫자는 전부 이 컴퓨터의 기록에서 다시 계산한 것이다.</p>"
              f"<div class='meta'>{chips}</div></div>"
              f"<div class='big'><div class='n'>{blind_n}<span style='font-size:22px;font-weight:600;color:var(--hero-sub)'> / {blind_d}</span></div>"
