@@ -19,3 +19,4 @@ resource "aws_security_group" "vulnerable_ssh" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
+# gate check
