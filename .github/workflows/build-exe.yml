@@ -44,6 +44,7 @@ jobs:
         continue-on-error: true
         shell: pwsh
         run: |
+          try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8; $OutputEncoding = [System.Text.Encoding]::UTF8 } catch { }   # 한글 출력이 로그에 깨지지 않게
           cd tests\unit
           $env:PYTHONPATH = "..\..\src"
           python -m unittest discover -s . -p "test_*.py" 2>&1 | Tee-Object -FilePath ..\..\win-unittest.log
@@ -58,15 +59,26 @@ jobs:
           powershell -NoProfile -ExecutionPolicy Bypass -File packaging\build_exe.ps1
           if (-not (Test-Path IaCPatch.exe)) { throw "IaCPatch.exe not produced" }
           Get-Item IaCPatch.exe, IaCPatch-console.exe | Select-Object Name, Length
-      - name: Smoke test (console exe — self re-exec + report-only run; must pass)
+      - name: Smoke test (console exe — selfcheck, self re-exec, report-only run; must pass)
         id: smoke
         shell: pwsh
         run: |
-          .\IaCPatch-console.exe --exec scripts/pyver.py 2>&1 | Tee-Object -FilePath smoke.log
+          try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8; $OutputEncoding = [System.Text.Encoding]::UTF8 } catch { }   # 한글 출력이 로그에 깨지지 않게
+          # 각 명령 앞뒤에 표식과 종료 코드를 남긴다 — smoke.log 끝부분만 봐도 어디서 죽었는지 알 수 있게
+          "=== 1) IaCPatch-console.exe --selfcheck (root/frozen/tools/install check)" | Tee-Object -FilePath smoke.log
+          .\IaCPatch-console.exe --selfcheck 2>&1 | Tee-Object -FilePath smoke.log -Append
+          "=== exit $LASTEXITCODE" | Tee-Object -FilePath smoke.log -Append
+          if ($LASTEXITCODE -ne 0) { throw "--selfcheck failed ($LASTEXITCODE)" }
+          "=== 2) IaCPatch-console.exe --exec scripts/pyver.py" | Tee-Object -FilePath smoke.log -Append
+          .\IaCPatch-console.exe --exec scripts/pyver.py 2>&1 | Tee-Object -FilePath smoke.log -Append
+          "=== exit $LASTEXITCODE" | Tee-Object -FilePath smoke.log -Append
           if ($LASTEXITCODE -ne 0) { throw "--exec failed ($LASTEXITCODE)" }
+          "=== 3) IaCPatch-console.exe --console --report-only --no-open" | Tee-Object -FilePath smoke.log -Append
           .\IaCPatch-console.exe --console --report-only --no-open 2>&1 | Tee-Object -FilePath smoke.log -Append
+          "=== exit $LASTEXITCODE" | Tee-Object -FilePath smoke.log -Append
           if ($LASTEXITCODE -ne 0) { throw "report-only run failed ($LASTEXITCODE)" }
           if (-not (Test-Path report\index.html)) { throw "report not written" }
+          "=== report\index.html written: $((Get-Item report\index.html).Length) bytes" | Tee-Object -FilePath smoke.log -Append
       - name: Smoke test (windowed exe — PowerShell does not wait for GUI apps, so Start-Process -Wait)
         id: smoke_windowed
         shell: pwsh
@@ -81,6 +93,7 @@ jobs:
         continue-on-error: true
         shell: pwsh
         run: |
+          try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8; $OutputEncoding = [System.Text.Encoding]::UTF8 } catch { }   # 한글 출력이 로그에 깨지지 않게
           .\IaCPatch-console.exe --unittest 2>&1 | Tee-Object -FilePath exe-unittest.log
           if ($LASTEXITCODE -ne 0) { throw "unit tests inside exe failed ($LASTEXITCODE)" }
       - name: Report test outcomes to the PR (so results are readable without opening logs)
@@ -108,7 +121,7 @@ jobs:
           $md += "| 창 없는 exe 실행 확인 | $env:WIN_OUTCOME |"
           $md += "| exe 안에서 단위 테스트 (참고용) | $env:EXE_OUTCOME |"
           $md += ""
-          $md += "아티팩트 IaCPatch-portable 은 스모크가 통과했을 때만 올라간다. 아래는 각 로그의 끝부분."
+          $md += "아티팩트 IaCPatch-portable 은 스모크가 통과했을 때만 올라간다. 아래는 각 로그의 끝부분 (전문은 브랜치 ci-logs)."
           $md += ""
           $md += "<details><summary>win-unittest.log (끝 60줄)</summary>"; $md += ""; $md += '```'; $md += (& $tail "win-unittest.log" 60); $md += '```'; $md += "</details>"
           $md += "<details><summary>smoke.log (끝 40줄)</summary>"; $md += ""; $md += '```'; $md += (& $tail "smoke.log" 40); $md += '```'; $md += "</details>"
@@ -120,6 +133,31 @@ jobs:
           $existing = gh api "repos/$env:GITHUB_REPOSITORY/issues/$env:PR/comments?per_page=100" | ConvertFrom-Json | Where-Object { $_.body.StartsWith($mark) } | Select-Object -First 1
           if ($existing) { gh api -X PATCH "repos/$env:GITHUB_REPOSITORY/issues/comments/$($existing.id)" -F body=@exe-build-report.md | Out-Null; "updated comment $($existing.id)" }
           else { gh pr comment $env:PR --body-file exe-build-report.md; "created comment" }
+      - name: Publish the same report + full logs to branch ci-logs (readable without login — `git fetch origin ci-logs`)
+        if: always()
+        continue-on-error: true
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Actions 로그·PR 댓글은 GitHub 로그인이 있어야 읽힌다. 브랜치는 git 으로 누구나 읽으므로 로그 전문을 ci-logs 브랜치에 덮어쓴다 (워크플로를 다시 돌리지 않는 브랜치).
+          $d = Join-Path $env:RUNNER_TEMP "ci-logs"
+          New-Item -ItemType Directory -Force $d | Out-Null
+          foreach ($f in @("exe-build-report.md", "win-unittest.log", "smoke.log", "exe-unittest.log")) { if (Test-Path $f) { Copy-Item $f $d } }
+          if (Test-Path experiments\exe-console.log) { Copy-Item experiments\exe-console.log $d }
+          if (-not (Test-Path (Join-Path $d "exe-build-report.md"))) {
+            "<!-- iacpatch-exe-build -->`n## IaCPatch.exe 빌드 (run $env:GITHUB_RUN_ID, sha $env:GITHUB_SHA)`n`n(PR 가 아닌 실행 — 결과 표 없음)" | Out-File (Join-Path $d "exe-build-report.md") -Encoding utf8
+          }
+          "run $env:GITHUB_RUN_ID`nsha $env:GITHUB_SHA`nevent $env:GITHUB_EVENT_NAME`nref $env:GITHUB_REF`n" | Out-File (Join-Path $d "RUN.txt") -Encoding utf8
+          Push-Location $d
+          git init -q -b ci-logs
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "build-exe run $env:GITHUB_RUN_ID for $env:GITHUB_SHA (logs only)"
+          git push -q -f "https://x-access-token:$env:GH_TOKEN@github.com/$env:GITHUB_REPOSITORY.git" HEAD:refs/heads/ci-logs
+          Pop-Location
+          "pushed ci-logs"
       - name: Package portable zip (repo files + exe, no .git)
         shell: pwsh
         run: |

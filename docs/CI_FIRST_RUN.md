@@ -25,6 +25,11 @@ push 는 B 가 GitHub Desktop 으로 했다 (A 계정 `krk1206` 로 로그인 �
    수정(다음 커밋): `app.py` 는 절대 import 만 쓰고 스크립트로 시작되면 `src/` 를 경로에 넣는다; `config.package_root()` 가 exe 면 exe 위치에서, 소스면 `src/iacpatch` 기준으로 루트를 잡고 네 모듈이 이걸 쓴다. 회귀 테스트 `tests/unit/test_app_report.py::EntryScriptModeTests`(스크립트 모드로 `--console --report-only` 실제 실행, 상대 import 0건) + `PackageRootTests`(frozen 흉내).
    **이 수정이 실제 Windows exe 에서 통하는지는 Build #3 이 말해 준다** — 워크플로가 결과와 로그 끝부분을 PR 댓글(`<!-- iacpatch-exe-build -->`)로 달게 바꿨으므로 다음부터는 로그인 없이 원인을 읽을 수 있다.
 
+| 7 | IaC Security Scan / verify #3 | a033666 | 성공 (3개 초록: iac-scan 23s, verify unit, verify experiments) | | PR #4 체크 화면 |
+| 8 | Build IaCPatch.exe #3 | a033666 | **실패** — 러너 Python 단위 테스트(step 4) exit 1, 콘솔 exe 스모크(step 6) exit 1. 빌드 자체는 성공. 결과 표·로그 끝부분이 PR 댓글로 달림 (로그인 없이는 못 읽음 → B 가 펼쳐서 캡처) | 1m 18s | [36460764934](https://github.com/krk1206/cloud-security-capstone/actions/runs/36460764934) |
+
+Build #3 뒤 추가: 스모크가 `--selfcheck`(루트·exe 여부·임시 폴더·도구·설치 검사)부터 찍고 명령마다 종료 코드 표식을 남기며, 결과 표와 **로그 전문을 브랜치 `ci-logs` 에 push** 한다 — 브랜치는 로그인 없이 `git fetch origin ci-logs` 로 읽힌다 (Actions 로그·PR 댓글은 로그인 필요). 이 브랜치는 어떤 워크플로도 다시 돌리지 않는다.
+
 ## 워크플로 단계 (build-exe.yml, 수정 후)
 
 러너 Python 으로 단위 테스트(Windows, 실패해도 계속) → exe 2종 빌드 → 콘솔 exe 스모크(`--exec scripts/pyver.py`, `--console --report-only --no-open`; **여기서 실패하면 아티팩트 없음**) → 창 없는 exe 실행 확인 → exe 안에서 단위 테스트(참고용, 실패해도 아티팩트는 올림) → 결과 표 + 로그 끝부분을 PR 댓글·작업 요약에 → `IaCPatch-portable-<sha>.zip` 아티팩트.
