@@ -1,7 +1,7 @@
 ﻿# IaCPatch.exe 만들기 (Windows, 팀 PC 에서 1회). 결과: 저장소 루트의 IaCPatch.exe
 #
 #   powershell -NoProfile -ExecutionPolicy Bypass -File packaging\build_exe.ps1
-#   powershell ... -File packaging\build_exe.ps1 -Console     # 검은 콘솔 창도 같이 뜨는 버전 (주소·오류가 보여서 진단용)
+#   powershell ... -File packaging\build_exe.ps1 -Console     # IaCPatch-console.exe: 검은 콘솔 창에 주소·오류가 보이는 진단용 판
 #   GitHub Actions 도 같은 빌드를 한다: .github/workflows/build-exe.yml (Windows 러너) → Actions 아티팩트 / 태그 push 시 Release
 #
 # exe 는 "실행기" 다 (더블클릭 → 127.0.0.1 로컬 서버 → 기본 브라우저에 화면). 저장소 폴더(policy\, scenarios\, experiments\, tests\, tools\)가 옆에 있어야 하고,
@@ -31,10 +31,11 @@ if ($LASTEXITCODE -ne 0) { Write-Host "tkinter 가 없다. python.org 설치본�
 if ($LASTEXITCODE -ne 0) { Write-Host "pyinstaller 설치 실패"; exit 1 }
 
 $mode = if ($Console) { "--console" } else { "--windowed" }
+$name = if ($Console) { "IaCPatch-console" } else { "IaCPatch" }   # 콘솔판은 검은 창에 로그가 보여서 문제 진단용. 둘 다 만들어 둘 수 있다
 # 경로는 전부 절대경로로 준다. --specpath 를 쓰면 PyInstaller 가 --add-data 의 상대경로를 spec 폴더(packaging\) 기준으로 풀어서
 # "packaging\src\iacpatch\generator\prompts 를 찾을 수 없다" 로 실패한다 (팀 PC 첫 빌드에서 실측, 2026-09-22).
 $args = @("-m", "PyInstaller", "--noconfirm", "--clean", "--onefile", $mode,
-          "--name", "IaCPatch",
+          "--name", $name,
           "--paths", "$Root\src",
           "--collect-submodules", "iacpatch",
           "--add-data", "$Root\src\iacpatch\generator\prompts;iacpatch\generator\prompts",
@@ -44,7 +45,7 @@ $args = @("-m", "PyInstaller", "--noconfirm", "--clean", "--onefile", $mode,
 & $PyExe @($PyPre + $args)
 if ($LASTEXITCODE -ne 0) { Write-Host "빌드 실패"; exit 1 }
 
-Copy-Item "packaging\dist\IaCPatch.exe" "$Root\IaCPatch.exe" -Force
+Copy-Item "packaging\dist\$name.exe" "$Root\$name.exe" -Force
 Write-Host ""
-Write-Host "완료: $Root\IaCPatch.exe  (더블클릭 → 브라우저에 화면이 열린다)"
+Write-Host "완료: $Root\$name.exe  (더블클릭 → 브라우저에 화면이 열린다. 창 없는 판의 출력은 experiments\exe-console.log)"
 Write-Host "주의: exe 만 다른 폴더로 옮기면 안 된다. 저장소 폴더째로 복사해야 policy\, scenarios\, tests\, tools\ 를 찾는다."

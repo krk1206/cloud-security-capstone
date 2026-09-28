@@ -78,7 +78,7 @@ def _exec_unittest() -> int:
     sys.path.insert(0, str(ROOT / "src"))
     os.chdir(ROOT)
     suite = unittest.defaultTestLoader.discover(str(ROOT / "tests" / "unit"), pattern="test_*.py")
-    res = unittest.TextTestRunner(verbosity=1).run(suite)
+    res = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
     return 0 if res.wasSuccessful() else 1
 
 
@@ -304,8 +304,27 @@ def console(report_only: bool, open_browser: bool, fresh: bool = False) -> int:
     return 0
 
 
+def _ensure_streams() -> None:
+    """창 없는(windowed) exe 는 sys.stdout/stderr 가 None 이라 unittest·print 가 죽는다 → experiments/exe-console.log 로 보낸다."""
+    if sys.stdout is not None and sys.stderr is not None:
+        return
+    try:
+        logp = ROOT / "experiments" / "exe-console.log"
+        logp.parent.mkdir(parents=True, exist_ok=True)
+        f = open(logp, "a", encoding="utf-8", buffering=1)
+        f.write(f"\n==== {time.strftime('%Y-%m-%dT%H:%M:%S')} argv={sys.argv[1:]}\n")
+    except OSError:
+        import io
+        f = io.StringIO()
+    if sys.stdout is None:
+        sys.stdout = f  # type: ignore[assignment]
+    if sys.stderr is None:
+        sys.stderr = f  # type: ignore[assignment]
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     import argparse
+    _ensure_streams()
     for s in (sys.stdout, sys.stderr):
         try:
             s.reconfigure(encoding="utf-8")  # type: ignore[attr-defined]

@@ -29,5 +29,6 @@ packaging/build/
 packaging/dist/
 packaging/*.spec
 /IaCPatch.exe
+/IaCPatch-console.exe
 # 스캐너 사각 탐색 원문(변형 main.tf·trivy.json·plan.json, 실행마다 수 MB) — 요약 FUZZ_RESULTS.md 만 커밋
 experiments/fuzz/
