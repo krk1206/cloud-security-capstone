@@ -89,9 +89,9 @@ class TrivyAdapter:
 
     def scan_dir(self, target_dir: str | Path, output_json: Optional[str | Path] = None,
                  tf_vars: Optional[str] = None, timeout: int = 600) -> TrivyScan:
-        argv = [self.binary, "config", str(target_dir), "--format", "json", "--include-non-failures", "--quiet"]
+        argv = [self.binary, "config", str(target_dir), "--format", "json", "--include-non-failures", "--quiet", "--skip-version-check"]
         if self.skip_check_update:
-            argv += ["--skip-check-update", "--skip-version-check"]   # 체크 번들 갱신·버전 확인(check.trivy.dev) 모두 안 함 = 네트워크 0
+            argv += ["--skip-check-update"]   # 내장 체크 번들 사용 (번들 갱신 없음). 버전 확인(check.trivy.dev)은 항상 끈다 = 네트워크 0
         if tf_vars:
             argv += ["--tf-vars", str(tf_vars)]
         if output_json:
