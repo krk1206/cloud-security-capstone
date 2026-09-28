@@ -2,8 +2,6 @@ name: IaC Security Scan
 
 on:
   pull_request:
-    paths:
-      - 'infrastructure/**'
   push:
     branches: [main]
     paths:
@@ -35,7 +33,7 @@ jobs:
           sudo apt-get install -y trivy
           trivy --version
 
-      - name: Scan (human readable)
+      - name: Scan (human readable, report only)
         run: |
           trivy config infrastructure/sg-baseline \
             --tf-vars infrastructure/sg-baseline/terraform.tfvars.example
@@ -54,3 +52,11 @@ jobs:
           name: trivy-scan-results
           path: scan-results/
           retention-days: 14
+
+      - name: Gate - fail on HIGH/CRITICAL (pull requests only)
+        if: github.event_name == 'pull_request'
+        run: |
+          trivy config infrastructure/sg-baseline \
+            --tf-vars infrastructure/sg-baseline/terraform.tfvars.example \
+            --severity HIGH,CRITICAL \
+            --exit-code 1
