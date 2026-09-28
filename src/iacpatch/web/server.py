@@ -144,7 +144,7 @@ def state_payload() -> Dict[str, Any]:
             summary = {"error": str(e)}
     return {
         "root": str(root), "python": platform.python_version(), "host": platform.node(), "os": platform.system(), "frozen": _app.FROZEN,
-        "title": _app.TITLE, "tools": _app.tool_status(), "selfcheck": _app.selfcheck(), "stale_hint": _app.STALE_HINT.replace("**", ""),
+        "title": _app.TITLE, "tools": _app.tool_status(), "selfcheck": _app.selfcheck(), "stale_hint": _app.install_hint(),
         "report_exists": report.exists(), "report_mtime": report.stat().st_mtime if report.exists() else None,
         "cc_candidates": _app.has_cc_candidates(), "steps": [t for t, _ in _app.steps(_app.has_cc_candidates())],
         "summary": summary, "job": JOB.snapshot(10**9),
@@ -246,15 +246,34 @@ def job_setup_tools() -> Callable:
     argv = ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(script)] if win else ["bash", str(script)]
 
     def fn(log, prog):
+        if not script.exists():
+            log(f"설치 스크립트가 없다: {script}")
+            log(_app.install_hint())
+            return {"rc": 2, "tools": _app.tool_status()}
         log(f"도구 설치: {' '.join(argv)}")
-        p = subprocess.Popen(argv, cwd=str(root), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace")
+        # 출력은 바이트로 받아 UTF-8 → (Windows) 콘솔 코드페이지 순으로 푼다. PowerShell 의 한글 오류가 cp949 라 utf-8 로만 읽으면 깨진다 (팀 PC 실측 09-28)
+        p = subprocess.Popen(argv, cwd=str(root), stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         assert p.stdout is not None
-        for line in p.stdout:
-            log(line.rstrip("\n"))
+        for raw in p.stdout:
+            log(decode_console(raw).rstrip("\r\n"))
         rc = p.wait()
-        log(f"종료 코드 {rc}")
+        log(f"종료 코드 {rc}" + ("" if rc == 0 else " — 실패. 위 메시지를 확인 (인터넷 연결, 압축 해제 권한, 폴더 위치)"))
         return {"rc": rc, "tools": _app.tool_status()}
     return fn
+
+
+def decode_console(raw: bytes) -> str:
+    """자식 프로세스 출력 한 줄을 문자열로. UTF-8 이 아니면 Windows 의 ANSI 코드페이지(cp949 등, 'mbcs'), 그것도 아니면 대체 문자."""
+    try:
+        return raw.decode("utf-8")
+    except UnicodeDecodeError:
+        pass
+    if platform.system() == "Windows":
+        try:
+            return raw.decode("mbcs")
+        except (UnicodeDecodeError, LookupError):
+            pass
+    return raw.decode("utf-8", errors="replace")
 
 
 def job_candidate(req: Dict[str, Any]) -> Callable:

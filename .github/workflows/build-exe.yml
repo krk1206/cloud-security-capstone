@@ -1,7 +1,7 @@
 name: Build IaCPatch.exe (Windows)
 
 # IaCPatch.exe 를 GitHub 의 Windows 러너에서 만든다 — 팀원 PC 에 Python/PyInstaller 가 없어도 된다.
-#   - PR/push: 아티팩트 "IaCPatch-portable" (exe 2종 + 저장소 파일 zip). Actions 실행 페이지에서 내려받는다 (GitHub 로그인 필요)
+#   - PR/push: 아티팩트 "IaCPatch-portable" = 저장소 파일 + exe 2종이 든 폴더 (한 번만 풀면 됨). Actions 실행 페이지 → Summary 맨 아래에서 내려받는다 (GitHub 로그인 필요)
 #     IaCPatch.exe = 창 없이 브라우저만 뜨는 판, IaCPatch-console.exe = 검은 창에 로그가 보이는 진단용 판 (기능은 같음)
 #   - 태그 v* push: Release 에 같은 zip 을 첨부한다 (로그인 없이 내려받기 가능)
 # exe 는 실행기다: 더블클릭 → 127.0.0.1 로컬 서버 → 기본 브라우저에 화면. LLM API·AWS·git push·terraform apply 는 부르지 않는다 (D-5, D-11).
@@ -158,35 +158,34 @@ jobs:
           git push -q -f "https://x-access-token:$env:GH_TOKEN@github.com/$env:GITHUB_REPOSITORY.git" HEAD:refs/heads/ci-logs
           Pop-Location
           "pushed ci-logs"
-      - name: Package portable zip (repo files + exe, no .git)
+      - name: Assemble portable folder (repo files + both exes, no .git)
         shell: pwsh
         run: |
-          $name = "IaCPatch-portable-" + $env:GITHUB_SHA.Substring(0,7)
-          git archive --format=zip --prefix=cloud-security-capstone/ -o "$name.zip" HEAD
-          # exe 두 개를 zip 안 저장소 폴더 루트에 넣는다 (report/ 등 빌드 산출물은 넣지 않는다)
-          $tmp = Join-Path $env:RUNNER_TEMP "portable"
-          Expand-Archive "$name.zip" -DestinationPath $tmp -Force
-          Copy-Item IaCPatch.exe (Join-Path $tmp "cloud-security-capstone\IaCPatch.exe")
-          Copy-Item IaCPatch-console.exe (Join-Path $tmp "cloud-security-capstone\IaCPatch-console.exe")
-          Remove-Item "$name.zip"
-          Compress-Archive -Path (Join-Path $tmp "cloud-security-capstone") -DestinationPath "$name.zip" -Force
-          "PORTABLE=$name.zip" | Out-File -FilePath $env:GITHUB_ENV -Append
-          Get-Item "$name.zip" | Select-Object Name, Length
+          # 아티팩트는 '폴더' 로 올린다 (zip 안에 zip 이 또 있으면 팀 PC 에서 exe 만 꺼내 더블클릭하는 사고가 남 — 09-28 실측).
+          # GitHub 가 아티팩트를 zip 으로 싸 주므로 팀원은 한 번만 풀면 policy\, scripts\ 옆에 IaCPatch.exe 가 있는 폴더를 얻는다.
+          $dir = Join-Path $env:RUNNER_TEMP "portable\cloud-security-capstone"
+          New-Item -ItemType Directory -Force $dir | Out-Null
+          git archive --format=zip --prefix=cloud-security-capstone/ -o "$env:RUNNER_TEMP\src.zip" HEAD
+          Expand-Archive "$env:RUNNER_TEMP\src.zip" -DestinationPath (Join-Path $env:RUNNER_TEMP "portable") -Force
+          Copy-Item IaCPatch.exe (Join-Path $dir "IaCPatch.exe")
+          Copy-Item IaCPatch-console.exe (Join-Path $dir "IaCPatch-console.exe")
+          "IaCPatch-portable $($env:GITHUB_SHA.Substring(0,7)) — 이 폴더째로 빈 새 폴더에 두고 IaCPatch.exe 더블클릭. 도구(trivy/terraform)는 화면의 '도구 설치/확인' 버튼." | Out-File (Join-Path $dir "PORTABLE_README.txt") -Encoding utf8
+          "PORTABLE_DIR=$dir" | Out-File -FilePath $env:GITHUB_ENV -Append
+          (Get-ChildItem $dir | Measure-Object).Count
       - uses: actions/upload-artifact@v4
         with:
           name: IaCPatch-portable
-          path: |
-            ${{ env.PORTABLE }}
-            IaCPatch.exe
-            IaCPatch-console.exe
+          path: ${{ env.PORTABLE_DIR }}
           retention-days: 30
-      - name: Attach to Release (tags only)
+      - name: Attach to Release (tags only — downloadable without GitHub login)
         if: startsWith(github.ref, 'refs/tags/v')
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           $tag = $env:GITHUB_REF_NAME
+          $zip = "IaCPatch-portable-$tag.zip"
+          Compress-Archive -Path $env:PORTABLE_DIR -DestinationPath $zip -Force
           gh release view $tag 2>$null
-          if ($LASTEXITCODE -ne 0) { gh release create $tag --title "IaCPatch $tag" --notes "IaCPatch.exe (Windows) + 저장소 파일. 빈 새 폴더에 풀고 IaCPatch.exe 를 더블클릭." }
-          gh release upload $tag $env:PORTABLE IaCPatch.exe IaCPatch-console.exe --clobber
+          if ($LASTEXITCODE -ne 0) { gh release create $tag --title "IaCPatch $tag" --notes "IaCPatch.exe (Windows) + 저장소 파일. zip 을 빈 새 폴더에 풀고 그 안의 IaCPatch.exe 를 더블클릭. 도구는 화면의 버튼으로 받는다." }
+          gh release upload $tag $zip --clobber

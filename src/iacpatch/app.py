@@ -176,6 +176,10 @@ def ensure_python(argv: List[str]) -> None:
 def selfcheck() -> List[str]:
     """설치 상태 검사 — 옛 파일과 새 파일이 섞였는지(zip 을 기존 폴더에 풀며 '건너뛰기' 한 사례), 필수 스크립트가 있는지."""
     problems: List[str] = []
+    if not (ROOT / "policy" / "patch_policy.json").exists():
+        # 팀 PC 실측(09-28): 아티팩트 zip 을 풀면 exe 와 '안쪽 zip' 이 나오는데 exe 만 더블클릭 → 저장소 파일이 옆에 없어 검사 7건이 전부 '없음'
+        problems.append(f"저장소 폴더가 아니다: {ROOT} 에 policy\\patch_policy.json 이 없다. " + NOT_REPO_HINT)
+        return problems
     if sys.version_info < (3, 10):
         problems.append(f"python {platform.python_version()} — 3.10 이상 필요")
     checks = [("iacpatch.config", "Settings", "tf_template_dir"), ("iacpatch.report_html", "summarize", None), ("iacpatch.fuzz.runner", "run_variants", None),
@@ -242,6 +246,14 @@ def _selfcheck_cli() -> int:
 
 
 STALE_HINT = "옛 파일과 새 파일이 섞여 있다. zip 을 기존 폴더에 덮어쓰지 말고 **빈 새 폴더**에 풀어서 거기서 실행할 것 (tools\\ 는 버튼으로 다시 받으면 됨)."
+NOT_REPO_HINT = ("exe 는 저장소 파일(policy\\, scripts\\, experiments\\ 폴더)이 옆에 있는 곳에서 실행해야 한다. "
+                 "아티팩트 zip 을 빈 새 폴더에 풀고, policy\\ 폴더가 보이는 그 자리의 IaCPatch.exe 를 더블클릭할 것 (exe 만 다른 곳으로 옮기면 안 됨. "
+                 "zip 을 풀었는데 또 zip 이 보이면 그것도 풀 것).")
+
+
+def install_hint() -> str:
+    """설치 검사 실패 때 보여 줄 안내: 저장소 폴더 자체가 없으면 NOT_REPO_HINT, 있으면 옛/새 파일 섞임 안내."""
+    return NOT_REPO_HINT if not (ROOT / "policy" / "patch_policy.json").exists() else STALE_HINT.replace("**", "")
 
 
 def steps(include_cc: bool, fresh: bool = False) -> List[tuple]:
@@ -298,8 +310,8 @@ def run_all(log: Callable[[str], None], progress: Callable[[int, int], None], re
             log("설치 상태 검사 실패 — 실험을 돌리지 않는다:")
             for pr in probs:
                 log(f"  - {pr}"); lf.write(f"selfcheck: {pr}\n")
-            log(STALE_HINT.replace("**", ""))
-            raise RuntimeError("설치 상태 검사 실패 (위 목록). " + STALE_HINT.replace("**", ""))
+            log(install_hint())
+            raise RuntimeError("설치 상태 검사 실패 (위 목록). " + install_hint())
         log(f"설치 상태 검사 OK (python {platform.python_version()})")
         todo = [] if report_only else steps(has_cc_candidates(), fresh=fresh)
         if todo:

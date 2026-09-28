@@ -6,9 +6,10 @@
 ## 실행기: `IaCPatch.exe` → 브라우저 화면 (2026-09-28, bat/tkinter 창 대체)
 
 **받는 법**
-1. GitHub 저장소 → **Actions** → "Build IaCPatch.exe (Windows)" 의 최근 실행 → 아래 **Artifacts** 의 `IaCPatch-portable` (GitHub 로그인 필요). 태그(`v*`)를 push 했으면 **Releases** 에서 로그인 없이 받는다.
-2. zip 을 **빈 새 폴더**에 푼다 (기존 폴더에 덮어쓰지 말 것 — 옛 파일과 섞이면 화면 위 "설치 검사" 칩이 빨갛게 되고 실험을 막는다).
-3. 그 폴더의 `IaCPatch.exe` 를 더블클릭 → 기본 브라우저에 화면이 열린다 (`http://127.0.0.1:8765/`, 이 PC 안에서만 접속됨). Python 설치 불필요.
+1. GitHub 저장소 → **Actions** → "Build IaCPatch.exe (Windows)" 의 최근 실행 → **Summary** 페이지 맨 아래 **Artifacts** 의 `IaCPatch-portable` (GitHub 로그인 필요 — 아무 계정이나 됨, collaborator 일 필요 없음). 태그(`v*`)를 push 했으면 **Releases** 에서 로그인 없이 받는다.
+2. zip 을 **빈 새 폴더**에 푼다 (기존 폴더에 덮어쓰지 말 것 — 옛 파일과 섞이면 화면 위 "설치 검사" 칩이 빨갛게 되고 실험을 막는다). 풀고 나면 그 자리에 `policy\`, `scripts\`, `IaCPatch.exe` 가 나란히 보여야 한다. **zip 안에 또 zip 이 보이면 그것도 풀어야 한다**(09-28 이전 빌드의 포장 방식; 팀 PC 실측에서 exe 만 꺼내 실행해 "설치 검사 실패 7건" 이 났다).
+3. `policy\` 가 보이는 그 폴더의 `IaCPatch.exe` 를 더블클릭 → 기본 브라우저에 화면이 열린다 (`http://127.0.0.1:8765/`, 이 PC 안에서만 접속됨). Python 설치 불필요. Windows 가 "PC 보호" 창을 띄우면(서명 없는 exe) "추가 정보 → 실행".
+4. **팀원에게 주는 법**: 같은 zip 을 그대로 전달하면 된다(카톡·드라이브·USB) — 안에 저장소 파일이 다 있어서 GitHub 계정도 Python 도 필요 없다. 각자 빈 새 폴더에 풀고 2~3 을 반복. 화면의 "도구 설치/확인" 은 인터넷이 필요하다(trivy·terraform 을 받는다).
    직접 만들려면 `packaging\build_exe.bat` (PyInstaller, 1회). Python 이 있는 PC 에선 `IaCPatch.bat` 도 같은 화면을 연다.
 
 **화면 탭**
