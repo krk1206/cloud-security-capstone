@@ -8,6 +8,8 @@
 
 > 제목 변경 (2026-09-28) - 지도교수 지시에 따라 프로젝트가 하는 일이 드러나고 동사로 끝나는 형태로 변경했다. 이전 제목: AWS IaC 보안 패치 검증 파이프라인 (2026-09-08 ~ 09-28). 시스템의 구조와 용어(파이프라인, 검증 계층)는 변경 없음.
 
+> LLM 실행 방식 (2026-09-15) - 지도교수 지시에 따라 유료 LLM API 대신 Claude Code(요청마다 신규 세션, 비대화형 실행)를 사용한다. 이 문서의 'LLM'과 'AI 패치 생성기'는 Claude Code로 실행되는 모델을 뜻한다.
+
 > **문서 표기 정리 (2026-09-08)** — 팀 내부 문서에서 게이팅 기준을 "확신도"로 표기해 왔으나, 실제 판정 기준은 AI의 확신도가 아니라 **변경의 위험도**(리소스 종류, 영향 범위, 롤백 난이도)이므로 정리했다. AI의 확신도는 등급을 낮추는 방향으로만 반영되는 부수 입력이다. 상세는 [`criticism and rebuttal.md`](criticism%20and%20rebuttal.md) 비판 6 참조.
 
 > Terraform으로 작성한 AWS 인프라 코드의 설정 오류(misconfiguration)를 Trivy로 탐지하고, LLM이 패치 후보를 생성하면, **결정론적 검증 스택이 그 패치가 실제로 보안 상태를 개선했는지 판정하고** Risk Rubric이 자동화 수준을 결정하는 DevSecOps 파이프라인. **스캐너 통과만으로 성공을 판정하지 않는다.**
@@ -332,7 +334,7 @@ GitHub Repository
 | 역할 | 담당 | 주요 산출물 |
 |---|---|---|
 | **A — 클라우드 인프라** | Terraform 샘플 인프라, Trivy 연동, CIS 매핑, AWS 샌드박스 관리, V1·V2·V3·V4·V7 | 설정 오류 시나리오, Seeded Deceptive 세트, CIS 매핑 테이블, AWS 실측 스크립트 |
-| **B — AI Agent + Oracle** | LLM 연동, 패치 생성, **Intent Oracle(V6)**, Risk Rubric 구현 | 패치 생성기, Intent Oracle, Risk Scorer |
+| **B — AI Agent + Oracle** | Claude Code 연동, 패치 생성, **Intent Oracle(V6)**, Risk Rubric 구현 | 패치 생성기, Intent Oracle, Risk Scorer |
 | **C — 파이프라인·평가** | GitHub Actions 통합, PR/승인 흐름, V5·V8, 실험 경로, Rule-based baseline, 실험·문서화 | 통합 파이프라인, baseline 스크립트, 실험 리포트 |
 
 ---
@@ -356,7 +358,7 @@ GitHub Repository
 
 | 주차 | 기간 | 핵심 목표 |
 |---|---|---|
-| 1주차 | 9/8~9/14 | 3인 개별 환경 구축 (저장소, AWS 샌드박스, LLM 연동) |
+| 1주차 | 9/8~9/14 | 3인 개별 환경 구축 (저장소, AWS 샌드박스, Claude Code 연동) |
 | 2주차 | 9/15~9/21 | Trivy IaC 스캐너 파이프라인 연동 |
 | 3주차 | 9/22~9/28 | CIS 매핑 + AI 분석 리포팅 + **V2 신규 finding 카운트** |
 | 4주차 | 9/29~10/5 | **Risk Rubric 설계** + Validity/Autonomy 축 분리 + 화이트리스트 |
@@ -384,7 +386,7 @@ GitHub Repository
 
 ### 1주차 (9/8~9/14) — 환경 구축
 - **A**: AWS 샌드박스 계정 준비(무료 플랜, Budgets 알림, 루트 MFA, 작업용 IAM 사용자, GitHub OIDC 연동), 의도적 설정 오류를 포함한 Terraform 인프라 작성
-- **B**: 개발환경 세팅, LLM API 연동 테스트
+- **B**: 개발환경 세팅, Claude Code 연동 테스트 (2026-09-15 지도교수 지시로 LLM API 대신 Claude Code 사용)
 - **C**: GitHub 저장소 정비, 기본 GitHub Actions 빌드 워크플로우 구현
 - **완료 기준:** 3인 각자 기본 환경이 개별적으로 동작한다
 
