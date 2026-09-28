@@ -1487,7 +1487,7 @@
    "Type": "terraform",
    "MisconfSummary": {
     "Successes": 0,
-    "Failures": 1
+    "Failures": 2
    },
    "Misconfigurations": [
     {
