@@ -28,10 +28,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+from ..config import package_root
 from ..generator.base import GenerationError, LLMResponse, parse_llm_output
 from ..models import Finding, PatchCandidate
 
-MOCK_DIR = Path(__file__).resolve().parents[3] / "tests" / "fixtures" / "mock_llm"
+MOCK_DIR = package_root() / "tests" / "fixtures" / "mock_llm"   # exe(onefile) 안에서는 __file__ 이 임시 폴더
 
 
 class CandidateSourceError(ValueError):

@@ -17,6 +17,7 @@ import urllib.request
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+from ..config import package_root
 from .base import LLMResponse
 
 DEFAULT_TIMEOUT = 120
@@ -51,7 +52,7 @@ class MockProvider:
 
     def __init__(self, fixture: Optional[str] = None, fixture_dir: Optional[str] = None):
         self.fixture = fixture or os.environ.get("LLM_MOCK_FIXTURE") or "sg_baseline_ok"
-        self.fixture_dir = Path(fixture_dir or os.environ.get("LLM_MOCK_DIR") or Path(__file__).resolve().parents[3] / "tests" / "fixtures" / "mock_llm")
+        self.fixture_dir = Path(fixture_dir or os.environ.get("LLM_MOCK_DIR") or package_root() / "tests" / "fixtures" / "mock_llm")
         self.model = f"mock:{self.fixture}"
 
     def complete(self, system: str, user: str, max_tokens: int, temperature: float) -> LLMResponse:

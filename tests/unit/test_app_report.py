@@ -76,6 +76,68 @@ class AppTests(unittest.TestCase):
         self.assertIn(b"-m iacpatch.app", raw)
 
 
+class EntryScriptModeTests(unittest.TestCase):
+    """PyInstaller exe 는 app.py 를 `python src/iacpatch/app.py` 처럼 __main__ 스크립트로 시작한다 (패키지가 아니므로 상대 import 불가).
+    build-exe 첫 실행(2026-09-28)이 여기서 죽었다: `from .report_html import build` → "attempted relative import with no known parent package"."""
+
+    def test_app_py_has_no_relative_imports(self):
+        import re
+        src = (ROOT / "src" / "iacpatch" / "app.py").read_text(encoding="utf-8")
+        self.assertEqual(re.findall(r"^\s*(?:from \.|import \.)", src, re.M), [])
+
+    @unittest.skipIf(FROZEN, "exe 안에서는 build-exe 워크플로의 스모크가 같은 것을 exe 로 검사한다")
+    def test_entry_script_report_only_from_another_cwd(self):
+        # cwd 도 PYTHONPATH 도 저장소가 아닌 상태에서 스크립트로 시작 → 루트를 스스로 찾고 리포트를 지정 경로에 쓴다
+        env = {k: v for k, v in os.environ.items() if k != "PYTHONPATH"}
+        env["PYTHONIOENCODING"] = "utf-8"
+        with tempfile.TemporaryDirectory() as td:
+            out = Path(td) / "r" / "index.html"
+            r = subprocess.run([sys.executable, str(ROOT / "src" / "iacpatch" / "app.py"), "--console", "--report-only", "--no-open", "--report-out", str(out)],
+                               cwd=td, env=env, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=300)
+            self.assertEqual(r.returncode, 0, r.stdout[-2000:] + r.stderr[-2000:])
+            self.assertTrue(out.exists(), r.stdout[-2000:])
+            self.assertIn("설치 상태 검사 OK", r.stdout)
+            self.assertIn("<html", out.read_text(encoding="utf-8"))
+            r2 = subprocess.run([sys.executable, str(ROOT / "src" / "iacpatch" / "app.py"), "--exec", "scripts/pyver.py"],
+                                cwd=td, env=env, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=120)
+            self.assertEqual(r2.returncode, 0, r2.stdout + r2.stderr)
+
+
+class PackageRootTests(unittest.TestCase):
+    """config.package_root: 소스면 src/iacpatch 의 두 단계 위, exe(onefile) 면 __file__(임시 폴더) 대신 exe 위치에서 위로. IACPATCH_ROOT 가 최우선."""
+
+    def test_source_mode_is_repo_root(self):
+        from iacpatch.config import package_root
+        self.assertEqual(package_root(), ROOT)
+        self.assertEqual(report_html.ROOT, ROOT)
+
+    def test_frozen_mode_uses_exe_location_not_temp_dir(self):
+        from iacpatch.config import package_root
+        saved = (getattr(sys, "frozen", None), sys.executable, os.environ.get("IACPATCH_ROOT"))
+        try:
+            os.environ.pop("IACPATCH_ROOT", None)
+            sys.frozen = True                                   # type: ignore[attr-defined]
+            sys.executable = str(ROOT / "IaCPatch.exe")         # exe 를 저장소 루트에 둔 경우
+            self.assertEqual(package_root(), ROOT)
+            sys.executable = str(ROOT / "packaging" / "dist" / "IaCPatch.exe")   # 하위 폴더에 있어도 위로 올라가 찾는다
+            self.assertEqual(package_root(), ROOT)
+            with tempfile.TemporaryDirectory() as td:
+                sys.executable = str(Path(td) / "IaCPatch.exe")  # 저장소 밖: 못 찾으면 cwd (임시 폴더를 루트로 잡지 않는다)
+                self.assertEqual(package_root(), Path.cwd().resolve())
+                os.environ["IACPATCH_ROOT"] = str(ROOT)
+                self.assertEqual(package_root(), ROOT)
+        finally:
+            if saved[0] is None:
+                delattr(sys, "frozen")
+            else:
+                sys.frozen = saved[0]                           # type: ignore[attr-defined]
+            sys.executable = saved[1]
+            if saved[2] is None:
+                os.environ.pop("IACPATCH_ROOT", None)
+            else:
+                os.environ["IACPATCH_ROOT"] = saved[2]
+
+
 class FingerprintTests(unittest.TestCase):
     def test_code_digest_ignores_runner_and_report_modules(self):
         from iacpatch import fingerprint

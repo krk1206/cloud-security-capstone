@@ -21,6 +21,7 @@ data/reviews/*
 data/cache/
 data/runs/*
 experiments/run_experiments.log
+experiments/exe-console.log
 iacpatch.config.json
 report/
 tools/*

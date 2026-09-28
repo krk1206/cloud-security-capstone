@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 from dataclasses import dataclass, field, asdict
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -57,12 +58,33 @@ class Settings:
         return self.path(self.cache_dir) / "baseline" if self.cache_enabled() else None
 
 
+def package_root() -> Path:
+    """이 코드가 들어 있는 저장소 루트 (cwd 와 무관).
+
+    소스로 돌 때: src/iacpatch/config.py 의 두 단계 위.
+    PyInstaller onefile exe 안에서는 __file__ 이 임시 풀림 폴더(sys._MEIPASS)를 가리키므로 그걸 쓰면 안 되고, exe 가 놓인 폴더에서
+    위로 올라가며 policy/patch_policy.json 을 찾는다 (exe 는 저장소 루트에 둔다). 환경변수 IACPATCH_ROOT 가 있으면 그것이 우선.
+    (build-exe 워크플로 첫 실행에서 리포트 모듈이 임시 폴더를 루트로 잡던 문제의 수정, 2026-09-28)
+    """
+    env = os.environ.get("IACPATCH_ROOT")
+    if env and (Path(env) / "policy" / "patch_policy.json").exists():
+        return Path(env).resolve()
+    if getattr(sys, "frozen", False):
+        start = Path(sys.executable).resolve().parent
+        for cand in [start, *start.parents]:
+            if (cand / "policy" / "patch_policy.json").exists():
+                return cand
+        return Path.cwd().resolve()
+    return Path(__file__).resolve().parents[2]
+
+
 def find_repo_root(start: Optional[str] = None) -> Path:
+    """start(기본 cwd)에서 위로 올라가며 저장소 루트를 찾고, 못 찾으면 package_root()."""
     p = Path(start or os.getcwd()).resolve()
     for cand in [p] + list(p.parents):
         if (cand / "policy" / "patch_policy.json").exists() or (cand / ".git").exists():
             return cand
-    return p
+    return package_root() if start is None else p
 
 
 def load_settings(repo_root: Optional[str] = None, overrides: Optional[Dict[str, Any]] = None) -> Settings:

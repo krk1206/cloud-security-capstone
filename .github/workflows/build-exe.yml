@@ -24,6 +24,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write   # 빌드·테스트 결과를 PR 댓글로 (로그인 없이 읽게)
 
 jobs:
   build:
@@ -38,6 +39,15 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Unit tests with the runner's Python on Windows (not frozen — separates Windows problems from exe problems)
+        id: pytests
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          cd tests\unit
+          $env:PYTHONPATH = "..\..\src"
+          python -m unittest discover -s . -p "test_*.py" 2>&1 | Tee-Object -FilePath ..\..\win-unittest.log
+          if ($LASTEXITCODE -ne 0) { throw "unit tests failed on Windows python ($LASTEXITCODE)" }
       - name: Build both variants (packaging/build_exe.ps1, same script the team uses)
         shell: pwsh
         run: |
@@ -48,17 +58,17 @@ jobs:
           powershell -NoProfile -ExecutionPolicy Bypass -File packaging\build_exe.ps1
           if (-not (Test-Path IaCPatch.exe)) { throw "IaCPatch.exe not produced" }
           Get-Item IaCPatch.exe, IaCPatch-console.exe | Select-Object Name, Length
-      - name: Smoke test (console exe — self re-exec, unit tests inside the frozen binary, report-only run)
+      - name: Smoke test (console exe — self re-exec + report-only run; must pass)
+        id: smoke
         shell: pwsh
         run: |
-          .\IaCPatch-console.exe --exec scripts/pyver.py
+          .\IaCPatch-console.exe --exec scripts/pyver.py 2>&1 | Tee-Object -FilePath smoke.log
           if ($LASTEXITCODE -ne 0) { throw "--exec failed ($LASTEXITCODE)" }
-          .\IaCPatch-console.exe --unittest
-          if ($LASTEXITCODE -ne 0) { throw "unit tests inside exe failed ($LASTEXITCODE)" }
-          .\IaCPatch-console.exe --console --report-only --no-open
+          .\IaCPatch-console.exe --console --report-only --no-open 2>&1 | Tee-Object -FilePath smoke.log -Append
           if ($LASTEXITCODE -ne 0) { throw "report-only run failed ($LASTEXITCODE)" }
           if (-not (Test-Path report\index.html)) { throw "report not written" }
       - name: Smoke test (windowed exe — PowerShell does not wait for GUI apps, so Start-Process -Wait)
+        id: smoke_windowed
         shell: pwsh
         run: |
           Remove-Item report\index.html -Force
@@ -66,6 +76,50 @@ jobs:
           if ($p.ExitCode -ne 0) { throw "windowed exe exit code $($p.ExitCode)" }
           if (-not (Test-Path report\index.html)) { throw "report not written by windowed exe" }
           if (Test-Path experiments\exe-console.log) { Get-Content experiments\exe-console.log -Tail 20 }
+      - name: Unit tests inside the frozen exe (informative — does not block the artifact)
+        id: exetests
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          .\IaCPatch-console.exe --unittest 2>&1 | Tee-Object -FilePath exe-unittest.log
+          if ($LASTEXITCODE -ne 0) { throw "unit tests inside exe failed ($LASTEXITCODE)" }
+      - name: Report test outcomes to the PR (so results are readable without opening logs)
+        if: always() && github.event_name == 'pull_request'
+        continue-on-error: true
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          PY_OUTCOME: ${{ steps.pytests.outcome }}
+          SMOKE_OUTCOME: ${{ steps.smoke.outcome }}
+          WIN_OUTCOME: ${{ steps.smoke_windowed.outcome }}
+          EXE_OUTCOME: ${{ steps.exetests.outcome }}
+        run: |
+          $tail = { param($f, $n) if (Test-Path $f) { (Get-Content $f -Tail $n) -join "`n" } else { "(no log)" } }
+          $md = @()
+          $md += "<!-- iacpatch-exe-build -->"
+          $md += "## IaCPatch.exe 빌드 (Windows 러너, run $env:GITHUB_RUN_ID)"
+          $md += ""
+          $md += "| 단계 | 결과 |"
+          $md += "|---|---|"
+          $md += "| 러너 Python 으로 단위 테스트 (Windows) | $env:PY_OUTCOME |"
+          $md += "| exe 스모크 (--exec, --console --report-only) | $env:SMOKE_OUTCOME |"
+          $md += "| 창 없는 exe 실행 확인 | $env:WIN_OUTCOME |"
+          $md += "| exe 안에서 단위 테스트 (참고용) | $env:EXE_OUTCOME |"
+          $md += ""
+          $md += "아티팩트 IaCPatch-portable 은 스모크가 통과했을 때만 올라간다. 아래는 각 로그의 끝부분."
+          $md += ""
+          $md += "<details><summary>win-unittest.log (끝 60줄)</summary>"; $md += ""; $md += '```'; $md += (& $tail "win-unittest.log" 60); $md += '```'; $md += "</details>"
+          $md += "<details><summary>smoke.log (끝 40줄)</summary>"; $md += ""; $md += '```'; $md += (& $tail "smoke.log" 40); $md += '```'; $md += "</details>"
+          $md += "<details><summary>exe-unittest.log (끝 60줄)</summary>"; $md += ""; $md += '```'; $md += (& $tail "exe-unittest.log" 60); $md += '```'; $md += "</details>"
+          $md -join "`n" | Out-File -FilePath exe-build-report.md -Encoding utf8
+          Get-Content exe-build-report.md | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+          # 같은 표식으로 시작하는 댓글이 있으면 고쳐 쓰고(PATCH), 없으면 새로 단다 (jq 대신 ConvertFrom-Json: pwsh 안에서 따옴표 문제 없음)
+          $mark = '<!-- iacpatch-exe-build -->'
+          $existing = gh api "repos/$env:GITHUB_REPOSITORY/issues/$env:PR/comments?per_page=100" | ConvertFrom-Json | Where-Object { $_.body.StartsWith($mark) } | Select-Object -First 1
+          if ($existing) { gh api -X PATCH "repos/$env:GITHUB_REPOSITORY/issues/comments/$($existing.id)" -F body=@exe-build-report.md | Out-Null; "updated comment $($existing.id)" }
+          else { gh pr comment $env:PR --body-file exe-build-report.md; "created comment" }
       - name: Package portable zip (repo files + exe, no .git)
         shell: pwsh
         run: |

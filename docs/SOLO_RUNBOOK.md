@@ -22,11 +22,11 @@
 | 설치 · 도구 | trivy/terraform 을 `tools\` 에 받기(처음 한 번), 설치 검사, 하는 것/안 하는 것 |
 
 - 화면을 닫으면(탭 닫기) 3분 뒤 프로세스가 스스로 끝난다. 바로 끝내려면 화면 오른쪽 위 **종료**.
-- 콘솔로만 돌리려면 `IaCPatch.exe --console` (리포트만 `--report-only`, 전부 다시 `--fresh`). 주소만 찍고 브라우저를 안 열려면 `--no-open`, 포트 지정 `--port 9000`.
+- 콘솔로만 돌리려면 `IaCPatch.exe --console` (리포트만 `--report-only`, 전부 다시 `--fresh`). 주소만 찍고 브라우저를 안 열려면 `--no-open`, 포트 지정 `--port 9000`, 리포트를 다른 경로에 쓰려면 `--report-out 경로`.
 - 로그: `experiments/run_experiments.log`. 리포트는 `report/` (git 에 안 올라감). 화면에서 돌린 후보 기록은 `data/reviews/` 에 시나리오 `ui/…` 로 남아 실험 세트의 최신 기록을 덮지 않는다.
 - **속도 (2026-09-22 수정)**: 팀 PC 에서 후보 하나에 3~4분 걸리던 원인은 Windows 에서 `terraform init` 이 후보마다 AWS provider(수백 MB)를 두 번씩 복사하던 것. 이제 (1) 처음 한 번 설치한 provider 를 `data/cache/tf-template/` 에 두고 하드링크로 되살려 복사를 없앴고, (2) 세트의 원본(baseline) 스캔·plan 은 한 번만 만들어 `data/cache/baseline/` 에 두며, (3) 원본·후보·intent·정책·코드·도구 버전이 전부 같은 후보는 이전 기록을 그대로 쓴다 (results.md 머리에 "재사용 N건"). 판정 코드는 그대로다. 팀 PC 실측(09-22, Terraform 1.16.1): 후보당 6~12초, 8단계 전체 약 10분 30초. 전부 다시 돌리려면 "전부 다시 돌리기" 체크 또는 `--fresh`. 캐시를 통째로 끄려면 환경변수 `IACPATCH_NO_CACHE=1`.
 - 하지 않는 것: LLM API 호출, Claude Code 자동 호출, AWS 접속, `terraform apply`, `git push`, PR 생성 (D-5, D-11). 실험 결과의 의미와 한계는 리포트 맨 위 노란 상자에 적혀 있다.
-- 같은 검증을 GitHub 가 PR 마다 자동으로 돌린다: `.github/workflows/iacpatch-verify.yml` (단위 테스트 + 후보 세트 4개 실측 + 검증 표를 PR 댓글로).
+- 같은 검증을 GitHub 가 PR 마다 자동으로 돌린다: `.github/workflows/iacpatch-verify.yml` (단위 테스트 + 후보 세트 4개 실측 + 검증 표를 PR 댓글로). exe 빌드(`build-exe.yml`)도 결과 표와 로그 끝부분을 PR 댓글로 단다. 첫 실행 기록: `docs/CI_FIRST_RUN.md`.
 
 ## 0. 한 번만: 도구 받기 (A 역할)
 

@@ -22,9 +22,10 @@ from collections import Counter
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from .config import package_root
 from .metrics import collect
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = package_root()   # exe(onefile) 안에서는 __file__ 이 임시 폴더라 쓰지 않는다
 SETS = ["eval-a-probe-rule", "eval-seeded-sg", "eval-iam-rule", "eval-seeded-iam", "eval-claude-code"]
 SET_TITLES = {"eval-a-probe-rule": "규칙 기반 baseline — SG (A 의 우회 케이스 9)", "eval-seeded-sg": "오라클 유무 (E2) — SG seeded 11",
               "eval-iam-rule": "규칙 기반 baseline — IAM (probe 5)", "eval-seeded-iam": "오라클 유무 (E2) — IAM seeded 13",

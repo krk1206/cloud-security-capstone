@@ -25,17 +25,20 @@ import webbrowser
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
+# 이 파일은 세 가지 방식으로 시작된다: `python -m iacpatch.app`(패키지), `python src/iacpatch/app.py`(스크립트), PyInstaller exe(스크립트와 같은 __main__).
+# 스크립트/exe 로 시작되면 __package__ 가 비어 있어 `from .x import` 가 "attempted relative import with no known parent package" 로 죽는다
+# (build-exe 워크플로 첫 실행의 스모크 실패 원인, 2026-09-28). 그래서 이 파일 안에서는 절대 import(iacpatch.…)만 쓰고, 스크립트로 시작됐으면 src/ 를 경로에 넣는다.
+if not __package__ and not getattr(sys, "frozen", False):
+    _src = str(Path(__file__).resolve().parents[1])
+    if _src not in sys.path:
+        sys.path.insert(0, _src)
+
+from iacpatch.config import package_root  # noqa: E402
+
 
 def find_root() -> Path:
-    """저장소 루트: 환경변수 IACPATCH_ROOT > exe/스크립트 위치에서 위로 올라가며 policy/patch_policy.json 찾기."""
-    env = os.environ.get("IACPATCH_ROOT")
-    if env and (Path(env) / "policy" / "patch_policy.json").exists():
-        return Path(env).resolve()
-    start = Path(sys.executable).resolve().parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parent
-    for p in [start, *start.parents]:
-        if (p / "policy" / "patch_policy.json").exists():
-            return p
-    return Path.cwd().resolve()
+    """저장소 루트: 환경변수 IACPATCH_ROOT > exe 위치(exe 면) / 소스 위치에서 위로 올라가며 policy/patch_policy.json 찾기 (config.package_root)."""
+    return package_root()
 
 
 ROOT = find_root()
@@ -232,8 +235,9 @@ def has_cc_candidates() -> bool:
         return False
 
 
-def run_all(log: Callable[[str], None], progress: Callable[[int, int], None], report_only: bool = False, open_browser: bool = True, fresh: bool = False) -> Path:
-    """실험 8단계 + 리포트. 각 단계의 출력은 log() 로 흘려보내고 experiments/run_experiments.log 에도 남긴다."""
+def run_all(log: Callable[[str], None], progress: Callable[[int, int], None], report_only: bool = False, open_browser: bool = True, fresh: bool = False,
+            report_out: Optional[Path] = None) -> Path:
+    """실험 8단계 + 리포트. 각 단계의 출력은 log() 로 흘려보내고 experiments/run_experiments.log 에도 남긴다. report_out: 리포트 경로(기본 report/index.html)."""
     env = _env()
     logf = ROOT / "experiments" / "run_experiments.log"
     logf.parent.mkdir(parents=True, exist_ok=True)
@@ -272,8 +276,8 @@ def run_all(log: Callable[[str], None], progress: Callable[[int, int], None], re
                 log(f"  (종료 코드 {rc} — 이 단계는 실패. 로그를 확인)"); lf.write(f"exit={rc}\n")
         progress(total - 1, total)
         log("\n================ 리포트 생성")
-        from .report_html import build
-        out = build(ROOT / "report" / "index.html")
+        from iacpatch.report_html import build
+        out = build(Path(report_out) if report_out else ROOT / "report" / "index.html")
         log(f"→ {out}"); lf.write(f"report: {out}\n")
         progress(total, total)
     if open_browser:
@@ -290,16 +294,16 @@ TITLE = "AI가 생성한 테라폼 보안 패치의 실효성 검증 자동화 �
 
 def gui(port: Optional[int] = None, open_browser: bool = True) -> int:
     """브라우저 화면: 로컬 웹 서버를 띄우고 기본 브라우저를 연다. 화면이 닫히면(heartbeat 끊김) 스스로 끝난다."""
-    from .web.server import serve
+    from iacpatch.web.server import serve
     return serve(port=port, open_browser=open_browser)
 
 
-def console(report_only: bool, open_browser: bool, fresh: bool = False) -> int:
+def console(report_only: bool, open_browser: bool, fresh: bool = False, report_out: Optional[Path] = None) -> int:
     def log(s: str) -> None:
         print(s, flush=True)
     def prog(i: int, n: int) -> None:
         pass
-    out = run_all(log, prog, report_only=report_only, open_browser=open_browser, fresh=fresh)
+    out = run_all(log, prog, report_only=report_only, open_browser=open_browser, fresh=fresh, report_out=report_out)
     print(f"\n완료. 리포트: {out}")
     return 0
 
@@ -343,10 +347,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--no-open", action="store_true", help="브라우저를 열지 않음")
     ap.add_argument("--fresh", action="store_true", help="(콘솔) 이전 기록 재사용 없이 전부 다시 돌림")
     ap.add_argument("--port", type=int, default=None, help="화면 포트 (기본: 8765 부터 빈 포트)")
+    ap.add_argument("--report-out", default=None, help="(콘솔) 리포트 파일 경로 (기본 report/index.html)")
     a = ap.parse_args(argv)
     if not a.console:
         return gui(port=a.port, open_browser=not a.no_open)
-    return console(a.report_only, not a.no_open, fresh=a.fresh)
+    return console(a.report_only, not a.no_open, fresh=a.fresh, report_out=Path(a.report_out) if a.report_out else None)
 
 
 if __name__ == "__main__":

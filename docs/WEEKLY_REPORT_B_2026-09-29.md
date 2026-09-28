@@ -8,9 +8,9 @@
 1. Risk Rubric(위험도 기준표) v2 — 변경 리소스 종류·수, IAM 여부, blast radius(부착 지점 수·외부 SG), 삭제/교체, provider 변경을 점수·hard 조건으로 정의(`policy/risk_rubric.json`, `docs/RISK_RUBRIC_V2.md`). 등급 상한 로직: 위험도 LOW/MEDIUM/HIGH → 자율성 상한 HIGH/MEDIUM/LOW, LLM 제안은 낮추는 방향만 반영(`policy/gate.py`).
 2. 완료 기준 확인 — (a) 목업 데이터로 분류: 후보 세트 라벨 25건을 실제 검토 흐름으로 다시 돌려 기대 등급 = 코드 등급 25/25, 세 등급 모두 출현(LOW 12·MEDIUM 12·HIGH 1) — terraform 없이 커밋된 plan 쌍으로 재계산되며 CI 단위 테스트에 포함. (b) 상한 강제: 위험도 3 × LLM 제안 4 × 검증 3 × 정책 2 = 72 조합 전수 검사 위반 0(`tests/unit/test_rubric_demo.py`).
    - 정직 표기: 라벨 25건은 B 의 Claude 세션이 기준표를 읽고 적은 값이라 **사람 손 검산은 아직 0/25**. 이번 주에 B 가 직접 검산해 `expected_risk_verified_by` 를 채운다.
-3. 실행 방식 교체 — bat/tkinter 창 대신 **IaCPatch.exe → 브라우저 화면**(로컬 127.0.0.1 서버, 외부 접속·외부 스크립트 없음). 탭: 4주차 기준표(표시·라벨 재계산·상한 전수 검사·계산기·게이트 데모), 5주차 후보→검증(V1~V6)→위험도→검토 수준→PR 미리보기, 실험 8단계, 리포트, 도구. Chromium 자동 시험(5탭) 통과. exe 는 GitHub Actions(Windows 러너)가 자동 빌드(`.github/workflows/build-exe.yml`) — **첫 빌드는 push 뒤 확인**.
+3. 실행 방식 교체 — bat/tkinter 창 대신 **IaCPatch.exe → 브라우저 화면**(로컬 127.0.0.1 서버, 외부 접속·외부 스크립트 없음). 탭: 4주차 기준표(표시·라벨 재계산·상한 전수 검사·계산기·게이트 데모), 5주차 후보→검증(V1~V6)→위험도→검토 수준→PR 미리보기, 실험 8단계, 리포트, 도구. Chromium 자동 시험(5탭) 통과. exe 는 GitHub Actions(Windows 러너)가 자동 빌드(`.github/workflows/build-exe.yml`). 첫 두 빌드(PR #4)는 빌드 자체는 성공했으나 스모크 단계에서 실패 → 원인(스크립트 모드 상대 import, onefile 임시 폴더 루트)을 샌드박스에서 재현해 수정 — **세 번째 빌드 결과 확인 필요** (`docs/CI_FIRST_RUN.md`).
 4. main 합치기 — A 의 CI 게이트·V2 초안·화이트리스트 v0.2·CIS 매핑 v0.2·피드백 문서를 B 브랜치에 병합. A 의 V2 스크립트와 파이프라인 V2 가 fixture 9쌍에서 같은 결과를 내는 테스트 추가. 화이트리스트 v0.2 ↔ 정책 파일 대조표(`docs/WHITELIST_VS_POLICY.md`, 다른 점 8건 → 팀 결정 항목). CIS 매핑 v0.2 값을 기계용 사본(`policy/cis_mapping.json`)에 반영(원문 대조는 미완 그대로).
-5. C 몫 선반영(C 확인 필요) — PR 마다 단위 테스트 + 후보 세트 4개 실측 + 검증 표를 PR 댓글로 다는 워크플로(`.github/workflows/iacpatch-verify.yml`). 자동 병합·apply 없음. **Actions 첫 실행은 push 뒤**.
+5. C 몫 선반영(C 확인 필요) — PR 마다 단위 테스트 + 후보 세트 4개 실측 + 검증 표를 PR 댓글로 다는 워크플로(`.github/workflows/iacpatch-verify.yml`). 자동 병합·apply 없음. PR #4 에서 2회 실행 모두 성공(unit + 후보 세트 4 실측, 5m13s·4m25s).
 6. 팀 PC 실측(9/22) — Terraform 1.16.1 로 4세트 38건 판정이 샌드박스(OpenTofu 1.10.6)와 38/38 동일, 후보당 6~12초.
 
 【다음 주 계획】

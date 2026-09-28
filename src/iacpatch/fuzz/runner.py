@@ -18,7 +18,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from ..config import Settings
+from ..config import Settings, package_root
 from ..iam_intent import load_iam_intent
 from ..intent import parse_intent
 from ..tools.terraform import TerraformAdapter
@@ -29,7 +29,7 @@ from ..verify.plan_model import build_world
 from ..verify.sg_oracle import evaluate as evaluate_sg
 from . import iam_variants, sg_variants
 
-ROOT = Path(__file__).resolve().parents[3]
+ROOT = package_root()   # exe(onefile) 안에서는 __file__ 이 임시 폴더라 쓰지 않는다
 IAM_INTENT = ROOT / "experiments" / "candidate-sets" / "eval-seeded-iam" / "intent.json"
 SG_INTENT = {
     "intent_version": "1", "intent_id": "fuzz-sg", "status": "active", "target_dir": "fuzz",
