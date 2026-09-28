@@ -3,8 +3,10 @@
 > **처음 보신다면 [`한장요약.md`](한장요약.md)부터 읽어주세요.** (3분)
 
 
-## AWS IaC 보안 패치 검증 파이프라인
-### Verification Pipeline for AWS IaC Security Patches
+## AI가 생성한 테라폼 보안 패치의 실효성 검증 자동화 구현
+### Automated Effectiveness Verification of AI-Generated Terraform Security Patches
+
+> 제목 변경 (2026-09-28) - 지도교수 지시에 따라 프로젝트가 하는 일이 드러나고 동사로 끝나는 형태로 변경했다. 이전 제목: AWS IaC 보안 패치 검증 파이프라인 (2026-09-08 ~ 09-28). 시스템의 구조와 용어(파이프라인, 검증 계층)는 변경 없음.
 
 > **문서 표기 정리 (2026-09-08)** — 팀 내부 문서에서 게이팅 기준을 "확신도"로 표기해 왔으나, 실제 판정 기준은 AI의 확신도가 아니라 **변경의 위험도**(리소스 종류, 영향 범위, 롤백 난이도)이므로 정리했다. AI의 확신도는 등급을 낮추는 방향으로만 반영되는 부수 입력이다. 상세는 [`criticism and rebuttal.md`](criticism%20and%20rebuttal.md) 비판 6 참조.
 
