@@ -38,7 +38,7 @@
 | 배포 후 결과를 실험 기록에 연결 (`postdeploy --review`) | `postdeploy.py` | 09-22 구현. FakeCli 로 VERIFIED / DEPLOY_FAILED / UNVERIFIED 경로 단위 테스트. metrics 표에 V7/V8/배포후 열. **실제 AWS 실행 0회** | A 가 sandbox apply 후 `--execute` |
 | 위험도 기준표 | `policy/risk_rubric.json` risk-v2, `docs/RISK_RUBRIC_V2.md` | 2026-09-22 확정안. 등급 일치율(손 적용 vs 코드) 25/25 (샌드박스 4세트). 팀 OK 후 고정 | 팀 확인 |
 | PR 생성 (브랜치/커밋/push/REST) | `tools/github.py` | 미리보기 모드(명령 출력)만 실행. push 미실행. 2026-09-22: `--review <id>` 로 실험 기록(data/reviews)도 받음 — LIGHT/FULL_REVIEW 만 허용, 단위 테스트 4건 | 저장소 권한 + `--execute` (사람) |
-| GitHub Actions `patch-verify.yml` | `.github/workflows/` | 작성만. Actions 에서 미실행 | push 후 첫 실행 확인 (Trivy 설치 스크립트 URL 포함) |
+| GitHub Actions `iacpatch-verify.yml`(단위 테스트 + 후보 세트 4개 실측 + PR 댓글) / `build-exe.yml`(Windows exe) | `.github/workflows/` | 2026-09-28 작성 (`bc-unit-tests.yml`·`patch-verify.yml` 을 대체). **Actions 첫 실행은 push 뒤** | 첫 실행 결과를 `docs/CI_FIRST_RUN.md` 에 기록 |
 | 온라인 plan (상태 기준, `plan_actions_delete/replace` 실측) | `tools/terraform.py --online` | 오프라인만 실행 | AWS 프로필 |
 
 ## 미완료

@@ -13,7 +13,7 @@ import sys
 import unittest
 from pathlib import Path
 
-from helpers import ROOT
+from helpers import ROOT, py_cmd
 
 from iacpatch.tools.trivy import TrivyScan, parse_findings, scan_summary
 from iacpatch.verify.layers import v2_finding_diff
@@ -28,7 +28,7 @@ def _scan(path: Path) -> TrivyScan:
 
 
 def _run_a(before: Path, after: Path):
-    r = subprocess.run([sys.executable, str(A_SCRIPT), str(before), str(after)], capture_output=True, text=True,
+    r = subprocess.run(py_cmd(str(A_SCRIPT), str(before), str(after)), capture_output=True, text=True,
                        encoding="utf-8", errors="replace", timeout=60)
     self_check = r.returncode in (0, 1)
     return self_check, r.returncode, json.loads(r.stdout) if r.stdout.strip() else {}

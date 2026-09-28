@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from helpers import ROOT
+from helpers import py_cmd, ROOT
 
 sys.path.insert(0, str(ROOT / "scripts"))
 import cc_add  # noqa: E402
@@ -45,14 +45,14 @@ class SoloKitTests(unittest.TestCase):
         resp.write_text("```hcl\n" + (ROOT / "scenarios/eval/a-probe/00-baseline/main.tf").read_text(encoding="utf-8").replace("0.0.0.0/0", "10.0.0.0/8") + "```\n", encoding="utf-8")
         cid = "cc-00-baseline-r999"
         try:
-            r = subprocess.run([sys.executable, str(ROOT / "scripts/cc_add.py"), "00-baseline", str(resp), "--rep", "999", "--expected", "correct",
-                                "--note", "unit test", "--yes"], cwd=str(ROOT), capture_output=True, text=True, encoding="utf-8", errors="replace")
+            r = subprocess.run(py_cmd(str(ROOT / "scripts/cc_add.py"), "00-baseline", str(resp), "--rep", "999", "--expected", "correct",
+                                "--note", "unit test", "--yes"), cwd=str(ROOT), capture_output=True, text=True, encoding="utf-8", errors="replace")
             self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
             self.assertTrue((set_dir / "candidates" / f"{cid}.tf").exists())
             m = json.loads(man.read_text(encoding="utf-8"))
             self.assertEqual(m["candidates"][-1]["id"], cid)
             self.assertEqual(m["candidates"][-1]["source"], "claude-code")
-            r2 = subprocess.run([sys.executable, str(ROOT / "scripts/cc_add.py"), "00-baseline", str(resp), "--rep", "999", "--expected", "correct", "--yes"],
+            r2 = subprocess.run(py_cmd(str(ROOT / "scripts/cc_add.py"), "00-baseline", str(resp), "--rep", "999", "--expected", "correct", "--yes"),
                                 cwd=str(ROOT), capture_output=True, text=True, encoding="utf-8", errors="replace")
             self.assertNotEqual(r2.returncode, 0)        # 같은 이름은 덮어쓰지 않는다
         finally:
@@ -63,7 +63,7 @@ class SoloKitTests(unittest.TestCase):
 
     def test_summarize_runs_without_records(self):
         out = Path(tempfile.mkdtemp())
-        r = subprocess.run([sys.executable, str(ROOT / "scripts/summarize_experiments.py"), "--out", str(out), "--write", str(out / "summary.md")],
+        r = subprocess.run(py_cmd(str(ROOT / "scripts/summarize_experiments.py"), "--out", str(out), "--write", str(out / "summary.md")),
                            cwd=str(ROOT), capture_output=True, text=True, encoding="utf-8", errors="replace")
         self.assertEqual(r.returncode, 0, r.stderr)
         text = (out / "summary.md").read_text(encoding="utf-8")

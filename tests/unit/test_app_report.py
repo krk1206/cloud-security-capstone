@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from helpers import ROOT
+from helpers import FROZEN, ROOT, py_cmd
 
 from iacpatch import app, report_html
 
@@ -56,6 +56,7 @@ class AppTests(unittest.TestCase):
             self.assertFalse(any(banned in c for c in cmds), banned)
         self.assertEqual(len(app.steps(include_cc=True)), len(s))
 
+    @unittest.skipIf(FROZEN, "exe 안에서는 python -m 이 없다 (build-exe 워크플로가 exe 의 --exec 를 따로 검사한다)")
     def test_exec_runs_repo_script_in_process(self):
         # exe 모드에서 쓰는 자기 재실행 경로. 여기서는 python 으로 같은 진입점을 호출한다.
         env = dict(os.environ, PYTHONPATH=str(ROOT / "src"), PYTHONIOENCODING="utf-8")
@@ -126,7 +127,7 @@ class SelfcheckTests(unittest.TestCase):
         raw = (ROOT / "IaCPatch.bat").read_bytes().decode("ascii")
         self.assertIn("pyver.py", raw)                       # 3.10+ 파이썬을 골라 쓴다 (py -3 가 3.7 을 가리킨 사례)
         self.assertIn("py -3.14", raw)
-        r = subprocess.run([sys.executable, str(ROOT / "scripts" / "pyver.py")])
+        r = subprocess.run(py_cmd(str(ROOT / "scripts" / "pyver.py")))
         self.assertEqual(r.returncode, 0)
 
 

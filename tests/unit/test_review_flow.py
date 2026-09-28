@@ -10,7 +10,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from helpers import ROOT
+from helpers import py_cmd, ROOT
 
 from iacpatch.config import load_settings
 from iacpatch.models import ReviewLevel, ReviewState, Verdict
@@ -350,8 +350,8 @@ class ReviewFlowTests(unittest.TestCase):
             self.assertEqual((ROOT / "scenarios/eval/a-probe" / c / "main.tf").read_bytes(),
                              (ROOT / "experiments/trivy-sg-probe/cases" / c / "main.tf").read_bytes(), c)
         env = dict(__import__("os").environ, TRIVY_BIN=str(self.out / "none"), TERRAFORM_BIN=str(self.out / "none"))
-        r = subprocess.run([sys.executable, str(ROOT / "scripts/run_candidate_set.py"), "experiments/candidate-sets/a-probe-dev/manifest.json",
-                            "--out", str(self.out / "runs"), "--results-dir", str(self.out / "results")], cwd=str(ROOT), capture_output=True, text=True, encoding="utf-8", errors="replace", env=env, timeout=300)
+        r = subprocess.run(py_cmd(str(ROOT / "scripts/run_candidate_set.py"), "experiments/candidate-sets/a-probe-dev/manifest.json",
+                            "--out", str(self.out / "runs"), "--results-dir", str(self.out / "results")), cwd=str(ROOT), capture_output=True, text=True, encoding="utf-8", errors="replace", env=env, timeout=300)
         self.assertEqual(r.returncode, 0, r.stderr[-2000:])
         self.assertIn("NO_FINDING", r.stdout)
         self.assertIn("INFO_INSUFFICIENT", r.stdout)

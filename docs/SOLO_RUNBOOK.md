@@ -3,25 +3,30 @@
 > 이 문서만 따라 하면 숫자가 나온다. LLM API 키·AWS 계정·GitHub 권한 없이 배포 전 실험(E1·E2)이 끝까지 돈다.
 > 유일하게 사람 손이 필요한 건 **Claude Code 에서 후보 받아오기** (지도교수 지시: 유료 API 대신 Claude Code).
 
-## 한 번 클릭 (2026-09-22 추가): `IaCPatch.bat`
+## 실행기: `IaCPatch.exe` → 브라우저 화면 (2026-09-28, bat/tkinter 창 대체)
 
-저장소 루트의 **`IaCPatch.bat`** 를 더블클릭하면 창이 뜬다 (Python 3.10+ 필요, 다른 설치 없음).
+**받는 법**
+1. GitHub 저장소 → **Actions** → "Build IaCPatch.exe (Windows)" 의 최근 실행 → 아래 **Artifacts** 의 `IaCPatch-portable` (GitHub 로그인 필요). 태그(`v*`)를 push 했으면 **Releases** 에서 로그인 없이 받는다.
+2. zip 을 **빈 새 폴더**에 푼다 (기존 폴더에 덮어쓰지 말 것 — 옛 파일과 섞이면 화면 위 "설치 검사" 칩이 빨갛게 되고 실험을 막는다).
+3. 그 폴더의 `IaCPatch.exe` 를 더블클릭 → 기본 브라우저에 화면이 열린다 (`http://127.0.0.1:8765/`, 이 PC 안에서만 접속됨). Python 설치 불필요.
+   직접 만들려면 `packaging\build_exe.bat` (PyInstaller, 1회). Python 이 있는 PC 에선 `IaCPatch.bat` 도 같은 화면을 연다.
 
-**zip 으로 받았으면 반드시 빈 새 폴더에 푼다.** 기존 폴더에 덮어쓰다가 "건너뛰기" 를 누르면 옛 파일과 새 파일이 섞여 `AttributeError`/`ImportError` 가 난다 (팀 PC 실측 2026-09-22). 창 위의 "설치 검사" 칩이 빨갛게 나오면 그 상태다 → 새 폴더에 다시. `tools\` 는 "도구 설치/확인" 버튼으로 다시 받으면 된다.
-PC 에 Python 이 여러 개면(`py -3` 가 3.7 을 가리키는 경우가 있었다) bat 이 3.10 이상을 골라 쓰고, 그래도 낮은 버전으로 시작되면 앱이 스스로 3.10+ 로 다시 뜬다.
+**화면 탭**
 
-| 버튼 | 하는 일 |
+| 탭 | 하는 일 |
 |---|---|
-| 도구 설치/확인 | `scripts/setup_tools.*` — trivy/terraform 을 `tools\` 에 받는다 (처음 한 번) |
-| ▶ 전체 실행 | 단위 테스트(0/8) → 실험 8단계(아래 1절 + 스캐너 사각 탐색 `FUZZ_RESULTS.md` + 오라클 차등 검증 `ORACLE_FUZZ.md`) → `report/index.html` 생성 → 브라우저로 연다 |
-| 리포트만 다시 생성 | 실험은 건너뛰고 `data/reviews/` 기록으로 리포트만 |
-| 리포트 열기 | 마지막 리포트 |
+| 4주차 · 위험도 기준표 | 기준표(`policy/risk_rubric.json`) 표시 → 라벨 25건을 실제 검토 흐름으로 **도구 없이** 재계산(커밋된 plan 쌍) → 기대 등급 vs 코드 등급 · 상한 강제 전수 검사(72 조합) · 계산기 · 게이트 데모 |
+| 5주차 · 패치 → 검증 → PR | 세트의 후보 / 규칙 기반 생성 / 붙여넣기(Claude Code 출력) 중 하나로 한 후보를 돌린다 → V1~V6 표 · 위험도 요인 · 검토 수준 · diff · **PR 미리보기**(브랜치·제목·명령만, push 는 사람) |
+| 실험 · 전체 실행 | 단위 테스트(0/8) → 실험 8단계(스캐너 사각 탐색·오라클 차등 검증 포함) → `report/index.html`. 처음 한 번은 전부, 이후엔 바뀐 후보만 |
+| 결과 · 리포트 | `report/index.html` |
+| 설치 · 도구 | trivy/terraform 을 `tools\` 에 받기(처음 한 번), 설치 검사, 하는 것/안 하는 것 |
 
-- 창이 안 뜨는 환경(tkinter 없음)에서는 자동으로 콘솔로 진행한다. 콘솔 강제: `IaCPatch.bat --console`, 리포트만: `--report-only`, 브라우저 안 열기: `--no-open`.
-- 로그: `experiments/run_experiments.log`. 리포트는 `report/` (git 에 안 올라감).
-- **속도 (2026-09-22 수정)**: 팀 PC 에서 후보 하나에 3~4분 걸리던 원인은 Windows 에서 `terraform init` 이 후보마다 AWS provider(수백 MB)를 두 번씩 복사하던 것. 이제 (1) 처음 한 번 설치한 provider 를 `data/cache/tf-template/` 에 두고 하드링크로 되살려 복사를 없앴고, (2) 세트의 원본(baseline) 스캔·plan 은 한 번만 만들어 `data/cache/baseline/` 에 두며, (3) 원본·후보·intent·정책·코드·도구 버전이 전부 같은 후보는 이전 기록을 그대로 쓴다 (results.md 머리에 "재사용 N건"). 판정 코드는 그대로다. 샌드박스 실측: 후보당 27초 → 8초, 아무것도 안 바뀐 재실행은 0.3초. 전부 다시 돌리려면 창의 "전부 다시 돌리기" 체크 또는 `--fresh`. 캐시를 통째로 끄려면 환경변수 `IACPATCH_NO_CACHE=1`.
-- exe 로 만들려면 `packaging\build_exe.bat` (PyInstaller, Windows 에서 1회) → 저장소 루트에 `IaCPatch.exe`. **exe 는 실행기**라 저장소 폴더째로 옮겨야 한다 (policy/, scenarios/, tests/, tools/ 를 옆에서 찾는다). 실험 스크립트는 exe 가 자기 자신을 `--exec` 로 다시 띄워 돌리므로 그 PC 에 Python 이 없어도 된다. **샌드박스에는 Windows 가 없어 exe 빌드는 미검증** — 팀 PC 에서 첫 빌드 뒤 결과를 `docs/worklog/` 에 적을 것.
-- 하지 않는 것: LLM API 호출, Claude Code 자동 호출, AWS 접속, `terraform apply`, `git push` (D-5, D-11). 실험 결과의 의미와 한계는 리포트 맨 위 노란 상자에 적혀 있다.
+- 화면을 닫으면(탭 닫기) 3분 뒤 프로세스가 스스로 끝난다. 바로 끝내려면 화면 오른쪽 위 **종료**.
+- 콘솔로만 돌리려면 `IaCPatch.exe --console` (리포트만 `--report-only`, 전부 다시 `--fresh`). 주소만 찍고 브라우저를 안 열려면 `--no-open`, 포트 지정 `--port 9000`.
+- 로그: `experiments/run_experiments.log`. 리포트는 `report/` (git 에 안 올라감). 화면에서 돌린 후보 기록은 `data/reviews/` 에 시나리오 `ui/…` 로 남아 실험 세트의 최신 기록을 덮지 않는다.
+- **속도 (2026-09-22 수정)**: 팀 PC 에서 후보 하나에 3~4분 걸리던 원인은 Windows 에서 `terraform init` 이 후보마다 AWS provider(수백 MB)를 두 번씩 복사하던 것. 이제 (1) 처음 한 번 설치한 provider 를 `data/cache/tf-template/` 에 두고 하드링크로 되살려 복사를 없앴고, (2) 세트의 원본(baseline) 스캔·plan 은 한 번만 만들어 `data/cache/baseline/` 에 두며, (3) 원본·후보·intent·정책·코드·도구 버전이 전부 같은 후보는 이전 기록을 그대로 쓴다 (results.md 머리에 "재사용 N건"). 판정 코드는 그대로다. 팀 PC 실측(09-22, Terraform 1.16.1): 후보당 6~12초, 8단계 전체 약 10분 30초. 전부 다시 돌리려면 "전부 다시 돌리기" 체크 또는 `--fresh`. 캐시를 통째로 끄려면 환경변수 `IACPATCH_NO_CACHE=1`.
+- 하지 않는 것: LLM API 호출, Claude Code 자동 호출, AWS 접속, `terraform apply`, `git push`, PR 생성 (D-5, D-11). 실험 결과의 의미와 한계는 리포트 맨 위 노란 상자에 적혀 있다.
+- 같은 검증을 GitHub 가 PR 마다 자동으로 돌린다: `.github/workflows/iacpatch-verify.yml` (단위 테스트 + 후보 세트 4개 실측 + 검증 표를 PR 댓글로).
 
 ## 0. 한 번만: 도구 받기 (A 역할)
 

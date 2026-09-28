@@ -1,0 +1,86 @@
+name: Build IaCPatch.exe (Windows)
+
+# IaCPatch.exe 를 GitHub 의 Windows 러너에서 만든다 — 팀원 PC 에 Python/PyInstaller 가 없어도 된다.
+#   - PR/push: 아티팩트 "IaCPatch-portable" (exe + 저장소 파일 zip). Actions 실행 페이지에서 내려받는다 (GitHub 로그인 필요)
+#   - 태그 v* push: Release 에 같은 zip 을 첨부한다 (로그인 없이 내려받기 가능)
+# exe 는 실행기다: 더블클릭 → 127.0.0.1 로컬 서버 → 기본 브라우저에 화면. LLM API·AWS·git push·terraform apply 는 부르지 않는다 (D-5, D-11).
+# trivy.exe / terraform.exe 는 exe 에 넣지 않는다 (화면의 '도구 설치/확인' 이 tools\ 에 받는다).
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+    paths:
+      - 'src/**'
+      - 'packaging/**'
+      - '.github/workflows/build-exe.yml'
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'packaging/**'
+      - '.github/workflows/build-exe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: PyInstaller onefile (windows-latest)
+    runs-on: windows-latest
+    timeout-minutes: 30
+    env:
+      PYTHONIOENCODING: utf-8
+      PYTHONUTF8: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build (packaging/build_exe.ps1, same script the team uses)
+        shell: pwsh
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File packaging\build_exe.ps1
+          if (-not (Test-Path IaCPatch.exe)) { throw "IaCPatch.exe not produced" }
+          Get-Item IaCPatch.exe | Select-Object Name, Length
+      - name: Smoke test the exe (self re-exec + unit tests inside the frozen binary)
+        shell: pwsh
+        run: |
+          .\IaCPatch.exe --exec scripts/pyver.py
+          if ($LASTEXITCODE -ne 0) { throw "--exec failed" }
+          .\IaCPatch.exe --unittest
+          if ($LASTEXITCODE -ne 0) { throw "unit tests inside exe failed" }
+          .\IaCPatch.exe --console --report-only --no-open
+          if ($LASTEXITCODE -ne 0) { throw "report-only run failed" }
+          if (-not (Test-Path report\index.html)) { throw "report not written" }
+      - name: Package portable zip (repo files + exe, no .git)
+        shell: pwsh
+        run: |
+          $name = "IaCPatch-portable-" + $env:GITHUB_SHA.Substring(0,7)
+          git archive --format=zip --prefix=cloud-security-capstone/ -o "$name.zip" HEAD
+          Compress-Archive -Path IaCPatch.exe -DestinationPath exe-only.zip -Force
+          # exe 를 zip 안 저장소 폴더 루트에 넣는다
+          $tmp = Join-Path $env:RUNNER_TEMP "portable"
+          Expand-Archive "$name.zip" -DestinationPath $tmp -Force
+          Copy-Item IaCPatch.exe (Join-Path $tmp "cloud-security-capstone\IaCPatch.exe")
+          Remove-Item "$name.zip"
+          Compress-Archive -Path (Join-Path $tmp "cloud-security-capstone") -DestinationPath "$name.zip" -Force
+          "PORTABLE=$name.zip" | Out-File -FilePath $env:GITHUB_ENV -Append
+          Get-Item "$name.zip" | Select-Object Name, Length
+      - uses: actions/upload-artifact@v4
+        with:
+          name: IaCPatch-portable
+          path: |
+            ${{ env.PORTABLE }}
+            IaCPatch.exe
+          retention-days: 30
+      - name: Attach to Release (tags only)
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = $env:GITHUB_REF_NAME
+          gh release view $tag 2>$null
+          if ($LASTEXITCODE -ne 0) { gh release create $tag --title "IaCPatch $tag" --notes "IaCPatch.exe (Windows) + 저장소 파일. 빈 새 폴더에 풀고 IaCPatch.exe 를 더블클릭." }
+          gh release upload $tag $env:PORTABLE IaCPatch.exe --clobber

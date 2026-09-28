@@ -1,5 +1,5 @@
 @echo off
-REM One click: unit tests -> experiments (8 steps) -> HTML report -> browser.
+REM Opens the IaCPatch screen in your browser (local server on 127.0.0.1). Same as IaCPatch.exe, but needs Python 3.10+.
 REM Picks a Python 3.10+ (the "py -3" launcher may point at an old 3.7 - seen on a team PC).
 REM trivy/terraform go to tools\ via the "tool setup" button (or scripts\setup_tools.bat).
 REM Does NOT: call any LLM API, run Claude Code, touch AWS, terraform apply, git push.

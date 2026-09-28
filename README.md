@@ -2,7 +2,7 @@
 
 > **처음 보신다면 [`한장요약.md`](한장요약.md)부터 읽어주세요.** (3분)
 > **실험을 직접 돌리려면 [`docs/SOLO_RUNBOOK.md`](docs/SOLO_RUNBOOK.md)** — 도구 받기 → `scripts/run_experiments.*` 한 방 → Claude Code 후보 채우기.
-> **한 번 클릭:** 저장소 루트의 `IaCPatch.bat` (Python 3 만 있으면 됨) → 창에서 **▶ 전체 실행** → 단위 테스트 + 실험 8단계 + `report/index.html` 이 브라우저로 열린다. exe 는 `packaging\build_exe.bat`.
+> **실행기:** `IaCPatch.exe` 더블클릭 → 브라우저에 화면 (4주차 위험도 기준표 · 5주차 패치→검증→PR 미리보기 · 실험 8단계 · 리포트). exe 는 GitHub Actions(`build-exe.yml`)가 만든다 → Actions 아티팩트 / Releases. 받는 법·탭 설명은 [`docs/SOLO_RUNBOOK.md`](docs/SOLO_RUNBOOK.md). (Python 이 있으면 `IaCPatch.bat` 도 같은 화면.)
 > **다른 조와 비교해 뭘로 이기나:** [`docs/DEPTH_OVER_SCALE.md`](docs/DEPTH_OVER_SCALE.md) — 스캐너 사각 탐색(`experiments/FUZZ_RESULTS.md`)·오라클 차등 검증(`experiments/ORACLE_FUZZ.md`)·남은 3가지.
 > **지도교수 9/22 질문에 대한 답:** [`docs/WHY_8_LAYERS.md`](docs/WHY_8_LAYERS.md) (8계층 근거), [`docs/PATCH_GENERATION.md`](docs/PATCH_GENERATION.md) (패치 생성 방식), [`docs/TRIVY_CIS_MAPPING.md`](docs/TRIVY_CIS_MAPPING.md) (차주 매핑표 뼈대).
 
@@ -314,7 +314,7 @@ Risk Rubric(변경 리소스 종류, 영향받는 리소스 수, IAM 관련 여�
 
 ```
 GitHub Repository  (2026-09-13 실제 구현 기준)
-├─ .github/workflows/       # iac-scan.yml (Trivy), patch-verify.yml (mock 파이프라인, 초안)
+├─ .github/workflows/       # iac-scan.yml (A: Trivy 게이트), iacpatch-verify.yml (단위 테스트 + 실험 + PR 검증 표 댓글), build-exe.yml (Windows exe 자동 빌드)
 ├─ infrastructure/          # Terraform (sg-baseline: 의도적 설정 오류, AWS 샌드박스 대상)
 ├─ src/iacpatch/            # 파이프라인 코드 (generator=패치 생성, verify=V1~V8, policy=Validator/Risk/Gate)
 ├─ policy/                  # patch_policy.json, risk_rubric.json, cis_mapping.json, intent/ (승인 출처)

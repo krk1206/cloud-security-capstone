@@ -69,6 +69,16 @@ def load_case_trivy(case: str):
     return TrivyScan(True, report, parse_findings(report), scan_summary(report), str(report.get("Trivy", {}).get("Version", "")))
 
 
+FROZEN = bool(getattr(sys, "frozen", False))   # PyInstaller exe 안에서 `IaCPatch.exe --unittest` 로 도는 중
+
+
+def py_cmd(script: str, *args: str) -> List[str]:
+    """저장소 스크립트를 돌리는 명령. exe 안에서는 python 이 없으므로 exe 자신을 --exec 로 다시 띄운다 (app._script_cmd 와 같은 규칙)."""
+    if FROZEN:
+        return [sys.executable, "--exec", str(script), *args]
+    return [sys.executable, str(script), *args]
+
+
 def tools_available() -> bool:
     from iacpatch.tools.runner import which
     tf = os.environ.get("TERRAFORM_BIN", "terraform")
