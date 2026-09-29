@@ -246,6 +246,11 @@ iframe{width:100%;height:78vh;border:1px solid var(--line);border-radius:8px;bac
       <div class="row" style="margin-top:8px"><button id="btn-tools" class="primary">도구 설치/확인 (trivy · terraform → tools\)</button></div>
       <div class="log" id="t-log" style="height:200px;margin-top:8px"></div>
       <h3>설치 검사</h3><ul id="selfcheck" class="small"></ul>
+      <h3>새 빌드 받기</h3>
+      <p class="small">지금 빌드: <code id="u-cur">?</code> · <span id="u-status" class="small">아직 확인 안 함</span></p>
+      <p class="small">GitHub Release <code>dev-latest</code>(브랜치 빌드마다 갱신, 로그인 불필요)에서 zip 을 받아 <b>옆 폴더</b>에 풀고 tools\·data\ 를 복사한 뒤 새 exe 를 띄운다. 이 폴더는 건드리지 않는다. 받은 zip 은 sha256 을 대조한다.</p>
+      <div class="row"><button id="btn-ucheck">업데이트 확인</button><button id="btn-uinstall" class="primary" disabled>새 빌드 받아서 실행</button></div>
+      <div class="log" id="u-log" style="height:140px;margin-top:8px"></div>
     </div>
     <div class="card">
       <h2>이 프로그램이 하는 것 / 안 하는 것</h2>
@@ -298,7 +303,7 @@ function chips(st){
   const tool = (k,v) => c.push(`<span class="chip ${v.ok?'ok':'bad'}">${k} ${esc(v.ok ? v.version.replace('Version: ','') : '없음 → 도구 탭')}</span>`);
   Object.entries(st.tools||{}).forEach(([k,v])=>tool(k,v));
   c.push(`<span class="chip ${st.selfcheck.length?'bad':'ok'}">설치 검사 ${st.selfcheck.length?('실패 '+st.selfcheck.length+'건'):'OK'} · python ${esc(st.python)}</span>`);
-  c.push(`<span class="chip">${esc(st.host)} · ${esc(st.os)}${st.frozen?' · exe':''}</span>`);
+  c.push(`<span class="chip">${esc(st.host)} · ${esc(st.os)}${st.frozen?' · exe':''}${(st.build&&st.build.sha)?' · 빌드 '+esc(st.build.sha.slice(0,7)):''}</span>`);
   c.push(`<span class="chip" title="${esc(st.root)}">저장소 ${esc(st.root.length>48?'…'+st.root.slice(-46):st.root)}</span>`);
   $('#chips').innerHTML = c.join('');
 }
@@ -321,7 +326,8 @@ async function refreshState(){
   STATE = st; chips(st);
   if(st.title) $('#title').textContent = st.title;
   $('#selfcheck').innerHTML = st.selfcheck.length ? st.selfcheck.map(p=>`<li style="color:var(--crit)">${esc(p)}</li>`).join('') + `<li>${esc(st.stale_hint)}</li>` : '<li>문제 없음</li>';
-  $('#tools-kv').innerHTML = Object.entries(st.tools).map(([k,v])=>`<dt>${esc(k)}</dt><dd>${v.ok?b('ok'):b('bad')} ${esc(v.version)} <span class="small mono">${esc(v.bin)}</span></dd>`).join('') + `<dt>python</dt><dd>${esc(st.python)}${st.frozen?' (exe 내장)':''}</dd><dt>저장소</dt><dd class="mono">${esc(st.root)}</dd>`;
+  $('#tools-kv').innerHTML = Object.entries(st.tools).map(([k,v])=>`<dt>${esc(k)}</dt><dd>${v.ok?b('ok'):b('bad')} ${esc(v.version)} <span class="small mono">${esc(v.bin)}</span></dd>`).join('') + `<dt>python</dt><dd>${esc(st.python)}${st.frozen?' (exe 내장)':''}</dd><dt>빌드</dt><dd class="mono">${(st.build&&st.build.sha)?esc(st.build.sha.slice(0,7))+(st.build.built_at?' · '+esc(st.build.built_at):''):'(정보 없음 — 소스 실행 또는 옛 빌드)'}</dd><dt>저장소</dt><dd class="mono">${esc(st.root)}</dd>`;
+  if (st.build && st.build.sha) $('#u-cur').textContent = st.build.sha.slice(0,7) + (st.build.built_at ? ' · ' + st.build.built_at : '');
   buildSteps(st.steps);
   tilesFromSummary(st.summary, $('#e-tiles'));
   $('#btn-rep').disabled = $('#btn-rep2').disabled = false;
@@ -389,6 +395,16 @@ function loadReport(){ const f = $('#rep-frame'); f.src = '/report/?t=' + Date.n
 
 // ---------------- 도구 탭
 $('#btn-tools').onclick = async () => { const r = await api('/api/job/setup_tools', {}); if(!r.started){ alert(r.error||'이미 다른 작업이 돌고 있다'); return; } startJob($('#t-log'), ()=>{}); };
+$('#btn-ucheck').onclick = async () => {
+  $('#u-status').textContent = '확인 중…'; $('#btn-uinstall').disabled = true;
+  const r = await api('/api/update/check');
+  $('#u-cur').textContent = (r.current && r.current.sha) ? r.current.sha.slice(0,7) + (r.current.built_at ? ' · ' + r.current.built_at : '') : '(빌드 정보 없음)';
+  if (r.error) { $('#u-status').textContent = r.error; return; }
+  const l = r.latest || {};
+  $('#u-status').textContent = r.newer ? `새 빌드 있음: ${(l.sha||'').slice(0,7)} (${l.built_at||'?'})` : `최신이다 (${(l.sha||'').slice(0,7)})`;
+  $('#btn-uinstall').disabled = !r.newer;
+};
+$('#btn-uinstall').onclick = async () => { const r = await api('/api/job/update', {}); if(!r.started){ alert(r.error||'이미 다른 작업이 돌고 있다'); return; } startJob($('#u-log'), ()=>{ $('#u-status').textContent = '끝. 새 탭이 열렸으면 이 창은 닫아도 된다.'; }); };
 
 // ---------------- 4주차
 function renderRubric(rv){

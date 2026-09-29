@@ -129,6 +129,14 @@ def reviews_root() -> Path:
     return Path(env) if env else _root() / "data" / "reviews"
 
 
+def _build_info() -> Dict[str, Any]:
+    try:
+        from .. import update as up
+        return up.build_info()
+    except Exception as e:  # 화면이 죽지 않게
+        return {"sha": None, "error": str(e)}
+
+
 def state_payload() -> Dict[str, Any]:
     root = _root()
     report = root / "report" / "index.html"
@@ -143,7 +151,7 @@ def state_payload() -> Dict[str, Any]:
         except Exception as e:  # 집계 실패는 화면에 그대로
             summary = {"error": str(e)}
     return {
-        "root": str(root), "python": platform.python_version(), "host": platform.node(), "os": platform.system(), "frozen": _app.FROZEN,
+        "root": str(root), "python": platform.python_version(), "host": platform.node(), "os": platform.system(), "frozen": _app.FROZEN, "build": _build_info(),
         "title": _app.TITLE, "tools": _app.tool_status(), "selfcheck": _app.selfcheck(), "stale_hint": _app.install_hint(),
         "report_exists": report.exists(), "report_mtime": report.stat().st_mtime if report.exists() else None,
         "cc_candidates": _app.has_cc_candidates(), "steps": [t for t, _ in _app.steps(_app.has_cc_candidates())],
@@ -274,6 +282,21 @@ def decode_console(raw: bytes) -> str:
         except (UnicodeDecodeError, LookupError):
             pass
     return raw.decode("utf-8", errors="replace")
+
+
+def job_update() -> Callable:
+    """새 빌드 받기 (GitHub Release dev-latest → 옆 폴더 → tools/data 복사 → 새 exe 실행). 네트워크는 github.com 만."""
+    from .. import update as up
+    from ..config import load_settings
+    root = _root()
+    url = os.environ.get("IACPATCH_UPDATE_URL") or load_settings(str(root)).extra.get("update_url") or up.DEFAULT_UPDATE_URL
+
+    def fn(log, prog):
+        res = up.install(root, url, log=log)
+        if res.get("launched"):
+            _STATE["quit_after"] = time.time() + 20   # 새 exe 가 떴으니 이 서버는 잠시 뒤 스스로 끝난다
+        return res
+    return fn
 
 
 def job_candidate(req: Dict[str, Any]) -> Callable:
@@ -426,6 +449,11 @@ class Handler(BaseHTTPRequestHandler):
                 self._json({"records": _latest_records()})
             elif u.path == "/api/week5/record":
                 self._json(record_detail(q.get("id", [""])[0]))
+            elif u.path == "/api/update/check":
+                from .. import update as up
+                from ..config import load_settings
+                url = os.environ.get("IACPATCH_UPDATE_URL") or load_settings(str(_root())).extra.get("update_url") or up.DEFAULT_UPDATE_URL
+                self._json(up.check(url))
             elif u.path in ("/report", "/report/", "/report/index.html"):
                 p = _root() / "report" / "index.html"
                 if p.exists():
@@ -457,6 +485,9 @@ class Handler(BaseHTTPRequestHandler):
                 self._json({"started": ok}, 200 if ok else 409)
             elif u.path == "/api/job/candidate":
                 ok = JOB.start("candidate", job_candidate(body))
+                self._json({"started": ok}, 200 if ok else 409)
+            elif u.path == "/api/job/update":
+                ok = JOB.start("update", job_update())
                 self._json({"started": ok}, 200 if ok else 409)
             elif u.path == "/api/week4/calc":
                 from ..rubric_demo import calc_risk
@@ -505,6 +536,10 @@ def serve(port: Optional[int] = None, open_browser: bool = True, idle_exit: bool
     try:
         while not _STATE["quit"]:
             time.sleep(0.5)
+            qa = _STATE.get("quit_after")
+            if qa and time.time() > qa:                                        # 업데이트로 새 exe 를 띄운 뒤
+                print("새 빌드가 실행돼 이 서버를 끝낸다.", flush=True)
+                break
             if not idle_exit or JOB.running:
                 continue
             hb = _STATE["last_heartbeat"]

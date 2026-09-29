@@ -51,6 +51,9 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "unit tests failed on Windows python ($LASTEXITCODE)" }
       - name: Build both variants (packaging/build_exe.ps1, same script the team uses)
         shell: pwsh
+        env:
+          IACPATCH_BUILD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          IACPATCH_BUILD_REF: ${{ github.head_ref || github.ref_name }}
         run: |
           # 1) 콘솔판: 검은 창에 로그가 보이는 진단용. PowerShell 이 끝날 때까지 기다리므로 스모크 테스트도 이걸로 한다
           powershell -NoProfile -ExecutionPolicy Bypass -File packaging\build_exe.ps1 -Console
@@ -177,6 +180,29 @@ jobs:
           name: IaCPatch-portable
           path: ${{ env.PORTABLE_DIR }}
           retention-days: 30
+      - name: Publish rolling pre-release dev-latest (branch builds — the app's '새 빌드 받기' button downloads from here, no login)
+        if: github.event_name == 'pull_request' || (github.event_name == 'push' && !startsWith(github.ref, 'refs/tags/'))
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          REF_NAME: ${{ github.head_ref || github.ref_name }}
+        run: |
+          # dev-latest 태그를 이 커밋으로 옮기고(지웠다 만듦) zip + latest.json(sha·sha256) 을 붙인다. 태그는 v* 가 아니라 이 워크플로를 다시 돌리지 않는다.
+          $zip = "IaCPatch-portable.zip"
+          # Compress-Archive(1.2.x) 는 zip 안 경로 구분자를 '\' 로 써서 다른 도구가 잘못 푼다 → python zipfile 로 ('/' 구분자, 루트에 policy/ 가 바로 오게)
+          python -c "import shutil,sys; shutil.make_archive('IaCPatch-portable', 'zip', root_dir=sys.argv[1])" $env:PORTABLE_DIR
+          if (-not (Test-Path $zip)) { throw "zip not created" }
+          $hash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
+          $built = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+          @{ sha = $env:HEAD_SHA; ref = $env:REF_NAME; built_at = $built; zip = $zip; sha256 = $hash; run_id = $env:GITHUB_RUN_ID } | ConvertTo-Json -Compress | Out-File -FilePath latest.json -Encoding ascii
+          Get-Content latest.json
+          gh release delete dev-latest --yes --cleanup-tag 2>$null
+          $notes = "브랜치 $env:REF_NAME 의 최신 빌드 (커밋 $($env:HEAD_SHA.Substring(0,7)), $built). 팀원용: zip 을 빈 새 폴더에 풀고 IaCPatch.exe 더블클릭. 화면의 '새 빌드 받기' 버튼도 여기서 받는다. 검증된 정식 릴리스가 아니다 — 매 push 마다 덮어쓴다."
+          gh release create dev-latest --prerelease --target $env:HEAD_SHA --title "IaCPatch dev-latest ($($env:HEAD_SHA.Substring(0,7)))" --notes $notes $zip latest.json
+          if ($LASTEXITCODE -ne 0) { throw "release create failed ($LASTEXITCODE)" }
+          "https://github.com/$env:GH_REPO/releases/download/dev-latest/$zip"
       - name: Attach to Release (tags only — downloadable without GitHub login)
         if: startsWith(github.ref, 'refs/tags/v')
         shell: pwsh

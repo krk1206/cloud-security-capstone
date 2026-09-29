@@ -41,6 +41,12 @@ $name = if ($Console) { "IaCPatch-console" } else { "IaCPatch" }   # 콘솔판�
 $env:PYTHONPATH = "$Root\src"
 & $PyExe @($PyPre + @("-c", "import iacpatch.fuzz.runner, iacpatch.web.server, iacpatch.rubric_demo"))
 if ($LASTEXITCODE -ne 0) { Write-Host "src\iacpatch 를 import 할 수 없다 (PYTHONPATH=$env:PYTHONPATH)"; exit 1 }
+# 빌드 정보(커밋·시각)를 exe 안에 넣는다 — 화면 '빌드' 칸과 '새 빌드 받기'(GitHub Release dev-latest 와 비교)가 읽는다
+$sha = if ($env:IACPATCH_BUILD_SHA) { $env:IACPATCH_BUILD_SHA } else { try { (git rev-parse HEAD 2>$null | Out-String).Trim() } catch { "" } }
+$built = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+$binfo = Join-Path $Root "src\iacpatch\build_info.json"
+@{ sha = $sha; built_at = $built; ref = $env:IACPATCH_BUILD_REF } | ConvertTo-Json -Compress | Out-File -FilePath $binfo -Encoding utf8
+Write-Host ("build_info: sha=" + $sha + " built_at=" + $built)
 $hidden = @()
 Get-ChildItem -Path "$Root\src\iacpatch" -Recurse -Filter *.py | Where-Object { $_.Name -ne "__main__.py" } | ForEach-Object {
   $rel = $_.FullName.Substring("$Root\src\".Length) -replace "\.py$", ""
@@ -56,6 +62,7 @@ $args = @("-m", "PyInstaller", "--noconfirm", "--clean", "--onefile", $mode,
           "--collect-submodules", "iacpatch") + $hidden + @(
           "--add-data", "$Root\src\iacpatch\generator\prompts;iacpatch\generator\prompts",
           "--add-data", "$Root\src\iacpatch\web\static;iacpatch\web\static",
+          "--add-data", "$binfo;iacpatch",
           "--distpath", "$Root\packaging\dist", "--workpath", "$Root\packaging\build", "--specpath", "$Root\packaging",
           "$Root\src\iacpatch\app.py")
 & $PyExe @($PyPre + $args)

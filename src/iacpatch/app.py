@@ -7,6 +7,7 @@
     python -m iacpatch.app --console --report-only   # 실험은 건너뛰고 리포트만
     python -m iacpatch.app --console --fresh         # 이전 기록 재사용 없이 전부 다시
     python -m iacpatch.app --selfcheck               # 루트·exe 여부·도구·설치 상태 검사만 찍고 끝 (진단용, 문제 있으면 종료 코드 1)
+    python -m iacpatch.app --update [--check]        # GitHub Release dev-latest 의 새 빌드를 옆 폴더에 받기 (화면의 '새 빌드 받기' 와 같음)
 
 화면(iacpatch/web): 4주차(위험도 기준표·상한 강제) · 5주차(패치→검증→PR 미리보기) · 실험 8단계 · 리포트 · 도구.
 
@@ -400,6 +401,12 @@ def main(argv: Optional[List[str]] = None) -> int:
         return _exec_unittest()
     if argv[:1] == ["--selfcheck"]:
         return _selfcheck_cli()
+    if argv[:1] == ["--update"]:      # 새 빌드 받기 (GitHub Release dev-latest). 콘솔 exe: IaCPatch-console.exe --update [--check]
+        from iacpatch.update import main as _upd
+        return _upd(argv[1:])
+    # 화면 안에서(in-process) 돌리는 검토도 실험 단계(subprocess)와 같은 provider 캐시를 쓰게 한다 — 새 폴더로 옮겨도 다시 안 받게
+    os.environ.setdefault("TF_PLUGIN_CACHE_DIR", str(ROOT / "tools" / "plugin-cache"))
+    (ROOT / "tools" / "plugin-cache").mkdir(parents=True, exist_ok=True)
     ap = argparse.ArgumentParser(description="IaCPatch 실행기 (브라우저 화면 / 콘솔)")
     ap.add_argument("--console", action="store_true", help="화면 없이 콘솔로 실험 8단계 + 리포트")
     ap.add_argument("--report-only", action="store_true", help="(콘솔) 실험은 건너뛰고 리포트만")
