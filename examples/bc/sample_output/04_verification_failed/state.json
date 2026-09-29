@@ -1,0 +1,37 @@
+{
+  "run_id": "20260915-063845-1d04dc",
+  "scenario": "ex04-v1-fail",
+  "state": "VALIDATION_FAILED",
+  "history": [
+    {
+      "state": "INPUT_READY",
+      "at": "2026-09-15T06:38:45+00:00",
+      "note": "대상 AVD-AWS-0107 @ main.tf:11 aws_security_group.vulnerable_ssh"
+    },
+    {
+      "state": "CANDIDATE_READY",
+      "at": "2026-09-15T06:38:45+00:00",
+      "note": "origin=mock files=['main.tf'] policy=OK"
+    },
+    {
+      "state": "VALIDATION_PENDING",
+      "at": "2026-09-15T06:38:45+00:00",
+      "note": "linked=['V1', 'V3'] validity=FAIL"
+    },
+    {
+      "state": "VALIDATION_FAILED",
+      "at": "2026-09-15T06:38:45+00:00",
+      "note": "review_level=BLOCKED"
+    }
+  ],
+  "errors": [],
+  "started_at": "2026-09-15T06:38:45+00:00",
+  "verification_status": "FAILED",
+  "review_level": "BLOCKED",
+  "note": "로컬 리포트 생성 성공은 패치 검증 성공이 아니다. verification_status 와 각 계층 상태를 볼 것",
+  "candidate_sha256": "7252bfb9b4c93b03494f1ac0d6f09d1cb90db27a41aaaf65dd46832b3d8469a5",
+  "candidate_origin": "mock",
+  "candidate_generator": "mock:sg_baseline_ok",
+  "verification_source": "example-fixture (예제 값)",
+  "finished_at": "2026-09-15T06:38:45+00:00"
+}

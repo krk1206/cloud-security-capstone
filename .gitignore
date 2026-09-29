@@ -1,11 +1,36 @@
 
+!*.tfvars.example
+!data/reviews/README.md
+!data/runs/README.md
+!tools/README.md
+# AWS
 # Terraform
+# iacpatch
+# 혼자 실험용 도구 (scripts/setup_tools.*) — 바이너리는 커밋하지 않는다
 **/.terraform/
+*.pyc
+*.tfplan
 *.tfstate
 *.tfstate.*
-*.tfplan
 *.tfvars
-!*.tfvars.example
-
-# AWS
 *credentials*.csv
+.claude/settings.local.json
+.iacpatch-work/
+__pycache__/
+data/reviews/*
+data/cache/
+data/runs/*
+experiments/run_experiments.log
+experiments/exe-console.log
+src/iacpatch/build_info.json
+iacpatch.config.json
+report/
+tools/*
+# exe 빌드 산출물 (packaging/build_exe.ps1) — 바이너리는 커밋하지 않는다
+packaging/build/
+packaging/dist/
+packaging/*.spec
+/IaCPatch.exe
+/IaCPatch-console.exe
+# 스캐너 사각 탐색 원문(변형 main.tf·trivy.json·plan.json, 실행마다 수 MB) — 요약 FUZZ_RESULTS.md 만 커밋
+experiments/fuzz/

@@ -1,0 +1,92 @@
+{
+  "policy_version": "sg-iam-v2 (2026-09-22)",
+  "_comment": "Policy Validator / V5 / V2 가 읽는 결정론적 정책. LLM 은 이 파일을 수정할 수 없다 (protected_paths).",
+  "supported_target_rules": [
+    "AVD-AWS-0107",
+    "AVD-AWS-0345",
+    "AVD-AWS-0342"
+  ],
+  "_supported_target_rules_note": "현재 파이프라인이 끝까지(V6 포함) 검증할 수 있는 finding 룰. SG: AVD-AWS-0107. IAM(Tier 1, docs/IAM_SCOPE.md): AVD-AWS-0345(무제한 S3 정책 s3:*), AVD-AWS-0342(iam:PassRole). Trivy 0.74.0 내장 체크에서 AVD-AWS-0057(일반 와일드카드)은 deprecated 라 발생하지 않는다. 다른 룰은 UNSUPPORTED_RULE 로 종료한다.",
+  "editable_file_globs": [
+    "*.tf"
+  ],
+  "protected_paths": [
+    "policy/",
+    "tests/",
+    "src/",
+    ".github/",
+    "scripts/",
+    "docs/",
+    "experiments/",
+    "data/"
+  ],
+  "protected_file_names": [
+    "provider.tf",
+    "versions.tf",
+    "backend.tf"
+  ],
+  "forbidden_tokens": [
+    "provisioner",
+    "local-exec",
+    "remote-exec",
+    "backend \"",
+    "null_resource",
+    "data \"external\"",
+    "data \"http\"",
+    "terraform_remote_state"
+  ],
+  "forbidden_block_changes": [
+    "terraform",
+    "provider"
+  ],
+  "allowed_change_resource_types": [
+    "aws_security_group",
+    "aws_vpc_security_group_ingress_rule",
+    "aws_vpc_security_group_egress_rule",
+    "aws_security_group_rule",
+    "aws_iam_policy",
+    "aws_iam_role_policy",
+    "aws_iam_role"
+  ],
+  "allowed_create_resource_types": [
+    "aws_vpc_security_group_ingress_rule",
+    "aws_vpc_security_group_egress_rule",
+    "aws_security_group_rule"
+  ],
+  "allowed_attribute_changes": {
+    "aws_security_group": [
+      "ingress",
+      "egress",
+      "description",
+      "tags",
+      "tags_all"
+    ],
+    "aws_iam_policy": [
+      "policy",
+      "description",
+      "tags",
+      "tags_all"
+    ],
+    "aws_iam_role_policy": [
+      "policy"
+    ],
+    "aws_iam_role": [
+      "description",
+      "tags",
+      "tags_all",
+      "max_session_duration"
+    ],
+    "_note": "aws_iam_role 의 assume_role_policy(신뢰 정책)·inline_policy·managed_policy_arns 는 패치 범위 밖 — 바뀌면 정책 위반. 새 IAM 리소스 생성(allowed_create_resource_types 에 없음)도 위반"
+  },
+  "allow_delete": false,
+  "allow_replace": false,
+  "max_changed_resources": 3,
+  "provider_config_change_allowed": false,
+  "v2_block_severities": [
+    "CRITICAL",
+    "HIGH"
+  ],
+  "v2_ignore_rules": [],
+  "max_patch_files": 2,
+  "max_file_bytes": 65536
+}

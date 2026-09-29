@@ -1,0 +1,6 @@
+generated: 2026-09-22T01:35:37Z
+terraform: OpenTofu v1.10.6
+source_dir: scenarios/eval/iam-report-worker
+candidate: experiments/candidate-sets/eval-seeded-iam/candidates/unapproved-trust-policy-open.tf
+candidate_sha256: 57dd3eb10ea7d1791cb04c6e90e1a05f33250be5e5e9f3b9058d82f00d3ce894
+mode: offline (상태 없음, 전부 create; provider override 는 결과에 포함되지 않음)

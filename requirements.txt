@@ -1,0 +1,2 @@
+# 런타임 의존성 없음 — Python 3.10+ 표준 라이브러리만 사용한다.
+# 외부 도구(바이너리): terraform(또는 tofu), trivy, aws cli 는 PATH 또는 TERRAFORM_BIN/TRIVY_BIN/AWS_BIN 으로 지정.

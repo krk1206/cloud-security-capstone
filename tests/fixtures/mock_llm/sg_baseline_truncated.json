@@ -1,0 +1,7 @@
+{
+  "_note": "API reported max_tokens; body cut mid-JSON",
+  "model": "mock-fixture",
+  "truncated": true,
+  "stop_reason": "max_tokens",
+  "text": "{\"status\": \"PATCH\", \"rationale\": \"\", \"proposed_autonomy\": null, \"assumptions\": [], \"files\": [{\"path\": \"main.tf\", \"content\": \"resource \\\"aws_security_group\\\" \\\"vulnerable_ssh\\\" {\\n  name        = \\\"capstone-vuln-ssh\\\"\\n  description = \\\"Intentionally misconfigured for capstone research\\\"\\n  vpc_id      = var.vpc_id\\n\\n  ingress {\\n    description = \\\"SSH open to the world (intentional defect)\\\"\\n  "
+}

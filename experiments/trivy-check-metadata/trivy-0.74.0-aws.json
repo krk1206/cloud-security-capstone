@@ -1,0 +1,3224 @@
+{
+ "trivy_version": "0.74.0",
+ "binary": "/home/claude/cloud-security-capstone/tools/trivy",
+ "checks": {
+  "AVD-AWS-0001": {
+   "package": "builtin.aws.apigateway.aws0001",
+   "title": "API Gateway stages for V1 and V2 should have access logging enabled",
+   "id": "AWS-0001",
+   "long_id": "aws-apigateway-enable-access-logging",
+   "provider": "aws",
+   "service": "apigateway",
+   "severity": "MEDIUM",
+   "recommended_action": "Enable logging for API Gateway stages",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0001",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-logging.html"
+   ]
+  },
+  "AVD-AWS-0002": {
+   "package": "builtin.aws.apigateway.aws0002",
+   "title": "API Gateway must have cache enabled",
+   "id": "AWS-0002",
+   "long_id": "aws-apigateway-enable-cache-encryption",
+   "provider": "aws",
+   "service": "apigateway",
+   "severity": "MEDIUM",
+   "recommended_action": "Enable cache encryption",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0002",
+   "frameworks": {},
+   "related_resources": []
+  },
+  "AVD-AWS-0003": {
+   "package": "builtin.aws.apigateway.aws0003",
+   "title": "API Gateway must have X-Ray tracing enabled",
+   "id": "AWS-0003",
+   "long_id": "aws-apigateway-enable-tracing",
+   "provider": "aws",
+   "service": "apigateway",
+   "severity": "LOW",
+   "recommended_action": "Enable tracing",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0003",
+   "frameworks": {},
+   "related_resources": []
+  },
+  "AVD-AWS-0004": {
+   "package": "builtin.aws.apigateway.aws0004",
+   "title": "No unauthorized access to API Gateway methods",
+   "id": "AWS-0004",
+   "long_id": "aws-apigateway-no-public-access",
+   "provider": "aws",
+   "service": "apigateway",
+   "severity": "LOW",
+   "recommended_action": "Use and authorization method or require API Key",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0004",
+   "frameworks": {},
+   "related_resources": []
+  },
+  "AVD-AWS-0005": {
+   "package": "builtin.aws.apigateway.aws0005",
+   "title": "API Gateway domain name uses outdated SSL/TLS protocols.",
+   "id": "AWS-0005",
+   "long_id": "aws-apigateway-use-secure-tls-policy",
+   "provider": "aws",
+   "service": "apigateway",
+   "severity": "HIGH",
+   "recommended_action": "Use the most modern TLS/SSL policies available",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0005",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/apigateway/latest/developerguide/apigateway-custom-domain-tls-version.html"
+   ]
+  },
+  "AVD-AWS-0006": {
+   "package": "builtin.aws.athena.aws0006",
+   "title": "Athena databases and workgroup configurations are created unencrypted at rest by default, they should be encrypted",
+   "id": "AWS-0006",
+   "long_id": "aws-athena-enable-at-rest-encryption",
+   "provider": "aws",
+   "service": "athena",
+   "severity": "HIGH",
+   "recommended_action": "Enable encryption at rest for Athena databases and workgroup configurations",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0006",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/athena/latest/ug/encryption.html"
+   ]
+  },
+  "AVD-AWS-0007": {
+   "package": "builtin.aws.athena.aws0007",
+   "title": "Athena workgroups should enforce configuration to prevent client disabling encryption",
+   "id": "AWS-0007",
+   "long_id": "aws-athena-no-encryption-override",
+   "provider": "aws",
+   "service": "athena",
+   "severity": "HIGH",
+   "recommended_action": "Enforce the configuration to prevent client overrides",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0007",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/athena/latest/ug/manage-queries-control-costs-with-workgroups.html"
+   ]
+  },
+  "AVD-AWS-0008": {
+   "package": "builtin.aws.ec2.aws0008",
+   "title": "Launch configuration with unencrypted block device.",
+   "id": "AWS-0008",
+   "long_id": "aws-ec2-enable-launch-config-at-rest-encryption",
+   "provider": "aws",
+   "service": "ec2",
+   "severity": "HIGH",
+   "recommended_action": "Turn on encryption for all block devices",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0008",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/RootDeviceStorage.html"
+   ]
+  },
+  "AVD-AWS-0009": {
+   "package": "builtin.aws.ec2.aws0009",
+   "title": "Launch configuration should not have a public IP address.",
+   "id": "AWS-0009",
+   "long_id": "aws-ec2-no-public-ip",
+   "provider": "aws",
+   "service": "ec2",
+   "severity": "HIGH",
+   "recommended_action": "Set the instance to not be publicly accessible",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0009",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-instance-addressing.html"
+   ]
+  },
+  "AVD-AWS-0010": {
+   "package": "builtin.aws.cloudfront.aws0010",
+   "title": "Cloudfront distribution should have Access Logging configured",
+   "id": "AWS-0010",
+   "long_id": "aws-cloudfront-enable-logging",
+   "provider": "aws",
+   "service": "cloudfront",
+   "severity": "MEDIUM",
+   "recommended_action": "Enable logging for CloudFront distributions",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0010",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/AccessLogs.html"
+   ]
+  },
+  "AVD-AWS-0011": {
+   "package": "builtin.aws.cloudfront.aws0011",
+   "title": "CloudFront distribution does not have a WAF in front.",
+   "id": "AWS-0011",
+   "long_id": "aws-cloudfront-enable-waf",
+   "provider": "aws",
+   "service": "cloudfront",
+   "severity": "HIGH",
+   "recommended_action": "Enable WAF for the CloudFront distribution",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0011",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/waf/latest/developerguide/cloudfront-features.html"
+   ]
+  },
+  "AVD-AWS-0012": {
+   "package": "builtin.aws.cloudfront.aws0012",
+   "title": "CloudFront distribution allows unencrypted (HTTP) communications.",
+   "id": "AWS-0012",
+   "long_id": "aws-cloudfront-enforce-https",
+   "provider": "aws",
+   "service": "cloudfront",
+   "severity": "CRITICAL",
+   "recommended_action": "Only allow HTTPS for CloudFront distribution communication",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0012",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/using-https-cloudfront-to-s3-origin.html"
+   ]
+  },
+  "AVD-AWS-0013": {
+   "package": "builtin.aws.cloudfront.aws0013",
+   "title": "CloudFront distribution uses outdated SSL/TLS protocols.",
+   "id": "AWS-0013",
+   "long_id": "aws-cloudfront-use-secure-tls-policy",
+   "provider": "aws",
+   "service": "cloudfront",
+   "severity": "HIGH",
+   "recommended_action": "Use the most modern TLS/SSL policies available",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0013",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/secure-connections-supported-viewer-protocols-ciphers.html",
+    "https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/distribution-web-values-specify.html#DownloadDistValuesGeneral"
+   ]
+  },
+  "AVD-AWS-0014": {
+   "package": "builtin.aws.cloudtrail.aws0014",
+   "title": "Cloudtrail should be enabled in all regions regardless of where your AWS resources are generally homed",
+   "id": "AWS-0014",
+   "long_id": "aws-cloudtrail-enable-all-regions",
+   "provider": "aws",
+   "service": "cloudtrail",
+   "severity": "MEDIUM",
+   "recommended_action": "Enable Cloudtrail in all regions",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0014",
+   "frameworks": {
+    "cis-aws-1.2": [
+     "2.5"
+    ]
+   },
+   "related_resources": [
+    "https://docs.aws.amazon.com/awscloudtrail/latest/userguide/receive-cloudtrail-log-files-from-multiple-regions.html"
+   ]
+  },
+  "AVD-AWS-0015": {
+   "package": "builtin.aws.cloudtrail.aws0015",
+   "title": "CloudTrail should use Customer managed keys to encrypt the logs",
+   "id": "AWS-0015",
+   "long_id": "aws-cloudtrail-encryption-customer-managed-key",
+   "provider": "aws",
+   "service": "cloudtrail",
+   "severity": "HIGH",
+   "recommended_action": "Use Customer managed key",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0015",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/awscloudtrail/latest/userguide/encrypting-cloudtrail-log-files-with-aws-kms.html",
+    "https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#key-mgmt"
+   ]
+  },
+  "AVD-AWS-0016": {
+   "package": "builtin.aws.cloudtrail.aws0016",
+   "title": "Cloudtrail log validation should be enabled to prevent tampering of log data",
+   "id": "AWS-0016",
+   "long_id": "aws-cloudtrail-enable-log-validation",
+   "provider": "aws",
+   "service": "cloudtrail",
+   "severity": "HIGH",
+   "recommended_action": "Turn on log validation for Cloudtrail",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0016",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudtrail-log-file-validation-intro.html"
+   ]
+  },
+  "AVD-AWS-0017": {
+   "package": "builtin.aws.cloudwatch.aws0017",
+   "title": "CloudWatch log groups should be encrypted using CMK",
+   "id": "AWS-0017",
+   "long_id": "aws-cloudwatch-log-group-customer-key",
+   "provider": "aws",
+   "service": "cloudwatch",
+   "severity": "LOW",
+   "recommended_action": "Enable CMK encryption of CloudWatch Log Groups",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0017",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/encrypt-log-data-kms.html"
+   ]
+  },
+  "AVD-AWS-0018": {
+   "package": "builtin.aws.codebuild.aws0018",
+   "title": "CodeBuild Project artifacts encryption should not be disabled",
+   "id": "AWS-0018",
+   "long_id": "aws-codebuild-enable-encryption",
+   "provider": "aws",
+   "service": "codebuild",
+   "severity": "HIGH",
+   "recommended_action": "Enable encryption for CodeBuild project artifacts",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0018",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-codebuild-project-artifacts.html",
+    "https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-codebuild-project.html"
+   ]
+  },
+  "AVD-AWS-0019": {
+   "package": "builtin.aws.config.aws0019",
+   "title": "Config configuration aggregator should be using all regions for source",
+   "id": "AWS-0019",
+   "long_id": "aws-config-aggregate-all-regions",
+   "provider": "aws",
+   "service": "config",
+   "severity": "HIGH",
+   "recommended_action": "Set the aggregator to cover all regions",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0019",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/config/latest/developerguide/aggregate-data.html"
+   ]
+  },
+  "AVD-AWS-0020": {
+   "package": "builtin.aws.documentdb.aws0020",
+   "title": "DocumentDB logs export should be enabled",
+   "id": "AWS-0020",
+   "long_id": "aws-documentdb-enable-log-export",
+   "provider": "aws",
+   "service": "documentdb",
+   "severity": "MEDIUM",
+   "recommended_action": "Enable export logs",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0020",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/documentdb/latest/developerguide/event-auditing.html"
+   ]
+  },
+  "AVD-AWS-0021": {
+   "package": "builtin.aws.documentdb.aws0021",
+   "title": "DocumentDB storage must be encrypted",
+   "id": "AWS-0021",
+   "long_id": "aws-documentdb-enable-storage-encryption",
+   "provider": "aws",
+   "service": "documentdb",
+   "severity": "HIGH",
+   "recommended_action": "Enable storage encryption",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0021",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/documentdb/latest/developerguide/encryption-at-rest.html"
+   ]
+  },
+  "AVD-AWS-0022": {
+   "package": "builtin.aws.documentdb.aws0022",
+   "title": "DocumentDB encryption should use Customer Managed Keys",
+   "id": "AWS-0022",
+   "long_id": "aws-documentdb-encryption-customer-key",
+   "provider": "aws",
+   "service": "documentdb",
+   "severity": "LOW",
+   "recommended_action": "Enable encryption using customer managed keys",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0022",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/documentdb/latest/developerguide/security.encryption.ssl.public-key.html"
+   ]
+  },
+  "AVD-AWS-0023": {
+   "package": "builtin.aws.dynamodb.aws0023",
+   "title": "DAX Cluster should always encrypt data at rest",
+   "id": "AWS-0023",
+   "long_id": "aws-dynamodb-enable-at-rest-encryption",
+   "provider": "aws",
+   "service": "dynamodb",
+   "severity": "HIGH",
+   "recommended_action": "Enable encryption at rest for DAX Cluster",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0023",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/DAXEncryptionAtRest.html",
+    "https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-dax-cluster.html"
+   ]
+  },
+  "AVD-AWS-0024": {
+   "package": "builtin.aws.dynamodb.aws0024",
+   "title": "Point in time recovery should be enabled to protect DynamoDB table",
+   "id": "AWS-0024",
+   "long_id": "aws-dynamodb-enable-recovery",
+   "provider": "aws",
+   "service": "dynamodb",
+   "severity": "MEDIUM",
+   "recommended_action": "Enable point in time recovery",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0024",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/PointInTimeRecovery.html"
+   ]
+  },
+  "AVD-AWS-0025": {
+   "package": "builtin.aws.dynamodb.aws0025",
+   "title": "DynamoDB tables should use at rest encryption with a Customer Managed Key",
+   "id": "AWS-0025",
+   "long_id": "aws-dynamodb-table-customer-key",
+   "provider": "aws",
+   "service": "dynamodb",
+   "severity": "LOW",
+   "recommended_action": "Enable server side encryption with a customer managed key",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0025",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/EncryptionAtRest.html"
+   ]
+  },
+  "AVD-AWS-0026": {
+   "package": "builtin.aws.ec2.aws0026",
+   "title": "EBS volumes must be encrypted",
+   "id": "AWS-0026",
+   "long_id": "aws-ec2-enable-volume-encryption",
+   "provider": "aws",
+   "service": "ec2",
+   "severity": "HIGH",
+   "recommended_action": "Enable encryption of EBS volumes",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0026",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSEncryption.html"
+   ]
+  },
+  "AVD-AWS-0027": {
+   "package": "builtin.aws.ec2.aws0027",
+   "title": "EBS volume encryption should use Customer Managed Keys",
+   "id": "AWS-0027",
+   "long_id": "aws-ec2-volume-encryption-customer-key",
+   "provider": "aws",
+   "service": "ec2",
+   "severity": "LOW",
+   "recommended_action": "Enable encryption using customer managed keys",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0027",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSEncryption.html"
+   ]
+  },
+  "AVD-AWS-0028": {
+   "package": "builtin.aws.ec2.aws0028",
+   "title": "aws_instance should activate session tokens for Instance Metadata Service.",
+   "id": "AWS-0028",
+   "long_id": "aws-ec2-enforce-http-token-imds",
+   "provider": "aws",
+   "service": "ec2",
+   "severity": "HIGH",
+   "recommended_action": "Enable HTTP token requirement for IMDS",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0028",
+   "frameworks": {},
+   "related_resources": [
+    "https://aws.amazon.com/blogs/security/defense-in-depth-open-firewalls-reverse-proxies-ssrf-vulnerabilities-ec2-instance-metadata-service"
+   ]
+  },
+  "AVD-AWS-0029": {
+   "package": "builtin.aws.ec2.aws0029",
+   "title": "User data for EC2 instances must not contain sensitive AWS keys",
+   "id": "AWS-0029",
+   "long_id": "aws-ec2-no-secrets-in-user-data",
+   "provider": "aws",
+   "service": "ec2",
+   "severity": "CRITICAL",
+   "recommended_action": "Remove sensitive data from the EC2 instance user-data",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0029",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instancedata-add-user-data.html"
+   ]
+  },
+  "AVD-AWS-0030": {
+   "package": "builtin.aws.ecr.aws0030",
+   "title": "ECR repository has image scans disabled.",
+   "id": "AWS-0030",
+   "long_id": "aws-ecr-enable-image-scans",
+   "provider": "aws",
+   "service": "ecr",
+   "severity": "HIGH",
+   "recommended_action": "Enable ECR image scanning",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0030",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/AmazonECR/latest/userguide/image-scanning.html"
+   ]
+  },
+  "AVD-AWS-0031": {
+   "package": "builtin.aws.ecr.aws0031",
+   "title": "ECR images tags shouldn't be mutable.",
+   "id": "AWS-0031",
+   "long_id": "aws-ecr-enforce-immutable-repository",
+   "provider": "aws",
+   "service": "ecr",
+   "severity": "HIGH",
+   "recommended_action": "Only use immutable images in ECR",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0031",
+   "frameworks": {},
+   "related_resources": [
+    "https://sysdig.com/blog/toctou-tag-mutability/"
+   ]
+  },
+  "AVD-AWS-0032": {
+   "package": "builtin.aws.ecr.aws0032",
+   "title": "ECR repository policy must block public access",
+   "id": "AWS-0032",
+   "long_id": "aws-ecr-no-public-access",
+   "provider": "aws",
+   "service": "ecr",
+   "severity": "HIGH",
+   "recommended_action": "Do not allow public access in the policy",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0032",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/AmazonECR/latest/public/public-repository-policies.html"
+   ]
+  },
+  "AVD-AWS-0033": {
+   "package": "builtin.aws.ecr.aws0033",
+   "title": "ECR Repository should use customer managed keys to allow more control",
+   "id": "AWS-0033",
+   "long_id": "aws-ecr-repository-customer-key",
+   "provider": "aws",
+   "service": "ecr",
+   "severity": "LOW",
+   "recommended_action": "Use customer managed keys",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0033",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/AmazonECR/latest/userguide/encryption-at-rest.html"
+   ]
+  },
+  "AVD-AWS-0034": {
+   "package": "builtin.aws.ecs.aws0034",
+   "title": "ECS clusters should have container insights enabled",
+   "id": "AWS-0034",
+   "long_id": "aws-ecs-enable-container-insight",
+   "provider": "aws",
+   "service": "ecs",
+   "severity": "LOW",
+   "recommended_action": "Enable Container Insights",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0034",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/ContainerInsights.html"
+   ]
+  },
+  "AVD-AWS-0035": {
+   "package": "builtin.aws.ecs.aws0035",
+   "title": "ECS Task Definitions with EFS volumes should use in-transit encryption",
+   "id": "AWS-0035",
+   "long_id": "aws-ecs-enable-in-transit-encryption",
+   "provider": "aws",
+   "service": "ecs",
+   "severity": "HIGH",
+   "recommended_action": "Enable in transit encryption when using efs",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0035",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/AmazonECS/latest/userguide/efs-volumes.html",
+    "https://docs.aws.amazon.com/efs/latest/ug/encryption-in-transit.html"
+   ]
+  },
+  "AVD-AWS-0036": {
+   "package": "builtin.aws.ecs.aws0036",
+   "title": "Task definition defines sensitive environment variable(s).",
+   "id": "AWS-0036",
+   "long_id": "aws-ecs-no-plaintext-secrets",
+   "provider": "aws",
+   "service": "ecs",
+   "severity": "CRITICAL",
+   "recommended_action": "Use secrets for the task definition",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0036",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/systems-manager/latest/userguide/integration-ps-secretsmanager.html",
+    "https://www.vaultproject.io/"
+   ]
+  },
+  "AVD-AWS-0037": {
+   "package": "builtin.aws.efs.aws0037",
+   "title": "EFS Encryption has not been enabled",
+   "id": "AWS-0037",
+   "long_id": "aws-efs-enable-at-rest-encryption",
+   "provider": "aws",
+   "service": "efs",
+   "severity": "HIGH",
+   "recommended_action": "Enable encryption for EFS",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0037",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/efs/latest/ug/encryption.html"
+   ]
+  },
+  "AVD-AWS-0038": {
+   "package": "builtin.aws.eks.aws0038",
+   "title": "EKS Clusters should have cluster control plane logging turned on",
+   "id": "AWS-0038",
+   "long_id": "aws-eks-enable-control-plane-logging",
+   "provider": "aws",
+   "service": "eks",
+   "severity": "MEDIUM",
+   "recommended_action": "Enable logging for the EKS control plane",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0038",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/eks/latest/userguide/control-plane-logs.html"
+   ]
+  },
+  "AVD-AWS-0039": {
+   "package": "builtin.aws.eks.aws0039",
+   "title": "EKS should have the encryption of secrets enabled",
+   "id": "AWS-0039",
+   "long_id": "aws-eks-encrypt-secrets",
+   "provider": "aws",
+   "service": "eks",
+   "severity": "HIGH",
+   "recommended_action": "Enable encryption of EKS secrets",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0039",
+   "frameworks": {},
+   "related_resources": [
+    "https://aws.amazon.com/about-aws/whats-new/2020/03/amazon-eks-adds-envelope-encryption-for-secrets-with-aws-kms/"
+   ]
+  },
+  "AVD-AWS-0040": {
+   "package": "builtin.aws.eks.aws0040",
+   "title": "EKS Clusters should have the public access disabled",
+   "id": "AWS-0040",
+   "long_id": "aws-eks-no-public-cluster-access",
+   "provider": "aws",
+   "service": "eks",
+   "severity": "CRITICAL",
+   "recommended_action": "Don't enable public access to EKS Clusters",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0040",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/eks/latest/userguide/cluster-endpoint.html"
+   ]
+  },
+  "AVD-AWS-0041": {
+   "package": "builtin.aws.eks.aws0041",
+   "title": "EKS cluster should not have open CIDR range for public access",
+   "id": "AWS-0041",
+   "long_id": "aws-eks-no-public-cluster-access-to-cidr",
+   "provider": "aws",
+   "service": "eks",
+   "severity": "CRITICAL",
+   "recommended_action": "Don't enable public access to EKS Clusters",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0041",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/eks/latest/userguide/create-public-private-vpc.html"
+   ]
+  },
+  "AVD-AWS-0042": {
+   "package": "builtin.aws.elasticsearch.aws0042",
+   "title": "Domain logging should be enabled for Elastic Search domains",
+   "id": "AWS-0042",
+   "long_id": "aws-elasticsearch-enable-domain-logging",
+   "provider": "aws",
+   "service": "elasticsearch",
+   "severity": "MEDIUM",
+   "recommended_action": "Enable logging for ElasticSearch domains",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0042",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/elasticsearch-service/latest/developerguide/es-createdomain-configure-slow-logs.html"
+   ]
+  },
+  "AVD-AWS-0043": {
+   "package": "builtin.aws.elasticsearch.aws0043",
+   "title": "Elasticsearch domain uses plaintext traffic for node to node communication.",
+   "id": "AWS-0043",
+   "long_id": "aws-elasticsearch-enable-in-transit-encryption",
+   "provider": "aws",
+   "service": "elasticsearch",
+   "severity": "HIGH",
+   "recommended_action": "Enable encrypted node to node communication",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0043",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/elasticsearch-service/latest/developerguide/ntn.html"
+   ]
+  },
+  "AVD-AWS-0045": {
+   "package": "builtin.aws.elasticache.aws0045",
+   "title": "Elasticache Replication Group stores unencrypted data at-rest.",
+   "id": "AWS-0045",
+   "long_id": "aws-elasticache-enable-at-rest-encryption",
+   "provider": "aws",
+   "service": "elasticache",
+   "severity": "HIGH",
+   "recommended_action": "Enable at-rest encryption for replication group",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0045",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/AmazonElastiCache/latest/red-ug/at-rest-encryption.html"
+   ]
+  },
+  "AVD-AWS-0046": {
+   "package": "builtin.aws.elasticsearch.aws0046",
+   "title": "Elasticsearch doesn't enforce HTTPS traffic.",
+   "id": "AWS-0046",
+   "long_id": "aws-elasticsearch-enforce-https",
+   "provider": "aws",
+   "service": "elasticsearch",
+   "severity": "CRITICAL",
+   "recommended_action": "Enforce the use of HTTPS for ElasticSearch",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0046",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/elasticsearch-service/latest/developerguide/es-data-protection.html"
+   ]
+  },
+  "AVD-AWS-0047": {
+   "package": "builtin.aws.elb.aws0047",
+   "title": "An outdated SSL policy is in use by a load balancer.",
+   "id": "AWS-0047",
+   "long_id": "aws-elb-use-secure-tls-policy",
+   "provider": "aws",
+   "service": "elb",
+   "severity": "CRITICAL",
+   "recommended_action": "Use a more recent TLS/SSL policy for the load balancer",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0047",
+   "frameworks": {},
+   "related_resources": []
+  },
+  "AVD-AWS-0048": {
+   "package": "builtin.aws.elasticsearch.aws0048",
+   "title": "Elasticsearch domain isn't encrypted at rest.",
+   "id": "AWS-0048",
+   "long_id": "aws-elasticsearch-enable-domain-encryption",
+   "provider": "aws",
+   "service": "elasticsearch",
+   "severity": "HIGH",
+   "recommended_action": "Enable ElasticSearch domain encryption",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0048",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/elasticsearch-service/latest/developerguide/encryption-at-rest.html"
+   ]
+  },
+  "AVD-AWS-0049": {
+   "package": "builtin.aws.elasticache.aws0049",
+   "title": "Missing description for security group/security group rule.",
+   "id": "AWS-0049",
+   "long_id": "aws-elasticache-add-description-for-security-group",
+   "provider": "aws",
+   "service": "elasticache",
+   "severity": "LOW",
+   "recommended_action": "Add descriptions for all security groups and rules",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0049",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/AmazonElastiCache/latest/mem-ug/SecurityGroups.Creating.html"
+   ]
+  },
+  "AVD-AWS-0050": {
+   "package": "builtin.aws.elasticache.aws0050",
+   "title": "Redis cluster should have backup retention turned on",
+   "id": "AWS-0050",
+   "long_id": "aws-elasticache-enable-backup-retention",
+   "provider": "aws",
+   "service": "elasticache",
+   "severity": "MEDIUM",
+   "recommended_action": "Configure snapshot retention for redis cluster",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0050",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/AmazonElastiCache/latest/red-ug/backups-automatic.html"
+   ]
+  },
+  "AVD-AWS-0051": {
+   "package": "builtin.aws.elasticache.aws0051",
+   "title": "Elasticache Replication Group uses unencrypted traffic.",
+   "id": "AWS-0051",
+   "long_id": "aws-elasticache-enable-in-transit-encryption",
+   "provider": "aws",
+   "service": "elasticache",
+   "severity": "HIGH",
+   "recommended_action": "Enable in transit encryption for replication group",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0051",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/AmazonElastiCache/latest/red-ug/in-transit-encryption.html"
+   ]
+  },
+  "AVD-AWS-0052": {
+   "package": "builtin.aws.elb.aws0052",
+   "title": "Load balancers should drop invalid headers",
+   "id": "AWS-0052",
+   "long_id": "aws-elb-drop-invalid-headers",
+   "provider": "aws",
+   "service": "elb",
+   "severity": "HIGH",
+   "recommended_action": "Set drop_invalid_header_fields to true",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0052",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/elasticloadbalancing/latest/application/application-load-balancers.html"
+   ]
+  },
+  "AVD-AWS-0053": {
+   "package": "builtin.aws.elb.aws0053",
+   "title": "Load balancer is exposed to the internet.",
+   "id": "AWS-0053",
+   "long_id": "aws-elb-alb-not-public",
+   "provider": "aws",
+   "service": "elb",
+   "severity": "HIGH",
+   "recommended_action": "Switch to an internal load balancer or add a tfsec ignore",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0053",
+   "frameworks": {},
+   "related_resources": []
+  },
+  "AVD-AWS-0054": {
+   "package": "builtin.aws.elb.aws0054",
+   "title": "Use of plain HTTP.",
+   "id": "AWS-0054",
+   "long_id": "aws-elb-http-not-used",
+   "provider": "aws",
+   "service": "elb",
+   "severity": "CRITICAL",
+   "recommended_action": "Switch to HTTPS to benefit from TLS security features",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0054",
+   "frameworks": {},
+   "related_resources": [
+    "https://www.cloudflare.com/en-gb/learning/ssl/why-is-http-not-secure/"
+   ]
+  },
+  "AVD-AWS-0056": {
+   "package": "builtin.aws.iam.aws0056",
+   "title": "IAM Password policy should prevent password reuse.",
+   "id": "AWS-0056",
+   "long_id": "aws-iam-no-password-reuse",
+   "provider": "aws",
+   "service": "iam",
+   "severity": "MEDIUM",
+   "recommended_action": "Prevent password reuse in the policy",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0056",
+   "frameworks": {
+    "cis-aws-1.2": [
+     "1.10"
+    ],
+    "cis-aws-1.4": [
+     "1.9"
+    ]
+   },
+   "related_resources": [
+    "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_passwords_account-policy.html#password-policy-details"
+   ]
+  },
+  "AVD-AWS-0057": {
+   "package": "builtin.aws.iam.aws0057",
+   "title": "IAM policy should avoid use of wildcards and instead apply the principle of least privilege",
+   "id": "AWS-0057",
+   "long_id": "aws-iam-no-policy-wildcards",
+   "provider": "aws",
+   "service": "iam",
+   "severity": "HIGH",
+   "recommended_action": "Specify the exact permissions required, and to which resources they should apply instead of using wildcards.",
+   "deprecated": true,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0057",
+   "frameworks": {
+    "cis-aws-1.4": [
+     "1.16"
+    ]
+   },
+   "related_resources": [
+    "https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html"
+   ]
+  },
+  "AVD-AWS-0058": {
+   "package": "builtin.aws.iam.aws0058",
+   "title": "IAM Password policy should have requirement for at least one lowercase character.",
+   "id": "AWS-0058",
+   "long_id": "aws-iam-require-lowercase-in-passwords",
+   "provider": "aws",
+   "service": "iam",
+   "severity": "MEDIUM",
+   "recommended_action": "Enforce longer, more complex passwords in the policy",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0058",
+   "frameworks": {
+    "cis-aws-1.2": [
+     "1.6"
+    ]
+   },
+   "related_resources": [
+    "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_passwords_account-policy.html#password-policy-details"
+   ]
+  },
+  "AVD-AWS-0059": {
+   "package": "builtin.aws.iam.aws0059",
+   "title": "IAM Password policy should have requirement for at least one number in the password.",
+   "id": "AWS-0059",
+   "long_id": "aws-iam-require-numbers-in-passwords",
+   "provider": "aws",
+   "service": "iam",
+   "severity": "MEDIUM",
+   "recommended_action": "Enforce longer, more complex passwords in the policy",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0059",
+   "frameworks": {
+    "cis-aws-1.2": [
+     "1.8"
+    ]
+   },
+   "related_resources": [
+    "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_passwords_account-policy.html#password-policy-details"
+   ]
+  },
+  "AVD-AWS-0060": {
+   "package": "builtin.aws.iam.aws0060",
+   "title": "IAM Password policy should have requirement for at least one symbol in the password.",
+   "id": "AWS-0060",
+   "long_id": "aws-iam-require-symbols-in-passwords",
+   "provider": "aws",
+   "service": "iam",
+   "severity": "MEDIUM",
+   "recommended_action": "Enforce longer, more complex passwords in the policy",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0060",
+   "frameworks": {
+    "cis-aws-1.2": [
+     "1.7"
+    ]
+   },
+   "related_resources": [
+    "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_passwords_account-policy.html#password-policy-details"
+   ]
+  },
+  "AVD-AWS-0061": {
+   "package": "builtin.aws.iam.aws0061",
+   "title": "IAM Password policy should have requirement for at least one uppercase character.",
+   "id": "AWS-0061",
+   "long_id": "aws-iam-require-uppercase-in-passwords",
+   "provider": "aws",
+   "service": "iam",
+   "severity": "MEDIUM",
+   "recommended_action": "Enforce longer, more complex passwords in the policy",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0061",
+   "frameworks": {
+    "cis-aws-1.2": [
+     "1.5"
+    ]
+   },
+   "related_resources": [
+    "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_passwords_account-policy.html#password-policy-details"
+   ]
+  },
+  "AVD-AWS-0062": {
+   "package": "builtin.aws.iam.aws0062",
+   "title": "IAM Password policy should have expiry less than or equal to 90 days.",
+   "id": "AWS-0062",
+   "long_id": "aws-iam-set-max-password-age",
+   "provider": "aws",
+   "service": "iam",
+   "severity": "MEDIUM",
+   "recommended_action": "Limit the password duration with an expiry in the policy",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0062",
+   "frameworks": {
+    "cis-aws-1.2": [
+     "1.11"
+    ]
+   },
+   "related_resources": [
+    "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_passwords_account-policy.html#password-policy-details"
+   ]
+  },
+  "AVD-AWS-0063": {
+   "package": "builtin.aws.iam.aws0063",
+   "title": "IAM Password policy should have minimum password length of 14 or more characters.",
+   "id": "AWS-0063",
+   "long_id": "aws-iam-set-minimum-password-length",
+   "provider": "aws",
+   "service": "iam",
+   "severity": "MEDIUM",
+   "recommended_action": "Enforce longer, more complex passwords in the policy",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0063",
+   "frameworks": {
+    "cis-aws-1.2": [
+     "1.9"
+    ],
+    "cis-aws-1.4": [
+     "1.8"
+    ]
+   },
+   "related_resources": [
+    "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_passwords_account-policy.html#password-policy-details"
+   ]
+  },
+  "AVD-AWS-0064": {
+   "package": "builtin.aws.kinesis.aws0064",
+   "title": "Kinesis stream is unencrypted.",
+   "id": "AWS-0064",
+   "long_id": "aws-kinesis-enable-in-transit-encryption",
+   "provider": "aws",
+   "service": "kinesis",
+   "severity": "HIGH",
+   "recommended_action": "Enable in transit encryption",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0064",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/streams/latest/dev/server-side-encryption.html"
+   ]
+  },
+  "AVD-AWS-0065": {
+   "package": "builtin.aws.kms.aws0065",
+   "title": "A KMS key is not configured to auto-rotate.",
+   "id": "AWS-0065",
+   "long_id": "aws-kms-auto-rotate-keys",
+   "provider": "aws",
+   "service": "kms",
+   "severity": "MEDIUM",
+   "recommended_action": "Configure KMS key to auto rotate",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0065",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/kms/latest/developerguide/rotate-keys.html"
+   ]
+  },
+  "AVD-AWS-0066": {
+   "package": "builtin.aws.lambda.aws0066",
+   "title": "Lambda functions should have X-Ray tracing enabled",
+   "id": "AWS-0066",
+   "long_id": "aws-lambda-enable-tracing",
+   "provider": "aws",
+   "service": "lambda",
+   "severity": "LOW",
+   "recommended_action": "Enable tracing",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0066",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/lambda/latest/dg/services-xray.html"
+   ]
+  },
+  "AVD-AWS-0067": {
+   "package": "builtin.aws.lambda.aws0067",
+   "title": "Ensure that lambda function permission has a source arn specified",
+   "id": "AWS-0067",
+   "long_id": "aws-lambda-restrict-source-arn",
+   "provider": "aws",
+   "service": "lambda",
+   "severity": "CRITICAL",
+   "recommended_action": "Always provide a source arn for Lambda permissions",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0067",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-lambda-permission.html"
+   ]
+  },
+  "AVD-AWS-0070": {
+   "package": "builtin.aws.mq.aws0070",
+   "title": "MQ Broker should have audit logging enabled",
+   "id": "AWS-0070",
+   "long_id": "aws-mq-enable-audit-logging",
+   "provider": "aws",
+   "service": "mq",
+   "severity": "MEDIUM",
+   "recommended_action": "Enable audit logging",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0070",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/amazon-mq/latest/developer-guide/configure-logging-monitoring-activemq.html"
+   ]
+  },
+  "AVD-AWS-0071": {
+   "package": "builtin.aws.mq.aws0071",
+   "title": "MQ Broker should have general logging enabled",
+   "id": "AWS-0071",
+   "long_id": "aws-mq-enable-general-logging",
+   "provider": "aws",
+   "service": "mq",
+   "severity": "LOW",
+   "recommended_action": "Enable general logging",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0071",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/amazon-mq/latest/developer-guide/configure-logging-monitoring-activemq.html"
+   ]
+  },
+  "AVD-AWS-0072": {
+   "package": "builtin.aws.mq.aws0072",
+   "title": "Ensure MQ Broker is not publicly exposed",
+   "id": "AWS-0072",
+   "long_id": "aws-mq-no-public-access",
+   "provider": "aws",
+   "service": "mq",
+   "severity": "HIGH",
+   "recommended_action": "Disable public access when not required",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0072",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/amazon-mq/latest/developer-guide/using-amazon-mq-securely.html#prefer-brokers-without-public-accessibility"
+   ]
+  },
+  "AVD-AWS-0073": {
+   "package": "builtin.aws.msk.aws0073",
+   "title": "A MSK cluster allows unencrypted data in transit.",
+   "id": "AWS-0073",
+   "long_id": "aws-msk-enable-in-transit-encryption",
+   "provider": "aws",
+   "service": "msk",
+   "severity": "HIGH",
+   "recommended_action": "Enable in transit encryption",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0073",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/msk/latest/developerguide/msk-encryption.html"
+   ]
+  },
+  "AVD-AWS-0074": {
+   "package": "builtin.aws.msk.aws0074",
+   "title": "Ensure MSK Cluster logging is enabled",
+   "id": "AWS-0074",
+   "long_id": "aws-msk-enable-logging",
+   "provider": "aws",
+   "service": "msk",
+   "severity": "MEDIUM",
+   "recommended_action": "Enable logging",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0074",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/msk/latest/developerguide/msk-logging.html"
+   ]
+  },
+  "AVD-AWS-0075": {
+   "package": "builtin.aws.neptune.aws0075",
+   "title": "Neptune logs export should be enabled",
+   "id": "AWS-0075",
+   "long_id": "aws-neptune-enable-log-export",
+   "provider": "aws",
+   "service": "neptune",
+   "severity": "MEDIUM",
+   "recommended_action": "Enable export logs",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0075",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/neptune/latest/userguide/auditing.html"
+   ]
+  },
+  "AVD-AWS-0076": {
+   "package": "builtin.aws.neptune.aws0076",
+   "title": "Neptune storage must be encrypted at rest",
+   "id": "AWS-0076",
+   "long_id": "aws-neptune-enable-storage-encryption",
+   "provider": "aws",
+   "service": "neptune",
+   "severity": "HIGH",
+   "recommended_action": "Enable encryption of Neptune storage",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0076",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/neptune/latest/userguide/encrypt.html"
+   ]
+  },
+  "AVD-AWS-0077": {
+   "package": "builtin.aws.rds.aws0077",
+   "title": "RDS Cluster and RDS instance should have backup retention longer than default 1 day",
+   "id": "AWS-0077",
+   "long_id": "aws-rds-specify-backup-retention",
+   "provider": "aws",
+   "service": "rds",
+   "severity": "MEDIUM",
+   "recommended_action": "Explicitly set the retention period to greater than the default",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0077",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_WorkingWithAutomatedBackups.html#USER_WorkingWithAutomatedBackups.BackupRetention"
+   ]
+  },
+  "AVD-AWS-0078": {
+   "package": "builtin.aws.rds.aws0078",
+   "title": "Performance Insights encryption should use Customer Managed Keys",
+   "id": "AWS-0078",
+   "long_id": "aws-rds-performance-insights-encryption-customer-key",
+   "provider": "aws",
+   "service": "rds",
+   "severity": "LOW",
+   "recommended_action": "Use Customer Managed Keys to encrypt Performance Insights data",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0078",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_PerfInsights.access-control.html#USER_PerfInsights.access-control.cmk-policy",
+    "https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#key-mgmt"
+   ]
+  },
+  "AVD-AWS-0079": {
+   "package": "builtin.aws.rds.aws0079",
+   "title": "There is no encryption specified or encryption is disabled on the RDS Cluster.",
+   "id": "AWS-0079",
+   "long_id": "aws-rds-encrypt-cluster-storage-data",
+   "provider": "aws",
+   "service": "rds",
+   "severity": "HIGH",
+   "recommended_action": "Enable encryption for RDS clusters",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0079",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Overview.Encryption.html"
+   ]
+  },
+  "AVD-AWS-0080": {
+   "package": "builtin.aws.rds.aws0080",
+   "title": "RDS encryption has not been enabled at a DB Instance level.",
+   "id": "AWS-0080",
+   "long_id": "aws-rds-encrypt-instance-storage-data",
+   "provider": "aws",
+   "service": "rds",
+   "severity": "HIGH",
+   "recommended_action": "Enable encryption for RDS instances",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0080",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Overview.Encryption.html"
+   ]
+  },
+  "AVD-AWS-0083": {
+   "package": "builtin.aws.redshift.aws0083",
+   "title": "Missing description for security group/security group rule.",
+   "id": "AWS-0083",
+   "long_id": "aws-redshift-add-description-to-security-group",
+   "provider": "aws",
+   "service": "redshift",
+   "severity": "LOW",
+   "recommended_action": "Add descriptions for all security groups and rules",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0083",
+   "frameworks": {},
+   "related_resources": [
+    "https://www.cloudconformity.com/knowledge-base/aws/EC2/security-group-rules-description.html"
+   ]
+  },
+  "AVD-AWS-0084": {
+   "package": "builtin.aws.redshift.aws0084",
+   "title": "Redshift clusters should use at rest encryption",
+   "id": "AWS-0084",
+   "long_id": "aws-redshift-encryption-customer-key",
+   "provider": "aws",
+   "service": "redshift",
+   "severity": "HIGH",
+   "recommended_action": "Enable encryption using CMK",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0084",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/redshift/latest/mgmt/working-with-db-encryption.html"
+   ]
+  },
+  "AVD-AWS-0085": {
+   "package": "builtin.aws.redshift.aws0085",
+   "title": "AWS Classic resource usage.",
+   "id": "AWS-0085",
+   "long_id": "aws-redshift-no-classic-resources",
+   "provider": "aws",
+   "service": "redshift",
+   "severity": "CRITICAL",
+   "recommended_action": "Switch to VPC resources",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0085",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-classic-platform.html"
+   ]
+  },
+  "AVD-AWS-0086": {
+   "package": "builtin.aws.s3.aws0086",
+   "title": "S3 Access block should block public ACL",
+   "id": "AWS-0086",
+   "long_id": "aws-s3-block-public-acls",
+   "provider": "aws",
+   "service": "s3",
+   "severity": "HIGH",
+   "recommended_action": "Enable blocking any PUT calls with a public ACL specified",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0086",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-control-block-public-access.html"
+   ]
+  },
+  "AVD-AWS-0087": {
+   "package": "builtin.aws.s3.aws0087",
+   "title": "S3 Access block should block public policy",
+   "id": "AWS-0087",
+   "long_id": "aws-s3-block-public-policy",
+   "provider": "aws",
+   "service": "s3",
+   "severity": "HIGH",
+   "recommended_action": "Prevent policies that allow public access being PUT",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0087",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/AmazonS3/latest/dev-retired/access-control-block-public-access.html"
+   ]
+  },
+  "AVD-AWS-0088": {
+   "package": "builtin.aws.s3.aws0088",
+   "title": "Unencrypted S3 bucket.",
+   "id": "AWS-0088",
+   "long_id": "aws-s3-enable-bucket-encryption",
+   "provider": "aws",
+   "service": "s3",
+   "severity": "HIGH",
+   "recommended_action": "Configure bucket encryption",
+   "deprecated": true,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0088",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/AmazonS3/latest/userguide/bucket-encryption.html"
+   ]
+  },
+  "AVD-AWS-0089": {
+   "package": "builtin.aws.s3.aws0089",
+   "title": "S3 Bucket Logging",
+   "id": "AWS-0089",
+   "long_id": "aws-s3-enable-logging",
+   "provider": "aws",
+   "service": "s3",
+   "severity": "LOW",
+   "recommended_action": "Add a logging block to the resource to enable access logging",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0089",
+   "frameworks": {},
+   "related_resources": []
+  },
+  "AVD-AWS-0090": {
+   "package": "builtin.aws.s3.aws0090",
+   "title": "S3 Data should be versioned",
+   "id": "AWS-0090",
+   "long_id": "aws-s3-enable-versioning",
+   "provider": "aws",
+   "service": "s3",
+   "severity": "MEDIUM",
+   "recommended_action": "Enable versioning to protect against accidental/malicious removal or modification",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0090",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/AmazonS3/latest/userguide/Versioning.html",
+    "https://aws.amazon.com/blogs/storage/reduce-storage-costs-with-fewer-noncurrent-versions-using-amazon-s3-lifecycle/"
+   ]
+  },
+  "AVD-AWS-0091": {
+   "package": "builtin.aws.s3.aws0091",
+   "title": "S3 Access Block should Ignore Public ACL",
+   "id": "AWS-0091",
+   "long_id": "aws-s3-ignore-public-acls",
+   "provider": "aws",
+   "service": "s3",
+   "severity": "HIGH",
+   "recommended_action": "Enable ignoring the application of public ACLs in PUT calls",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0091",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-control-block-public-access.html"
+   ]
+  },
+  "AVD-AWS-0092": {
+   "package": "builtin.aws.s3.aws0092",
+   "title": "S3 Buckets not publicly accessible through ACL.",
+   "id": "AWS-0092",
+   "long_id": "aws-s3-no-public-access-with-acl",
+   "provider": "aws",
+   "service": "s3",
+   "severity": "HIGH",
+   "recommended_action": "Don't use canned ACLs or switch to private acl",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0092",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/AmazonS3/latest/userguide/acl-overview.html"
+   ]
+  },
+  "AVD-AWS-0093": {
+   "package": "builtin.aws.s3.aws0093",
+   "title": "S3 Access block should restrict public bucket to limit access",
+   "id": "AWS-0093",
+   "long_id": "aws-s3-no-public-buckets",
+   "provider": "aws",
+   "service": "s3",
+   "severity": "HIGH",
+   "recommended_action": "Limit the access to public buckets to only the owner or AWS Services (eg; CloudFront)",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0093",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/AmazonS3/latest/dev-retired/access-control-block-public-access.html"
+   ]
+  },
+  "AVD-AWS-0094": {
+   "package": "builtin.aws.s3.aws0094",
+   "title": "S3 buckets should each define an aws_s3_bucket_public_access_block",
+   "id": "AWS-0094",
+   "long_id": "aws-s3-specify-public-access-block",
+   "provider": "aws",
+   "service": "s3",
+   "severity": "LOW",
+   "recommended_action": "Define a aws_s3_bucket_public_access_block for the given bucket to control public access policies",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0094",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-control-block-public-access.html"
+   ]
+  },
+  "AVD-AWS-0095": {
+   "package": "builtin.aws.sns.aws0095",
+   "title": "Unencrypted SNS topic.",
+   "id": "AWS-0095",
+   "long_id": "aws-sns-enable-topic-encryption",
+   "provider": "aws",
+   "service": "sns",
+   "severity": "HIGH",
+   "recommended_action": "Turn on SNS Topic encryption",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0095",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/sns/latest/dg/sns-server-side-encryption.html"
+   ]
+  },
+  "AVD-AWS-0096": {
+   "package": "builtin.aws.sqs.aws0096",
+   "title": "Unencrypted SQS queue.",
+   "id": "AWS-0096",
+   "long_id": "aws-sqs-enable-queue-encryption",
+   "provider": "aws",
+   "service": "sqs",
+   "severity": "HIGH",
+   "recommended_action": "Turn on SQS Queue encryption",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0096",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-server-side-encryption.html"
+   ]
+  },
+  "AVD-AWS-0097": {
+   "package": "builtin.aws.sqs.aws0097",
+   "title": "AWS SQS policy document has wildcard action statement.",
+   "id": "AWS-0097",
+   "long_id": "aws-sqs-no-wildcards-in-policy-documents",
+   "provider": "aws",
+   "service": "sqs",
+   "severity": "HIGH",
+   "recommended_action": "Keep policy scope to the minimum that is required to be effective",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0097",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-security-best-practices.html"
+   ]
+  },
+  "AVD-AWS-0098": {
+   "package": "builtin.aws.ssm.aws0098",
+   "title": "Secrets Manager should use customer managed keys",
+   "id": "AWS-0098",
+   "long_id": "aws-ssm-secret-use-customer-key",
+   "provider": "aws",
+   "service": "ssm",
+   "severity": "LOW",
+   "recommended_action": "Use customer managed keys",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0098",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/kms/latest/developerguide/services-secrets-manager.html#asm-encrypt"
+   ]
+  },
+  "AVD-AWS-0099": {
+   "package": "builtin.aws.ec2.aws0099",
+   "title": "Missing description for security group.",
+   "id": "AWS-0099",
+   "long_id": "aws-ec2-add-description-to-security-group",
+   "provider": "aws",
+   "service": "ec2",
+   "severity": "LOW",
+   "recommended_action": "Add descriptions for all security groups",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0099",
+   "frameworks": {},
+   "related_resources": [
+    "https://www.cloudconformity.com/knowledge-base/aws/EC2/security-group-rules-description.html"
+   ]
+  },
+  "AVD-AWS-0101": {
+   "package": "builtin.aws.ec2.aws0101",
+   "title": "AWS best practice to not use the default VPC for workflows",
+   "id": "AWS-0101",
+   "long_id": "aws-ec2-no-default-vpc",
+   "provider": "aws",
+   "service": "ec2",
+   "severity": "HIGH",
+   "recommended_action": "Create a non-default vpc for resources to be created in",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0101",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/vpc/latest/userguide/default-vpc.html"
+   ]
+  },
+  "AVD-AWS-0102": {
+   "package": "builtin.aws.ec2.aws0102",
+   "title": "An Network ACL rule allows ALL ports.",
+   "id": "AWS-0102",
+   "long_id": "aws-ec2-no-excessive-port-access",
+   "provider": "aws",
+   "service": "ec2",
+   "severity": "CRITICAL",
+   "recommended_action": "Set specific allowed ports",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0102",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/vpc/latest/userguide/vpc-network-acls.html"
+   ]
+  },
+  "AVD-AWS-0104": {
+   "package": "builtin.aws.ec2.aws0104",
+   "title": "A security group rule should not allow unrestricted egress to any IP address.",
+   "id": "AWS-0104",
+   "long_id": "aws-ec2-no-public-egress-sgr",
+   "provider": "aws",
+   "service": "ec2",
+   "severity": "CRITICAL",
+   "recommended_action": "Set a more restrictive cidr range",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0104",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/whitepapers/latest/building-scalable-secure-multi-vpc-network-infrastructure/centralized-egress-to-internet.html"
+   ]
+  },
+  "AVD-AWS-0105": {
+   "package": "builtin.aws.ec2.aws0105",
+   "title": "Network ACLs should not allow unrestricted ingress to SSH or RDP from any IP address.",
+   "id": "AWS-0105",
+   "long_id": "aws-ec2-no-public-ingress-acl",
+   "provider": "aws",
+   "service": "ec2",
+   "severity": "MEDIUM",
+   "recommended_action": "Set a more restrictive CIDR range",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0105",
+   "frameworks": {
+    "cis-aws-1.4": [
+     "5.1"
+    ]
+   },
+   "related_resources": [
+    "https://docs.aws.amazon.com/vpc/latest/userguide/vpc-network-acls.html",
+    "https://docs.aws.amazon.com/securityhub/latest/userguide/ec2-controls.html#ec2-21"
+   ]
+  },
+  "AVD-AWS-0107": {
+   "package": "builtin.aws.ec2.aws0107",
+   "title": "Security groups should not allow unrestricted ingress to SSH or RDP from any IP address.",
+   "id": "AWS-0107",
+   "long_id": "aws-ec2-no-public-ingress-sgr",
+   "provider": "aws",
+   "service": "ec2",
+   "severity": "HIGH",
+   "recommended_action": "Set a more restrictive CIDR range",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0107",
+   "frameworks": {
+    "cis-aws-1.2": [
+     "4.1",
+     "4.2"
+    ]
+   },
+   "related_resources": [
+    "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/security-group-rules-reference.html",
+    "https://docs.aws.amazon.com/securityhub/latest/userguide/ec2-controls.html#ec2-13",
+    "https://docs.aws.amazon.com/securityhub/latest/userguide/ec2-controls.html#ec2-14"
+   ]
+  },
+  "AVD-AWS-0109": {
+   "package": "builtin.aws.workspaces.aws0109",
+   "title": "Root and user volumes on Workspaces should be encrypted",
+   "id": "AWS-0109",
+   "long_id": "aws-workspaces-enable-disk-encryption",
+   "provider": "aws",
+   "service": "workspaces",
+   "severity": "HIGH",
+   "recommended_action": "Root and user volume encryption should be enabled",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0109",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/workspaces/latest/adminguide/encrypt-workspaces.html"
+   ]
+  },
+  "AVD-AWS-0110": {
+   "package": "builtin.aws.sam.aws0110",
+   "title": "SAM API must have data cache enabled",
+   "id": "AWS-0110",
+   "long_id": "aws-sam-enable-api-cache-encryption",
+   "provider": "aws",
+   "service": "sam",
+   "severity": "MEDIUM",
+   "recommended_action": "Enable cache encryption",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0110",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-apigateway-stage-methodsetting.html#cfn-apigateway-stage-methodsetting-cachedataencrypted"
+   ]
+  },
+  "AVD-AWS-0111": {
+   "package": "builtin.aws.sam.aws0111",
+   "title": "SAM API must have X-Ray tracing enabled",
+   "id": "AWS-0111",
+   "long_id": "aws-sam-enable-api-tracing",
+   "provider": "aws",
+   "service": "sam",
+   "severity": "LOW",
+   "recommended_action": "Enable tracing",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0111",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-resource-api.html#sam-api-tracingenabled"
+   ]
+  },
+  "AVD-AWS-0112": {
+   "package": "builtin.aws.sam.aws0112",
+   "title": "SAM API domain name uses outdated SSL/TLS protocols.",
+   "id": "AWS-0112",
+   "long_id": "aws-sam-api-use-secure-tls-policy",
+   "provider": "aws",
+   "service": "sam",
+   "severity": "HIGH",
+   "recommended_action": "Use the most modern TLS/SSL policies available",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0112",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-property-api-domainconfiguration.html#sam-api-domainconfiguration-securitypolicy"
+   ]
+  },
+  "AVD-AWS-0113": {
+   "package": "builtin.aws.sam.aws0113",
+   "title": "SAM API stages for V1 and V2 should have access logging enabled",
+   "id": "AWS-0113",
+   "long_id": "aws-sam-enable-api-access-logging",
+   "provider": "aws",
+   "service": "sam",
+   "severity": "MEDIUM",
+   "recommended_action": "Enable logging for API Gateway stages",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0113",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-resource-api.html#sam-api-accesslogsetting"
+   ]
+  },
+  "AVD-AWS-0114": {
+   "package": "builtin.aws.sam.aws0114",
+   "title": "Function policies should avoid use of wildcards and instead apply the principle of least privilege",
+   "id": "AWS-0114",
+   "long_id": "aws-sam-no-function-policy-wildcards",
+   "provider": "aws",
+   "service": "sam",
+   "severity": "HIGH",
+   "recommended_action": "Specify the exact permissions required, and to which resources they should apply instead of using wildcards.",
+   "deprecated": true,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0114",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-resource-function.html#sam-function-policies"
+   ]
+  },
+  "AVD-AWS-0116": {
+   "package": "builtin.aws.sam.aws0116",
+   "title": "SAM HTTP API stages for V1 and V2 should have access logging enabled",
+   "id": "AWS-0116",
+   "long_id": "aws-sam-enable-http-api-access-logging",
+   "provider": "aws",
+   "service": "sam",
+   "severity": "MEDIUM",
+   "recommended_action": "Enable logging for API Gateway stages",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0116",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-resource-httpapi.html#sam-httpapi-accesslogsettings"
+   ]
+  },
+  "AVD-AWS-0117": {
+   "package": "builtin.aws.sam.aws0117",
+   "title": "SAM State machine must have X-Ray tracing enabled",
+   "id": "AWS-0117",
+   "long_id": "aws-sam-enable-state-machine-tracing",
+   "provider": "aws",
+   "service": "sam",
+   "severity": "LOW",
+   "recommended_action": "Enable tracing",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0117",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-resource-statemachine.html#sam-statemachine-tracing"
+   ]
+  },
+  "AVD-AWS-0119": {
+   "package": "builtin.aws.sam.aws0119",
+   "title": "SAM State machine must have logging enabled",
+   "id": "AWS-0119",
+   "long_id": "aws-sam-enable-state-machine-logging",
+   "provider": "aws",
+   "service": "sam",
+   "severity": "LOW",
+   "recommended_action": "Enable logging",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0119",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-resource-statemachine.html#sam-statemachine-logging"
+   ]
+  },
+  "AVD-AWS-0120": {
+   "package": "builtin.aws.sam.aws0120",
+   "title": "State machine policies should avoid use of wildcards and instead apply the principle of least privilege",
+   "id": "AWS-0120",
+   "long_id": "aws-sam-no-state-machine-policy-wildcards",
+   "provider": "aws",
+   "service": "sam",
+   "severity": "HIGH",
+   "recommended_action": "Specify the exact permissions required, and to which resources they should apply instead of using wildcards.",
+   "deprecated": true,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0120",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-resource-statemachine.html#sam-statemachine-policies"
+   ]
+  },
+  "AVD-AWS-0121": {
+   "package": "builtin.aws.sam.aws0121",
+   "title": "SAM Simple table must have server side encryption enabled.",
+   "id": "AWS-0121",
+   "long_id": "aws-sam-enable-table-encryption",
+   "provider": "aws",
+   "service": "sam",
+   "severity": "HIGH",
+   "recommended_action": "Enable server side encryption",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0121",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-resource-simpletable.html#sam-simpletable-ssespecification"
+   ]
+  },
+  "AVD-AWS-0122": {
+   "package": "builtin.aws.ec2.aws0122",
+   "title": "Ensure all data stored in the launch configuration EBS is securely encrypted",
+   "id": "AWS-0122",
+   "long_id": "aws-ec2-no-sensitive-info",
+   "provider": "aws",
+   "service": "ec2",
+   "severity": "HIGH",
+   "recommended_action": "Don't use sensitive data in user data",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0122",
+   "frameworks": {},
+   "related_resources": []
+  },
+  "AVD-AWS-0123": {
+   "package": "builtin.aws.iam.aws0123",
+   "title": "IAM groups should have MFA enforcement activated.",
+   "id": "AWS-0123",
+   "long_id": "aws-iam-enforce-group-mfa",
+   "provider": "aws",
+   "service": "iam",
+   "severity": "MEDIUM",
+   "recommended_action": "Use terraform-module/enforce-mfa/aws to ensure that MFA is enforced",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0123",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_passwords_account-policy.html#password-policy-details"
+   ]
+  },
+  "AVD-AWS-0124": {
+   "package": "builtin.aws.ec2.aws0124",
+   "title": "Missing description for security group rule.",
+   "id": "AWS-0124",
+   "long_id": "aws-ec2-add-description-to-security-group-rule",
+   "provider": "aws",
+   "service": "ec2",
+   "severity": "LOW",
+   "recommended_action": "Add descriptions for all security groups rules",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0124",
+   "frameworks": {},
+   "related_resources": [
+    "https://www.cloudconformity.com/knowledge-base/aws/EC2/security-group-rules-description.html"
+   ]
+  },
+  "AVD-AWS-0125": {
+   "package": "builtin.aws.sam.aws0125",
+   "title": "SAM Function must have X-Ray tracing enabled",
+   "id": "AWS-0125",
+   "long_id": "aws-sam-enable-function-tracing",
+   "provider": "aws",
+   "service": "sam",
+   "severity": "LOW",
+   "recommended_action": "Enable tracing",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0125",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-resource-function.html#sam-function-tracing"
+   ]
+  },
+  "AVD-AWS-0126": {
+   "package": "builtin.aws.elasticsearch.aws0126",
+   "title": "Elasticsearch domain endpoint is using outdated TLS policy.",
+   "id": "AWS-0126",
+   "long_id": "aws-elasticsearch-use-secure-tls-policy",
+   "provider": "aws",
+   "service": "elasticsearch",
+   "severity": "HIGH",
+   "recommended_action": "Use the most modern TLS/SSL policies available",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0126",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/elasticsearch-service/latest/developerguide/es-data-protection.html"
+   ]
+  },
+  "AVD-AWS-0127": {
+   "package": "builtin.aws.redshift.aws0127",
+   "title": "Redshift cluster should be deployed into a specific VPC",
+   "id": "AWS-0127",
+   "long_id": "aws-redshift-use-vpc",
+   "provider": "aws",
+   "service": "redshift",
+   "severity": "HIGH",
+   "recommended_action": "Deploy Redshift cluster into a non default VPC",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0127",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/redshift/latest/mgmt/managing-clusters-vpc.html"
+   ]
+  },
+  "AVD-AWS-0128": {
+   "package": "builtin.aws.neptune.aws0128",
+   "title": "Neptune encryption should use Customer Managed Keys",
+   "id": "AWS-0128",
+   "long_id": "aws-neptune-encryption-customer-key",
+   "provider": "aws",
+   "service": "neptune",
+   "severity": "HIGH",
+   "recommended_action": "Enable encryption using customer managed keys",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0128",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/neptune/latest/userguide/encrypt.html"
+   ]
+  },
+  "AVD-AWS-0129": {
+   "package": "builtin.aws.ec2.aws0129",
+   "title": "User data for EC2 instances must not contain sensitive AWS keys",
+   "id": "AWS-0129",
+   "long_id": "aws-ec2-no-secrets-in-launch-template-user-data",
+   "provider": "aws",
+   "service": "ec2",
+   "severity": "CRITICAL",
+   "recommended_action": "Remove sensitive data from the EC2 instance user-data generated by launch templates",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0129",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instancedata-add-user-data.html"
+   ]
+  },
+  "AVD-AWS-0130": {
+   "package": "builtin.aws.ec2.aws0130",
+   "title": "aws_instance should activate session tokens for Instance Metadata Service.",
+   "id": "AWS-0130",
+   "long_id": "aws-ec2-enforce-launch-config-http-token-imds",
+   "provider": "aws",
+   "service": "ec2",
+   "severity": "HIGH",
+   "recommended_action": "Enable HTTP token requirement for IMDS",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0130",
+   "frameworks": {},
+   "related_resources": [
+    "https://aws.amazon.com/blogs/security/defense-in-depth-open-firewalls-reverse-proxies-ssrf-vulnerabilities-ec2-instance-metadata-service"
+   ]
+  },
+  "AVD-AWS-0131": {
+   "package": "builtin.aws.ec2.aws0131",
+   "title": "Instance with unencrypted block device.",
+   "id": "AWS-0131",
+   "long_id": "aws-ec2-enable-at-rest-encryption",
+   "provider": "aws",
+   "service": "ec2",
+   "severity": "HIGH",
+   "recommended_action": "Turn on encryption for all block devices",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0131",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/RootDeviceStorage.html"
+   ]
+  },
+  "AVD-AWS-0132": {
+   "package": "builtin.aws.s3.aws0132",
+   "title": "S3 encryption should use Customer Managed Keys",
+   "id": "AWS-0132",
+   "long_id": "aws-s3-encryption-customer-key",
+   "provider": "aws",
+   "service": "s3",
+   "severity": "HIGH",
+   "recommended_action": "Use SSE-KMS with a customer managed key (CMK)",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0132",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/AmazonS3/latest/userguide/bucket-encryption.html"
+   ]
+  },
+  "AVD-AWS-0133": {
+   "package": "builtin.aws.rds.aws0133",
+   "title": "Enable Performance Insights to detect potential problems",
+   "id": "AWS-0133",
+   "long_id": "aws-rds-enable-performance-insights",
+   "provider": "aws",
+   "service": "rds",
+   "severity": "LOW",
+   "recommended_action": "Enable performance insights",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0133",
+   "frameworks": {},
+   "related_resources": [
+    "https://aws.amazon.com/rds/performance-insights/"
+   ]
+  },
+  "AVD-AWS-0134": {
+   "package": "builtin.aws.ssm.aws0134",
+   "title": "Secrets should not be exfiltrated using Terraform HTTP data blocks",
+   "id": "AWS-0134",
+   "long_id": "aws-ssm-avoid-leaks-via-http",
+   "provider": "aws",
+   "service": "ssm",
+   "severity": "CRITICAL",
+   "recommended_action": "Remove this potential exfiltration HTTP request.",
+   "deprecated": true,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0134",
+   "frameworks": {},
+   "related_resources": [
+    "https://sprocketfox.io/xssfox/2022/02/09/terraformsupply/"
+   ]
+  },
+  "AVD-AWS-0135": {
+   "package": "builtin.aws.sqs.aws0135",
+   "title": "SQS queue should be encrypted with a CMK.",
+   "id": "AWS-0135",
+   "long_id": "aws-sqs-queue-encryption-use-cmk",
+   "provider": "aws",
+   "service": "sqs",
+   "severity": "HIGH",
+   "recommended_action": "Encrypt SQS Queue with a customer-managed key",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0135",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-server-side-encryption.html"
+   ]
+  },
+  "AVD-AWS-0136": {
+   "package": "builtin.aws.sns.aws0136",
+   "title": "SNS topic not encrypted with CMK.",
+   "id": "AWS-0136",
+   "long_id": "aws-sns-topic-encryption-use-cmk",
+   "provider": "aws",
+   "service": "sns",
+   "severity": "HIGH",
+   "recommended_action": "Use a CMK for SNS Topic encryption",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0136",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/sns/latest/dg/sns-server-side-encryption.html"
+   ]
+  },
+  "AVD-AWS-0137": {
+   "package": "builtin.aws.emr.aws0137",
+   "title": "Enable at-rest encryption for EMR clusters.",
+   "id": "AWS-0137",
+   "long_id": "aws-emr-enable-at-rest-encryption",
+   "provider": "aws",
+   "service": "emr",
+   "severity": "HIGH",
+   "recommended_action": "Enable at-rest encryption for EMR cluster",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0137",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/config/latest/developerguide/operational-best-practices-for-nist_800-171.html"
+   ]
+  },
+  "AVD-AWS-0138": {
+   "package": "builtin.aws.emr.aws0138",
+   "title": "Enable in-transit encryption for EMR clusters.",
+   "id": "AWS-0138",
+   "long_id": "aws-emr-enable-in-transit-encryption",
+   "provider": "aws",
+   "service": "emr",
+   "severity": "HIGH",
+   "recommended_action": "Enable in-transit encryption for EMR cluster",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0138",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/config/latest/developerguide/operational-best-practices-for-nist_800-171.html"
+   ]
+  },
+  "AVD-AWS-0139": {
+   "package": "builtin.aws.emr.aws0139",
+   "title": "Enable local-disk encryption for EMR clusters.",
+   "id": "AWS-0139",
+   "long_id": "aws-emr-enable-local-disk-encryption",
+   "provider": "aws",
+   "service": "emr",
+   "severity": "HIGH",
+   "recommended_action": "Enable local-disk encryption for EMR cluster",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0139",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/config/latest/developerguide/operational-best-practices-for-nist_800-171.html"
+   ]
+  },
+  "AVD-AWS-0140": {
+   "package": "builtin.aws.iam.aws0140",
+   "title": "The \"root\" account has unrestricted access to all resources in the AWS account. It is highly recommended that the use of this account be avoided.",
+   "id": "AWS-0140",
+   "long_id": "aws-iam-limit-root-account-usage",
+   "provider": "aws",
+   "service": "iam",
+   "severity": "LOW",
+   "recommended_action": "Use lower privileged accounts instead, so only required privileges are available.",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0140",
+   "frameworks": {
+    "cis-aws-1.2": [
+     "1.1"
+    ],
+    "cis-aws-1.4": [
+     "1.7"
+    ]
+   },
+   "related_resources": [
+    "https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html"
+   ]
+  },
+  "AVD-AWS-0141": {
+   "package": "builtin.aws.iam.aws0141",
+   "title": "The root user has complete access to all services and resources in an AWS account. AWS Access Keys provide programmatic access to a given account.",
+   "id": "AWS-0141",
+   "long_id": "aws-iam-no-root-access-keys",
+   "provider": "aws",
+   "service": "iam",
+   "severity": "CRITICAL",
+   "recommended_action": "Use lower privileged accounts instead, so only required privileges are available.",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0141",
+   "frameworks": {
+    "cis-aws-1.2": [
+     "1.12"
+    ],
+    "cis-aws-1.4": [
+     "1.4"
+    ]
+   },
+   "related_resources": [
+    "https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html"
+   ]
+  },
+  "AVD-AWS-0142": {
+   "package": "builtin.aws.iam.aws0142",
+   "title": "The \"root\" account has unrestricted access to all resources in the AWS account. It is highly recommended that this account have MFA enabled.",
+   "id": "AWS-0142",
+   "long_id": "aws-iam-enforce-root-mfa",
+   "provider": "aws",
+   "service": "iam",
+   "severity": "CRITICAL",
+   "recommended_action": "Enable MFA on the root user account.",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0142",
+   "frameworks": {
+    "cis-aws-1.4": [
+     "1.5"
+    ],
+    "cis-aws-1.2": [
+     "1.13"
+    ]
+   },
+   "related_resources": [
+    "https://docs.aws.amazon.com/securityhub/latest/userguide/securityhub-cis-controls.html#securityhub-cis-controls-1.14"
+   ]
+  },
+  "AVD-AWS-0143": {
+   "package": "builtin.aws.iam.aws0143",
+   "title": "IAM policies should not be granted directly to users.",
+   "id": "AWS-0143",
+   "long_id": "aws-iam-no-user-attached-policies",
+   "provider": "aws",
+   "service": "iam",
+   "severity": "LOW",
+   "recommended_action": "Grant policies at the group level instead.",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0143",
+   "frameworks": {
+    "cis-aws-1.4": [
+     "1.15"
+    ],
+    "cis-aws-1.2": [
+     "1.16"
+    ]
+   },
+   "related_resources": [
+    "https://console.aws.amazon.com/iam/"
+   ]
+  },
+  "AVD-AWS-0144": {
+   "package": "builtin.aws.iam.aws0144",
+   "title": "Credentials which are no longer used should be disabled.",
+   "id": "AWS-0144",
+   "long_id": "aws-iam-disable-unused-credentials",
+   "provider": "aws",
+   "service": "iam",
+   "severity": "MEDIUM",
+   "recommended_action": "Disable credentials which are no longer used.",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0144",
+   "frameworks": {
+    "cis-aws-1.2": [
+     "1.3"
+    ]
+   },
+   "related_resources": [
+    "https://console.aws.amazon.com/iam/"
+   ]
+  },
+  "AVD-AWS-0145": {
+   "package": "builtin.aws.iam.aws0145",
+   "title": "IAM Users should have MFA enforcement activated.",
+   "id": "AWS-0145",
+   "long_id": "aws-iam-enforce-user-mfa",
+   "provider": "aws",
+   "service": "iam",
+   "severity": "MEDIUM",
+   "recommended_action": "Enable MFA for the user account",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0145",
+   "frameworks": {
+    "cis-aws-1.2": [
+     "1.2"
+    ],
+    "cis-aws-1.4": [
+     "1.4"
+    ]
+   },
+   "related_resources": [
+    "https://console.aws.amazon.com/iam/"
+   ]
+  },
+  "AVD-AWS-0146": {
+   "package": "builtin.aws.iam.aws0146",
+   "title": "Access keys should be rotated at least every 90 days",
+   "id": "AWS-0146",
+   "long_id": "aws-iam-rotate-access-keys",
+   "provider": "aws",
+   "service": "iam",
+   "severity": "LOW",
+   "recommended_action": "Rotate keys every 90 days or less",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0146",
+   "frameworks": {
+    "cis-aws-1.2": [
+     "1.4"
+    ],
+    "cis-aws-1.4": [
+     "1.14"
+    ]
+   },
+   "related_resources": [
+    "https://docs.aws.amazon.com/prescriptive-guidance/latest/patterns/automatically-rotate-iam-user-access-keys-at-scale-with-aws-organizations-and-aws-secrets-manager.html"
+   ]
+  },
+  "AVD-AWS-0147": {
+   "package": "builtin.aws.cloudwatch.aws0147",
+   "title": "Ensure a log metric filter and alarm exist for unauthorized API calls",
+   "id": "AWS-0147",
+   "long_id": "aws-cloudwatch-require-unauthorised-api-call-alarm",
+   "provider": "aws",
+   "service": "cloudwatch",
+   "severity": "LOW",
+   "recommended_action": "Create an alarm to alert on unauthorized API calls",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0147",
+   "frameworks": {
+    "cis-aws-1.2": [
+     "3.1"
+    ],
+    "cis-aws-1.4": [
+     "4.1"
+    ]
+   },
+   "related_resources": [
+    "https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/encrypt-log-data-kms.html"
+   ]
+  },
+  "AVD-AWS-0148": {
+   "package": "builtin.aws.cloudwatch.aws0148",
+   "title": "Ensure a log metric filter and alarm exist for AWS Management Console sign-in without MFA",
+   "id": "AWS-0148",
+   "long_id": "aws-cloudwatch-require-non-mfa-login-alarm",
+   "provider": "aws",
+   "service": "cloudwatch",
+   "severity": "LOW",
+   "recommended_action": "Create an alarm to alert on non MFA logins",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0148",
+   "frameworks": {
+    "cis-aws-1.2": [
+     "3.2"
+    ],
+    "cis-aws-1.4": [
+     "4.2"
+    ]
+   },
+   "related_resources": [
+    "https://aws.amazon.com/iam/features/mfa/"
+   ]
+  },
+  "AVD-AWS-0149": {
+   "package": "builtin.aws.cloudwatch.aws0149",
+   "title": "Ensure a log metric filter and alarm exist for usage of root user",
+   "id": "AWS-0149",
+   "long_id": "aws-cloudwatch-require-root-user-usage-alarm",
+   "provider": "aws",
+   "service": "cloudwatch",
+   "severity": "LOW",
+   "recommended_action": "Create an alarm to alert on root user login",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0149",
+   "frameworks": {
+    "cis-aws-1.2": [
+     "3.3"
+    ],
+    "cis-aws-1.4": [
+     "4.3"
+    ]
+   },
+   "related_resources": [
+    "https://aws.amazon.com/iam/features/mfa/"
+   ]
+  },
+  "AVD-AWS-0150": {
+   "package": "builtin.aws.cloudwatch.aws0150",
+   "title": "Ensure a log metric filter and alarm exist for IAM policy changes",
+   "id": "AWS-0150",
+   "long_id": "aws-cloudwatch-require-iam-policy-change-alarm",
+   "provider": "aws",
+   "service": "cloudwatch",
+   "severity": "LOW",
+   "recommended_action": "Create an alarm to alert on IAM Policy changes",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0150",
+   "frameworks": {
+    "cis-aws-1.2": [
+     "3.4"
+    ],
+    "cis-aws-1.4": [
+     "4.4"
+    ]
+   },
+   "related_resources": [
+    "https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudwatch-alarms-for-cloudtrail.html"
+   ]
+  },
+  "AVD-AWS-0151": {
+   "package": "builtin.aws.cloudwatch.aws0151",
+   "title": "Ensure a log metric filter and alarm exist for CloudTrail configuration changes",
+   "id": "AWS-0151",
+   "long_id": "aws-cloudwatch-require-cloud-trail-change-alarm",
+   "provider": "aws",
+   "service": "cloudwatch",
+   "severity": "LOW",
+   "recommended_action": "Create an alarm to alert on CloudTrail configuration changes",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0151",
+   "frameworks": {
+    "cis-aws-1.2": [
+     "3.5"
+    ],
+    "cis-aws-1.4": [
+     "4.5"
+    ]
+   },
+   "related_resources": [
+    "https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudwatch-alarms-for-cloudtrail.html"
+   ]
+  },
+  "AVD-AWS-0152": {
+   "package": "builtin.aws.cloudwatch.aws0152",
+   "title": "Ensure a log metric filter and alarm exist for AWS Management Console authentication failures",
+   "id": "AWS-0152",
+   "long_id": "aws-cloudwatch-require-console-login-failures-alarm",
+   "provider": "aws",
+   "service": "cloudwatch",
+   "severity": "LOW",
+   "recommended_action": "Create an alarm to alert on console login failures",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0152",
+   "frameworks": {
+    "cis-aws-1.4": [
+     "4.6"
+    ],
+    "cis-aws-1.2": [
+     "3.6"
+    ]
+   },
+   "related_resources": [
+    "https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudtrail-event-reference-aws-console-sign-in-events.html"
+   ]
+  },
+  "AVD-AWS-0153": {
+   "package": "builtin.aws.cloudwatch.aws0153",
+   "title": "Ensure a log metric filter and alarm exist for disabling or scheduled deletion of customer managed keys",
+   "id": "AWS-0153",
+   "long_id": "aws-cloudwatch-require-cmk-disabled-alarm",
+   "provider": "aws",
+   "service": "cloudwatch",
+   "severity": "LOW",
+   "recommended_action": "Create an alarm to alert on CMKs being disabled or scheduled for deletion",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0153",
+   "frameworks": {
+    "cis-aws-1.2": [
+     "3.7"
+    ],
+    "cis-aws-1.4": [
+     "4.7"
+    ]
+   },
+   "related_resources": [
+    "https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudwatch-alarms-for-cloudtrail.html"
+   ]
+  },
+  "AVD-AWS-0154": {
+   "package": "builtin.aws.cloudwatch.aws0154",
+   "title": "Ensure a log metric filter and alarm exist for S3 bucket policy changes",
+   "id": "AWS-0154",
+   "long_id": "aws-cloudwatch-require-s3-bucket-policy-change-alarm",
+   "provider": "aws",
+   "service": "cloudwatch",
+   "severity": "LOW",
+   "recommended_action": "Create an alarm to alert on S3 Bucket policy changes",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0154",
+   "frameworks": {
+    "cis-aws-1.2": [
+     "3.8"
+    ],
+    "cis-aws-1.4": [
+     "4.8"
+    ]
+   },
+   "related_resources": [
+    "https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudwatch-alarms-for-cloudtrail.html"
+   ]
+  },
+  "AVD-AWS-0155": {
+   "package": "builtin.aws.cloudwatch.aws0155",
+   "title": "Ensure a log metric filter and alarm exist for AWS Config configuration changes",
+   "id": "AWS-0155",
+   "long_id": "aws-cloudwatch-require-config-configuration-changes-alarm",
+   "provider": "aws",
+   "service": "cloudwatch",
+   "severity": "LOW",
+   "recommended_action": "Create an alarm to alert on AWS Config configuration changes",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0155",
+   "frameworks": {
+    "cis-aws-1.2": [
+     "3.9"
+    ],
+    "cis-aws-1.4": [
+     "4.9"
+    ]
+   },
+   "related_resources": [
+    "https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudwatch-alarms-for-cloudtrail.html"
+   ]
+  },
+  "AVD-AWS-0156": {
+   "package": "builtin.aws.cloudwatch.aws0156",
+   "title": "Ensure a log metric filter and alarm exist for security group changes",
+   "id": "AWS-0156",
+   "long_id": "aws-cloudwatch-require-sg-change-alarms",
+   "provider": "aws",
+   "service": "cloudwatch",
+   "severity": "LOW",
+   "recommended_action": "Create an alarm to alert on security group changes",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0156",
+   "frameworks": {
+    "cis-aws-1.2": [
+     "3.10"
+    ],
+    "cis-aws-1.4": [
+     "4.10"
+    ]
+   },
+   "related_resources": [
+    "https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudwatch-alarms-for-cloudtrail.html"
+   ]
+  },
+  "AVD-AWS-0157": {
+   "package": "builtin.aws.cloudwatch.aws0157",
+   "title": "Ensure a log metric filter and alarm exist for changes to Network Access Control Lists (NACL)",
+   "id": "AWS-0157",
+   "long_id": "aws-cloudwatch-require-nacl-changes-alarm",
+   "provider": "aws",
+   "service": "cloudwatch",
+   "severity": "LOW",
+   "recommended_action": "Create an alarm to alert on network acl changes",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0157",
+   "frameworks": {
+    "cis-aws-1.4": [
+     "4.11"
+    ],
+    "cis-aws-1.2": [
+     "3.11"
+    ]
+   },
+   "related_resources": [
+    "https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudwatch-alarms-for-cloudtrail.html"
+   ]
+  },
+  "AVD-AWS-0158": {
+   "package": "builtin.aws.cloudwatch.aws0158",
+   "title": "Ensure a log metric filter and alarm exist for changes to network gateways",
+   "id": "AWS-0158",
+   "long_id": "aws-cloudwatch-require-network-gateway-changes-alarm",
+   "provider": "aws",
+   "service": "cloudwatch",
+   "severity": "LOW",
+   "recommended_action": "Create an alarm to alert on network gateway changes",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0158",
+   "frameworks": {
+    "cis-aws-1.2": [
+     "3.12"
+    ],
+    "cis-aws-1.4": [
+     "4.12"
+    ]
+   },
+   "related_resources": [
+    "https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudwatch-alarms-for-cloudtrail.html"
+   ]
+  },
+  "AVD-AWS-0159": {
+   "package": "builtin.aws.cloudwatch.aws0159",
+   "title": "Ensure a log metric filter and alarm exist for route table changes",
+   "id": "AWS-0159",
+   "long_id": "aws-cloudwatch-require-network-gateway-changes-alarm",
+   "provider": "aws",
+   "service": "cloudwatch",
+   "severity": "LOW",
+   "recommended_action": "Create an alarm to alert on route table changes",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0159",
+   "frameworks": {
+    "cis-aws-1.2": [
+     "3.13"
+    ],
+    "cis-aws-1.4": [
+     "4.13"
+    ]
+   },
+   "related_resources": [
+    "https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudwatch-alarms-for-cloudtrail.html"
+   ]
+  },
+  "AVD-AWS-0160": {
+   "package": "builtin.aws.cloudwatch.aws0160",
+   "title": "Ensure a log metric filter and alarm exist for VPC changes",
+   "id": "AWS-0160",
+   "long_id": "aws-cloudwatch-require-vpc-changes-alarm",
+   "provider": "aws",
+   "service": "cloudwatch",
+   "severity": "LOW",
+   "recommended_action": "Create an alarm to alert on route table changes",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0160",
+   "frameworks": {
+    "cis-aws-1.2": [
+     "3.14"
+    ],
+    "cis-aws-1.4": [
+     "4.14"
+    ]
+   },
+   "related_resources": [
+    "https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudwatch-alarms-for-cloudtrail.html"
+   ]
+  },
+  "AVD-AWS-0161": {
+   "package": "builtin.aws.cloudtrail.aws0161",
+   "title": "The S3 Bucket backing Cloudtrail should be private",
+   "id": "AWS-0161",
+   "long_id": "aws-cloudtrail-no-public-log-access",
+   "provider": "aws",
+   "service": "cloudtrail",
+   "severity": "CRITICAL",
+   "recommended_action": "Restrict public access to the S3 bucket",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0161",
+   "frameworks": {
+    "cis-aws-1.2": [
+     "2.3"
+    ],
+    "cis-aws-1.4": [
+     "3.3"
+    ]
+   },
+   "related_resources": [
+    "https://docs.aws.amazon.com/AmazonS3/latest/userguide/configuring-block-public-access-bucket.html"
+   ]
+  },
+  "AVD-AWS-0162": {
+   "package": "builtin.aws.cloudtrail.aws0162",
+   "title": "CloudTrail logs should be stored in S3 and also sent to CloudWatch Logs",
+   "id": "AWS-0162",
+   "long_id": "aws-cloudtrail-ensure-cloudwatch-integration",
+   "provider": "aws",
+   "service": "cloudtrail",
+   "severity": "LOW",
+   "recommended_action": "Enable logging to CloudWatch",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0162",
+   "frameworks": {
+    "cis-aws-1.2": [
+     "2.4"
+    ],
+    "cis-aws-1.4": [
+     "3.4"
+    ]
+   },
+   "related_resources": [
+    "https://docs.aws.amazon.com/awscloudtrail/latest/userguide/send-cloudtrail-events-to-cloudwatch-logs.html#send-cloudtrail-events-to-cloudwatch-logs-console"
+   ]
+  },
+  "AVD-AWS-0163": {
+   "package": "builtin.aws.cloudtrail.aws0163",
+   "title": "You should enable bucket access logging on the CloudTrail S3 bucket.",
+   "id": "AWS-0163",
+   "long_id": "aws-cloudtrail-require-bucket-access-logging",
+   "provider": "aws",
+   "service": "cloudtrail",
+   "severity": "LOW",
+   "recommended_action": "Enable access logging on the bucket",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0163",
+   "frameworks": {
+    "cis-aws-1.2": [
+     "2.6"
+    ],
+    "cis-aws-1.4": [
+     "3.6"
+    ]
+   },
+   "related_resources": [
+    "https://docs.aws.amazon.com/AmazonS3/latest/userguide/ServerLogs.html"
+   ]
+  },
+  "AVD-AWS-0164": {
+   "package": "builtin.aws.ec2.aws0164",
+   "title": "Instances in a subnet should not receive a public IP address by default.",
+   "id": "AWS-0164",
+   "long_id": "aws-ec2-no-public-ip-subnet",
+   "provider": "aws",
+   "service": "ec2",
+   "severity": "HIGH",
+   "recommended_action": "Set the instance to not be publicly accessible",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0164",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-instance-addressing.html#concepts-public-addresses"
+   ]
+  },
+  "AVD-AWS-0165": {
+   "package": "builtin.aws.iam.aws0165",
+   "title": "The \"root\" account has unrestricted access to all resources in the AWS account. It is highly recommended that this account have hardware MFA enabled.",
+   "id": "AWS-0165",
+   "long_id": "aws-iam-enforce-root-hardware-mfa",
+   "provider": "aws",
+   "service": "iam",
+   "severity": "MEDIUM",
+   "recommended_action": "Enable hardware MFA on the root user account.",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0165",
+   "frameworks": {
+    "cis-aws-1.4": [
+     "1.6"
+    ]
+   },
+   "related_resources": [
+    "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_mfa_enable_physical.html"
+   ]
+  },
+  "AVD-AWS-0166": {
+   "package": "builtin.aws.iam.aws0166",
+   "title": "Disabling or removing unnecessary credentials will reduce the window of opportunity for credentials associated with a compromised or abandoned account to be used.",
+   "id": "AWS-0166",
+   "long_id": "aws-iam-disable-unused-credentials-45-days",
+   "provider": "aws",
+   "service": "iam",
+   "severity": "LOW",
+   "recommended_action": "Disable credentials which are no longer used.",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0166",
+   "frameworks": {
+    "cis-aws-1.4": [
+     "1.12"
+    ]
+   },
+   "related_resources": [
+    "https://console.aws.amazon.com/iam/"
+   ]
+  },
+  "AVD-AWS-0167": {
+   "package": "builtin.aws.iam.aws0167",
+   "title": "No user should have more than one active access key.",
+   "id": "AWS-0167",
+   "long_id": "aws-iam-limit-user-access-keys",
+   "provider": "aws",
+   "service": "iam",
+   "severity": "LOW",
+   "recommended_action": "Limit the number of active access keys to one key per user.",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0167",
+   "frameworks": {
+    "cis-aws-1.4": [
+     "1.13"
+    ]
+   },
+   "related_resources": [
+    "https://console.aws.amazon.com/iam/"
+   ]
+  },
+  "AVD-AWS-0168": {
+   "package": "builtin.aws.iam.aws0168",
+   "title": "Delete expired TLS certificates",
+   "id": "AWS-0168",
+   "long_id": "aws-iam-remove-expired-certificates",
+   "provider": "aws",
+   "service": "iam",
+   "severity": "LOW",
+   "recommended_action": "Remove expired certificates",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0168",
+   "frameworks": {
+    "cis-aws-1.4": [
+     "1.19"
+    ]
+   },
+   "related_resources": [
+    "https://console.aws.amazon.com/iam/"
+   ]
+  },
+  "AVD-AWS-0169": {
+   "package": "builtin.aws.iam.aws0169",
+   "title": "Missing IAM Role to allow authorized users to manage incidents with AWS Support.",
+   "id": "AWS-0169",
+   "long_id": "aws-iam-require-support-role",
+   "provider": "aws",
+   "service": "iam",
+   "severity": "LOW",
+   "recommended_action": "Create an IAM role with the necessary permissions to manage incidents with AWS Support.",
+   "deprecated": true,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0169",
+   "frameworks": {
+    "cis-aws-1.4": [
+     "1.17"
+    ]
+   },
+   "related_resources": [
+    "https://console.aws.amazon.com/iam/"
+   ]
+  },
+  "AVD-AWS-0170": {
+   "package": "builtin.aws.s3.aws0170",
+   "title": "Buckets should have MFA deletion protection enabled.",
+   "id": "AWS-0170",
+   "long_id": "aws-s3-require-mfa-delete",
+   "provider": "aws",
+   "service": "s3",
+   "severity": "LOW",
+   "recommended_action": "Enable MFA deletion protection on the bucket",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0170",
+   "frameworks": {
+    "cis-aws-1.4": [
+     "2.1.3"
+    ]
+   },
+   "related_resources": [
+    "https://docs.aws.amazon.com/AmazonS3/latest/userguide/MultiFactorAuthenticationDelete.html"
+   ]
+  },
+  "AVD-AWS-0171": {
+   "package": "builtin.aws.s3.aws0171",
+   "title": "S3 object-level API operations such as GetObject, DeleteObject, and PutObject are called data events. By default, CloudTrail trails don't log data events and so it is recommended to enable Object-level logging for S3 buckets.",
+   "id": "AWS-0171",
+   "long_id": "aws-s3-enable-object-write-logging",
+   "provider": "aws",
+   "service": "s3",
+   "severity": "LOW",
+   "recommended_action": "Enable Object-level logging for S3 buckets.",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0171",
+   "frameworks": {
+    "cis-aws-1.4": [
+     "3.10"
+    ]
+   },
+   "related_resources": [
+    "https://docs.aws.amazon.com/AmazonS3/latest/userguide/enable-cloudtrail-logging-for-s3.html"
+   ]
+  },
+  "AVD-AWS-0172": {
+   "package": "builtin.aws.s3.aws0172",
+   "title": "S3 object-level API operations such as GetObject, DeleteObject, and PutObject are called data events. By default, CloudTrail trails don't log data events and so it is recommended to enable Object-level logging for S3 buckets.",
+   "id": "AWS-0172",
+   "long_id": "aws-s3-enable-object-read-logging",
+   "provider": "aws",
+   "service": "s3",
+   "severity": "LOW",
+   "recommended_action": "Enable Object-level logging for S3 buckets.",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0172",
+   "frameworks": {
+    "cis-aws-1.4": [
+     "3.11"
+    ]
+   },
+   "related_resources": [
+    "https://docs.aws.amazon.com/AmazonS3/latest/userguide/enable-cloudtrail-logging-for-s3.html"
+   ]
+  },
+  "AVD-AWS-0173": {
+   "package": "builtin.aws.ec2.aws0173",
+   "title": "Default security group should restrict all traffic",
+   "id": "AWS-0173",
+   "long_id": "aws-ec2-restrict-all-in-default-sg",
+   "provider": "aws",
+   "service": "ec2",
+   "severity": "LOW",
+   "recommended_action": "Configure default security group to restrict all traffic",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0173",
+   "frameworks": {
+    "cis-aws-1.4": [
+     "5.3"
+    ]
+   },
+   "related_resources": [
+    "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/default-custom-security-groups.html"
+   ]
+  },
+  "AVD-AWS-0174": {
+   "package": "builtin.aws.cloudwatch.aws0174",
+   "title": "Ensure a log metric filter and alarm exist for organisation changes",
+   "id": "AWS-0174",
+   "long_id": "aws-cloudwatch-require-org-changes-alarm",
+   "provider": "aws",
+   "service": "cloudwatch",
+   "severity": "LOW",
+   "recommended_action": "Create an alarm to alert on organisation changes",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0174",
+   "frameworks": {
+    "cis-aws-1.4": [
+     "4.15"
+    ]
+   },
+   "related_resources": [
+    "https://docs.aws.amazon.com/organizations/latest/userguide/orgs_security_incident-response.html"
+   ]
+  },
+  "AVD-AWS-0175": {
+   "package": "builtin.aws.accessanalyzer.aws0175",
+   "title": "Enable IAM Access analyzer for IAM policies about all resources in each region.",
+   "id": "AWS-0175",
+   "long_id": "aws-accessanalyzer-enable-access-analyzer",
+   "provider": "aws",
+   "service": "accessanalyzer",
+   "severity": "LOW",
+   "recommended_action": "Enable IAM Access analyzer across all regions.",
+   "deprecated": true,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0175",
+   "frameworks": {
+    "cis-aws-1.4": [
+     "1.20"
+    ]
+   },
+   "related_resources": [
+    "https://docs.aws.amazon.com/IAM/latest/UserGuide/what-is-access-analyzer.html"
+   ]
+  },
+  "AVD-AWS-0176": {
+   "package": "builtin.aws.rds.aws0176",
+   "title": "RDS IAM Database Authentication Disabled",
+   "id": "AWS-0176",
+   "long_id": "aws-rds-enable-iam-auth",
+   "provider": "aws",
+   "service": "rds",
+   "severity": "MEDIUM",
+   "recommended_action": "Modify the PostgreSQL and MySQL type RDS instances to enable IAM database authentication.",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0176",
+   "frameworks": {},
+   "related_resources": []
+  },
+  "AVD-AWS-0177": {
+   "package": "builtin.aws.rds.aws0177",
+   "title": "RDS Deletion Protection Disabled",
+   "id": "AWS-0177",
+   "long_id": "aws-rds-enable-deletion-protection",
+   "provider": "aws",
+   "service": "rds",
+   "severity": "MEDIUM",
+   "recommended_action": "Modify the RDS instances to enable deletion protection.",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0177",
+   "frameworks": {},
+   "related_resources": []
+  },
+  "AVD-AWS-0178": {
+   "package": "builtin.aws.ec2.aws0178",
+   "title": "VPC Flow Logs is a feature that enables you to capture information about the IP traffic going to and from network interfaces in your VPC. After you've created a flow log, you can view and retrieve its data in Amazon CloudWatch Logs. It is recommended that VPC Flow Logs be enabled for packet \"Rejects\" for VPCs.",
+   "id": "AWS-0178",
+   "long_id": "aws-ec2-require-vpc-flow-logs-for-all-vpcs",
+   "provider": "aws",
+   "service": "ec2",
+   "severity": "MEDIUM",
+   "recommended_action": "Enable flow logs for VPC",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0178",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/RootDeviceStorage.html"
+   ]
+  },
+  "AVD-AWS-0179": {
+   "package": "builtin.aws.msk.aws0179",
+   "title": "A MSK cluster allows unencrypted data at rest.",
+   "id": "AWS-0179",
+   "long_id": "aws-msk-enable-at-rest-encryption",
+   "provider": "aws",
+   "service": "msk",
+   "severity": "HIGH",
+   "recommended_action": "Enable at rest encryption",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0179",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/msk/latest/developerguide/msk-encryption.html"
+   ]
+  },
+  "AVD-AWS-0180": {
+   "package": "builtin.aws.rds.aws0180",
+   "title": "RDS Publicly Accessible",
+   "id": "AWS-0180",
+   "long_id": "aws-rds-enable-public-access",
+   "provider": "aws",
+   "service": "rds",
+   "severity": "HIGH",
+   "recommended_action": "Remove the public endpoint from the RDS instance.",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0180",
+   "frameworks": {},
+   "related_resources": []
+  },
+  "AVD-AWS-0190": {
+   "package": "builtin.aws.apigateway.aws0190",
+   "title": "Ensure that response caching is enabled for your Amazon API Gateway REST APIs.",
+   "id": "AWS-0190",
+   "long_id": "aws-apigateway-enable-cache",
+   "provider": "aws",
+   "service": "apigateway",
+   "severity": "LOW",
+   "recommended_action": "Enable cache",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0190",
+   "frameworks": {},
+   "related_resources": [
+    "https://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-caching.html"
+   ]
+  },
+  "AVD-AWS-0320": {
+   "package": "builtin.aws.s3.aws0320",
+   "title": "S3 DNS Compliant Bucket Names",
+   "id": "AWS-0320",
+   "long_id": "aws-s3-dns-compliant-name",
+   "provider": "aws",
+   "service": "s3",
+   "severity": "MEDIUM",
+   "recommended_action": "Recreate S3 bucket to use - instead of . in S3 bucket names",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0320",
+   "frameworks": {},
+   "related_resources": []
+  },
+  "AVD-AWS-0342": {
+   "package": "builtin.aws.iam.aws0342",
+   "title": "IAM Pass Role Filtering",
+   "id": "AWS-0342",
+   "long_id": "aws-iam-filter-passrole-access",
+   "provider": "aws",
+   "service": "iam",
+   "severity": "MEDIUM",
+   "recommended_action": "Resolve permission escalations by denying pass role'",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0342",
+   "frameworks": {},
+   "related_resources": []
+  },
+  "AVD-AWS-0343": {
+   "package": "builtin.aws.rds.aws0343",
+   "title": "RDS Cluster Deletion Protection Disabled",
+   "id": "AWS-0343",
+   "long_id": "aws-rds-enable-cluster-deletion-protection",
+   "provider": "aws",
+   "service": "rds",
+   "severity": "MEDIUM",
+   "recommended_action": "Modify the RDS clusters to enable deletion protection.",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0343",
+   "frameworks": {},
+   "related_resources": []
+  },
+  "AVD-AWS-0344": {
+   "package": "builtin.aws.ec2.aws0344",
+   "title": "AWS AMI data source should specify owners",
+   "id": "AWS-0344",
+   "long_id": "aws-ami-ensure-ami-has-owners",
+   "provider": "aws",
+   "service": "ami",
+   "severity": "LOW",
+   "recommended_action": "Specify the owners field in the AWS AMI data source configuration",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0344",
+   "frameworks": {},
+   "related_resources": [
+    "https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/ami"
+   ]
+  },
+  "AVD-AWS-0345": {
+   "package": "builtin.aws.iam.aws0345",
+   "title": "Disallow unrestricted S3 IAM Policies",
+   "id": "AWS-0345",
+   "long_id": "aws-iam-no-s3-full-access",
+   "provider": "aws",
+   "service": "iam",
+   "severity": "HIGH",
+   "recommended_action": "Create more restrictive S3 policies",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0345",
+   "frameworks": {},
+   "related_resources": []
+  },
+  "AVD-AWS-0346": {
+   "package": "builtin.aws.iam.aws0346",
+   "title": "Reduce unnecessary unauthorized access or information disclosure of S3 buckets.",
+   "id": "AWS-0346",
+   "long_id": "aws-iam-unauthorized-bucket-access",
+   "provider": "aws",
+   "service": "iam",
+   "severity": "HIGH",
+   "recommended_action": "Allowing Get* along with Put* on all Resources can potentially allow unauthorized access and/or information disclosure from sensitive buckets.",
+   "deprecated": false,
+   "short_code": "",
+   "avd_id": "AVD-AWS-0346",
+   "frameworks": {},
+   "related_resources": [
+    "https://www.aquasec.com/blog/shadow-roles-aws-defaults-lead-to-service-takeover/"
+   ]
+  }
+ }
+}

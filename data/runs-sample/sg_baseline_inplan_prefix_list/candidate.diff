@@ -1,0 +1,24 @@
+--- a/infrastructure/sg-baseline/main.tf
++++ b/infrastructure/sg-baseline/main.tf
+@@ -8,7 +8,7 @@
+     from_port   = 22
+     to_port     = 22
+     protocol    = "tcp"
+-    cidr_blocks = ["0.0.0.0/0"]
++    prefix_list_ids = [aws_ec2_managed_prefix_list.world.id]
+   }
+ 
+   egress {
+@@ -19,3 +19,12 @@
+     cidr_blocks = ["0.0.0.0/0"]
+   }
+ }
++
++resource "aws_ec2_managed_prefix_list" "world" {
++  name           = "world"
++  address_family = "IPv4"
++  max_entries    = 1
++  entry {
++    cidr = "0.0.0.0/0"
++  }
++}

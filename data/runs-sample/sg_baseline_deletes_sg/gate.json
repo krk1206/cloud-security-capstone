@@ -1,0 +1,12 @@
+{
+  "action": "BLOCK",
+  "validity": "FAIL",
+  "policy_ok": true,
+  "risk_level": null,
+  "autonomy_cap": null,
+  "llm_proposed_autonomy": "HIGH",
+  "final_autonomy": null,
+  "reasons": [
+    "verification failed: FAIL at V3(error: Reference to undeclared resource A managed resource \"aws_security_group\" )"
+  ]
+}

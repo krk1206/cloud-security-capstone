@@ -1,0 +1,260 @@
+{
+ "format_version": "1.2",
+ "terraform_version": "1.10.6",
+ "planned_values": {
+  "root_module": {
+   "resources": [
+    {
+     "address": "aws_security_group.rdp",
+     "mode": "managed",
+     "type": "aws_security_group",
+     "name": "rdp",
+     "provider_name": "registry.opentofu.org/hashicorp/aws",
+     "schema_version": 1,
+     "values": {
+      "description": "rdp open",
+      "ingress": [
+       {
+        "cidr_blocks": [
+         "0.0.0.0/0"
+        ],
+        "description": "",
+        "from_port": 3389,
+        "ipv6_cidr_blocks": [],
+        "prefix_list_ids": [],
+        "protocol": "tcp",
+        "security_groups": [],
+        "self": false,
+        "to_port": 3389
+       },
+       {
+        "cidr_blocks": [
+         "10.0.0.0/8"
+        ],
+        "description": "",
+        "from_port": 22,
+        "ipv6_cidr_blocks": [],
+        "prefix_list_ids": [],
+        "protocol": "tcp",
+        "security_groups": [],
+        "self": false,
+        "to_port": 22
+       }
+      ],
+      "name": "rdp-sg",
+      "revoke_rules_on_delete": false,
+      "tags": null,
+      "timeouts": null
+     },
+     "sensitive_values": {
+      "egress": [],
+      "ingress": [
+       {
+        "cidr_blocks": [
+         false
+        ],
+        "ipv6_cidr_blocks": [],
+        "prefix_list_ids": [],
+        "security_groups": []
+       },
+       {
+        "cidr_blocks": [
+         false
+        ],
+        "ipv6_cidr_blocks": [],
+        "prefix_list_ids": [],
+        "security_groups": []
+       }
+      ],
+      "tags_all": {}
+     }
+    }
+   ]
+  }
+ },
+ "resource_changes": [
+  {
+   "address": "aws_security_group.rdp",
+   "mode": "managed",
+   "type": "aws_security_group",
+   "name": "rdp",
+   "provider_name": "registry.opentofu.org/hashicorp/aws",
+   "change": {
+    "actions": [
+     "create"
+    ],
+    "before": null,
+    "after": {
+     "description": "rdp open",
+     "ingress": [
+      {
+       "cidr_blocks": [
+        "0.0.0.0/0"
+       ],
+       "description": "",
+       "from_port": 3389,
+       "ipv6_cidr_blocks": [],
+       "prefix_list_ids": [],
+       "protocol": "tcp",
+       "security_groups": [],
+       "self": false,
+       "to_port": 3389
+      },
+      {
+       "cidr_blocks": [
+        "10.0.0.0/8"
+       ],
+       "description": "",
+       "from_port": 22,
+       "ipv6_cidr_blocks": [],
+       "prefix_list_ids": [],
+       "protocol": "tcp",
+       "security_groups": [],
+       "self": false,
+       "to_port": 22
+      }
+     ],
+     "name": "rdp-sg",
+     "revoke_rules_on_delete": false,
+     "tags": null,
+     "timeouts": null
+    },
+    "after_unknown": {
+     "arn": true,
+     "egress": true,
+     "id": true,
+     "ingress": [
+      {
+       "cidr_blocks": [
+        false
+       ],
+       "ipv6_cidr_blocks": [],
+       "prefix_list_ids": [],
+       "security_groups": []
+      },
+      {
+       "cidr_blocks": [
+        false
+       ],
+       "ipv6_cidr_blocks": [],
+       "prefix_list_ids": [],
+       "security_groups": []
+      }
+     ],
+     "name_prefix": true,
+     "owner_id": true,
+     "tags_all": true,
+     "vpc_id": true
+    },
+    "before_sensitive": false,
+    "after_sensitive": {
+     "egress": [],
+     "ingress": [
+      {
+       "cidr_blocks": [
+        false
+       ],
+       "ipv6_cidr_blocks": [],
+       "prefix_list_ids": [],
+       "security_groups": []
+      },
+      {
+       "cidr_blocks": [
+        false
+       ],
+       "ipv6_cidr_blocks": [],
+       "prefix_list_ids": [],
+       "security_groups": []
+      }
+     ],
+     "tags_all": {}
+    }
+   }
+  }
+ ],
+ "configuration": {
+  "provider_config": {
+   "aws": {
+    "name": "aws",
+    "full_name": "registry.opentofu.org/hashicorp/aws",
+    "expressions": {
+     "access_key": {
+      "constant_value": "offline-plan-fake"
+     },
+     "profile": {
+      "constant_value": null
+     },
+     "region": {
+      "constant_value": "ap-northeast-2"
+     },
+     "secret_key": {
+      "constant_value": "offline-plan-fake"
+     },
+     "skip_credentials_validation": {
+      "constant_value": true
+     },
+     "skip_metadata_api_check": {
+      "constant_value": true
+     },
+     "skip_region_validation": {
+      "constant_value": true
+     },
+     "skip_requesting_account_id": {
+      "constant_value": true
+     }
+    }
+   }
+  },
+  "root_module": {
+   "resources": [
+    {
+     "address": "aws_security_group.rdp",
+     "mode": "managed",
+     "type": "aws_security_group",
+     "name": "rdp",
+     "provider_config_key": "aws",
+     "expressions": {
+      "description": {
+       "constant_value": "rdp open"
+      },
+      "ingress": {
+       "constant_value": [
+        {
+         "cidr_blocks": [
+          "10.0.0.0/8"
+         ],
+         "description": null,
+         "from_port": 22,
+         "ipv6_cidr_blocks": null,
+         "prefix_list_ids": null,
+         "protocol": "tcp",
+         "security_groups": null,
+         "self": null,
+         "to_port": 22
+        },
+        {
+         "cidr_blocks": [
+          "0.0.0.0/0"
+         ],
+         "description": null,
+         "from_port": 3389,
+         "ipv6_cidr_blocks": null,
+         "prefix_list_ids": null,
+         "protocol": "tcp",
+         "security_groups": null,
+         "self": null,
+         "to_port": 3389
+        }
+       ]
+      },
+      "name": {
+       "constant_value": "rdp-sg"
+      }
+     },
+     "schema_version": 1
+    }
+   ]
+  }
+ },
+ "errored": false
+}

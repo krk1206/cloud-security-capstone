@@ -1,0 +1,12 @@
+{
+  "action": "HOLD_FOR_HUMAN",
+  "validity": "INCOMPLETE",
+  "policy_ok": true,
+  "risk_level": "LOW",
+  "autonomy_cap": "HIGH",
+  "llm_proposed_autonomy": "HIGH",
+  "final_autonomy": null,
+  "reasons": [
+    "verification incomplete: INCOMPLETE: V6=UNKNOWN — not a pass; human review required"
+  ]
+}
