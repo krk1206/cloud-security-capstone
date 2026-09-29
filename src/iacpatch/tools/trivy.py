@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import json
+import re
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -68,6 +69,7 @@ class TrivyScan:
     version: str
     error: str = ""
     argv: List[str] = field(default_factory=list)
+    parse_errors: List[str] = field(default_factory=list)   # stderr 의 "[terraform parser] Error parsing file …" — Trivy 는 못 읽은 파일을 건너뛰고 exit 0 + 검사 '성공' 으로 센다 (팀 PC 실습 09-29)
 
 
 class TrivyAdapter:
@@ -89,7 +91,8 @@ class TrivyAdapter:
 
     def scan_dir(self, target_dir: str | Path, output_json: Optional[str | Path] = None,
                  tf_vars: Optional[str] = None, timeout: int = 600) -> TrivyScan:
-        argv = [self.binary, "config", str(target_dir), "--format", "json", "--include-non-failures", "--quiet", "--skip-version-check"]
+        # --quiet 를 쓰지 않는다: 파싱 실패("[terraform parser] Error parsing file")가 stderr 로만 나오는데 --quiet 가 그것까지 숨긴다. 리포트는 --output 파일로 받는다
+        argv = [self.binary, "config", str(target_dir), "--format", "json", "--include-non-failures", "--skip-version-check"]
         if self.skip_check_update:
             argv += ["--skip-check-update"]   # 내장 체크 번들 사용 (번들 갱신 없음). 버전 확인(check.trivy.dev)은 항상 끈다 = 네트워크 0
         if tf_vars:
@@ -110,7 +113,19 @@ class TrivyAdapter:
         except (OSError, json.JSONDecodeError) as e:
             return TrivyScan(False, {}, [], {}, "", f"cannot parse trivy output: {e}", argv)
         ver = str((report.get("Trivy") or {}).get("Version") or self.version())
-        return TrivyScan(True, report, parse_findings(report), scan_summary(report), ver, "", argv)
+        return TrivyScan(True, report, parse_findings(report), scan_summary(report), ver, "", argv, parse_errors(r.stderr))
+
+
+def parse_errors(stderr: str) -> List[str]:
+    """Trivy stderr 에서 HCL 파싱 실패 줄만 뽑는다 (중복 제거). 파싱 실패 파일은 검사 대상에서 빠지므로 '경고 없음' 이 '안전' 이 아니다."""
+    out: List[str] = []
+    for line in (stderr or "").splitlines():
+        if "Error parsing file" in line or "failed to parse" in line.lower():
+            m = re.search(r'err="([^"]*)"', line)
+            msg = (m.group(1) if m else line.strip()).replace('\\"', '"')
+            if msg not in out:
+                out.append(msg[:300])
+    return out
 
 
 def load_report(path: str | Path) -> Dict[str, Any]:

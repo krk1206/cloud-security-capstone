@@ -115,7 +115,10 @@ def run_one(settings: Settings, kind: str, v, out_dir: Path, trivy: TrivyAdapter
     # ---- 스캐너
     if trivy.available():
         scan = trivy.scan_dir(wd, wd / "trivy.json")
-        if scan.ok:
+        if scan.ok and scan.parse_errors:
+            r.trivy_flagged = None            # Trivy 가 변형을 파싱 못 함 → '사각' 이 아니라 '측정 불가' (변형 생성기의 버그일 가능성)
+            r.trivy_rules = ["PARSE_ERROR"]
+        elif scan.ok:
             fails = [f for f in scan.findings if f.status == "FAIL"]
             r.trivy_rules = sorted({f.rule_id for f in fails})
             if kind == "sg":

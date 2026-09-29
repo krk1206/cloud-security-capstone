@@ -158,3 +158,30 @@ class V5Tests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TrivyParseErrorTests(unittest.TestCase):
+    """Trivy 는 HCL 을 못 읽으면 그 파일을 건너뛰고 exit 0 + 검사 '성공' 으로 센다 → '경고 없음' 이 통과로 보이면 안 된다 (팀 PC 실습 09-29: 속성 중복 파일이 V1 PASS)."""
+
+    STDERR = ('2026-09-29T02:45:20Z\tERROR\t[terraform parser] Error parsing file\tmodule="root" file_path="main.tf" '
+              'cause="    cidr_blocks = [\\"0.0.0.0/2\\"]" err="main.tf:15,5-16: Attribute redefined; The argument \\"cidr_blocks\\" was already set at main.tf:14,5-16. Each argument may be set only once."\n'
+              '2026-09-29T02:45:20Z\tINFO\t[terraform parser] No files found, nothing to do.\tmodule="root"\n')
+
+    def test_parse_errors_extracted_from_stderr(self):
+        from iacpatch.tools.trivy import parse_errors
+        errs = parse_errors(self.STDERR)
+        self.assertEqual(len(errs), 1)
+        self.assertIn("Attribute redefined", errs[0])
+        self.assertEqual(parse_errors(""), [])
+
+    def test_v1_and_v2_error_instead_of_pass_when_candidate_unparseable(self):
+        from iacpatch.tools.trivy import TrivyScan
+        from iacpatch.verify.layers import v1_target_finding, v2_finding_diff
+        before = load_case_trivy("00-baseline")
+        target = next(f for f in before.findings if f.rule_id == "AVD-AWS-0107")
+        after = TrivyScan(True, {"Results": [{"Target": ".", "MisconfSummary": {"Successes": 51, "Failures": 0}}]}, [],
+                          {"successes": 51, "failures": 0, "checks_executed": 51}, "0.74.0", "", [], ["main.tf:15,5-16: Attribute redefined"])
+        self.assertEqual(v1_target_finding(target, before, after).verdict, Verdict.ERROR)
+        self.assertEqual(v2_finding_diff(before, after).verdict, Verdict.ERROR)
+        clean = TrivyScan(True, after.report, [], after.summary, "0.74.0", "", [], [])
+        self.assertEqual(v1_target_finding(target, before, clean).verdict, Verdict.PASS)   # 파싱 오류가 없을 때만 PASS

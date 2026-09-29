@@ -25,6 +25,11 @@ def v1_target_finding(target: Finding, before: TrivyScan, after: TrivyScan,
     tool = f"trivy {after.version}" if after.version else "trivy"
     if not after.ok:
         return LayerResult("V1", "target finding removed", Verdict.ERROR, f"re-scan failed: {after.error}", {}, True, tool)
+    if after.parse_errors:
+        # Trivy 는 파싱 못 한 파일을 건너뛰고 나머지 검사를 '성공' 으로 세므로, 이 상태의 '경고 없음' 은 통과가 아니다 (팀 PC 실습 09-29: 속성 중복 파일이 V1 PASS 로 나옴)
+        return LayerResult("V1", "target finding removed", Verdict.ERROR,
+                           "re-scan could not parse the candidate (Trivy skipped it, so 'no finding' means 'not scanned'): " + "; ".join(after.parse_errors[:2]),
+                           {"parse_errors": after.parse_errors}, True, tool)
     if after.summary.get("checks_executed", 0) == 0:
         return LayerResult("V1", "target finding removed", Verdict.ERROR,
                            "re-scan executed 0 checks — cannot distinguish 'passed' from 'not scanned'", after.summary, True, tool)
@@ -53,6 +58,9 @@ def v2_finding_diff(before: TrivyScan, after: TrivyScan, block_severities: Itera
     tool = f"trivy {after.version}" if after.version else "trivy"
     if not before.ok or not after.ok:
         return LayerResult("V2", "new findings introduced?", Verdict.ERROR, f"scan failed: before={before.error!r} after={after.error!r}", {}, True, tool)
+    if after.parse_errors or before.parse_errors:
+        return LayerResult("V2", "new findings introduced?", Verdict.ERROR, "a scan could not parse its input (Trivy skips unparseable files): "
+                           + "; ".join((after.parse_errors or before.parse_errors)[:2]), {"before": before.parse_errors, "after": after.parse_errors}, True, tool)
     if after.summary.get("checks_executed", 0) == 0 or before.summary.get("checks_executed", 0) == 0:
         return LayerResult("V2", "new findings introduced?", Verdict.ERROR, "a scan executed 0 checks", {"before": before.summary, "after": after.summary}, True, tool)
     bmap = {f.key: f for f in before.findings}
