@@ -28,6 +28,7 @@ class Settings:
     aws_profile: str = ""
     aws_region: str = "ap-northeast-2"
     offline_plan: bool = True             # 자격증명 없는 환경 기본값. 실제 배포 경로에서는 false 로.
+    aws_provider_version: str = "5.100.0" # offline plan 의 override 가 못 박는 AWS provider 버전 (D-13, 팀 PC 실측 09-29: 안 박으면 최신으로 바뀌어 V5 오탐)
     tf_var_file: str = ""                 # 예: terraform.tfvars.example (plan/trivy 에 전달)
     llm_provider: str = "mock"
     llm_model: str = ""

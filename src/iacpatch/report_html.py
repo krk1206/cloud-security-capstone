@@ -222,7 +222,8 @@ def summarize(reviews_root: Optional[Path] = None) -> Dict[str, Any]:
     env_bits = []
     for k, v in (tools or {}).items():
         if isinstance(v, dict):
-            env_bits.append(f"{v.get('kind') or k} {v.get('version') or '없음'}" + (" (offline plan)" if v.get("offline_plan") else ""))
+            env_bits.append(f"{v.get('kind') or k} {v.get('version') or '없음'}" + (" (offline plan)" if v.get("offline_plan") else "")
+                            + (f", aws provider {v['aws_provider']}" if v.get("aws_provider") else ""))
     cc = _load(ROOT / "experiments/candidate-sets/eval-claude-code/manifest.json") or {}
     fuzz_md = _read(ROOT / "experiments" / "FUZZ_RESULTS.md")
     fz = re.search(r"잡혀야 하는 변형 (\d+)개 중 Trivy 사각 \*\*(\d+)개\*\*, 그중 오라클 탐지 \*\*(\d+)개\*\* · UNKNOWN (\d+)개 · 오라클도 놓침 \*\*(\d+)개\*\*", fuzz_md)

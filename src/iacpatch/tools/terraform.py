@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -25,8 +26,24 @@ from typing import Any, Dict, List, Optional
 from .runner import CmdResult, ToolNotFound, run, which
 
 OFFLINE_OVERRIDE_FILENAME = "zz_iacpatch_offline_override.tf"
+# AWS provider 버전 고정. 이유(팀 PC 실측 2026-09-29): 시나리오 .tf 에 버전 제약이 없으면 terraform init 이 '그때의 최신'(6.66.0)을 받는다.
+# 같은 PC 에서 아침 실험은 5.100.0(infrastructure/ 의 lock 이 템플릿을 만듦), 저녁 화면 실행은 6.66.0 이 되어 원본 plan 과 후보 plan 의
+# provider 가 달라졌고, 6.x 가 리소스마다 넣는 `region` 속성을 V5 가 "허용 목록 밖 변경" 으로 잡았다 (V5 FAIL — 패치와 무관한 오탐).
+# 검증 결과가 실행 시각·순서에 따라 달라지면 안 되므로 offline plan 의 override 파일에 버전을 못 박는다 (D-13).
+# 5.100.0 = 샌드박스 fixture(tests/fixtures/plans)·팀 PC lock·9/22 실측이 전부 쓴 버전. 바꾸려면 Settings.aws_provider_version.
+DEFAULT_AWS_PROVIDER_VERSION = "5.100.0"
+PROVIDER_PIN = """terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "%(version)s"
+    }
+  }
+}
+
+"""
 OFFLINE_OVERRIDE = """# iacpatch: offline plan override (auto-generated in the working copy only; never committed)
-provider "aws" {
+%(provider_pin)sprovider "aws" {
   region                      = "%(region)s"
   profile                     = null
   access_key                  = "offline-plan-fake"
@@ -68,9 +85,11 @@ class StepOutput:
 
 
 class TerraformAdapter:
-    def __init__(self, binary: Optional[str] = None, region: str = "ap-northeast-2", template_dir: Optional[str | Path] = None):
+    def __init__(self, binary: Optional[str] = None, region: str = "ap-northeast-2", template_dir: Optional[str | Path] = None,
+                 provider_version: Optional[str] = DEFAULT_AWS_PROVIDER_VERSION):
         self.binary = binary or os.environ.get("TERRAFORM_BIN") or "terraform"
         self.region = region
+        self.provider_version = provider_version   # None 이면 고정하지 않음 (config 의 제약/lock 대로)
         self.template_dir = Path(template_dir) if template_dir else None
         self.last_template_action = ""      # "restored" | "saved" | "" (기록용)
 
@@ -159,10 +178,25 @@ class TerraformAdapter:
             target.write_text(content, encoding="utf-8")
         return dst
 
+    def offline_override_text(self) -> str:
+        pin = PROVIDER_PIN % {"version": self.provider_version} if self.provider_version else ""
+        return OFFLINE_OVERRIDE % {"region": self.region, "provider_pin": pin}
+
     def add_offline_override(self, workdir: str | Path) -> Path:
+        """`*_override.tf` 는 Terraform 이 같은 이름의 블록을 덮어쓰는 파일이다: provider "aws" 의 자격증명 무시 설정과, required_providers 의 aws 버전 고정."""
         p = Path(workdir) / OFFLINE_OVERRIDE_FILENAME
-        p.write_text(OFFLINE_OVERRIDE % {"region": self.region}, encoding="utf-8")
+        p.write_text(self.offline_override_text(), encoding="utf-8")
         return p
+
+    @staticmethod
+    def locked_provider_version(workdir: str | Path, provider: str = "hashicorp/aws") -> Optional[str]:
+        """init 뒤 .terraform.lock.hcl 에 적힌 provider 버전 (실제로 plan 에 쓰인 버전의 증거). 없으면 None."""
+        lock = Path(workdir) / LOCK_FILENAME
+        if not lock.exists():
+            return None
+        # registry.terraform.io/… (Terraform) 과 registry.opentofu.org/… (OpenTofu) 둘 다
+        m = re.search(r'provider\s+"[^"]*/' + re.escape(provider) + r'"\s*\{[^}]*?version\s*=\s*"([^"]+)"', lock.read_text(encoding="utf-8", errors="replace"), re.S)
+        return m.group(1) if m else None
 
     # -- 명령 --------------------------------------------------------------
     def _run(self, args: List[str], cwd: str | Path, timeout: int = 600) -> StepOutput:

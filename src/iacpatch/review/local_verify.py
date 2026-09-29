@@ -82,13 +82,13 @@ def run_local_verification(settings: Settings, tf_dir: Path, candidate_files: Di
 
     # ---------------------------------------------------------------- 원본(baseline) 캐시 준비
     trivy = TrivyAdapter(settings.trivy_bin)
-    tf = TerraformAdapter(settings.terraform_bin, settings.aws_region, template_dir=settings.tf_template_dir())
+    tf = TerraformAdapter(settings.terraform_bin, settings.aws_region, template_dir=settings.tf_template_dir(), provider_version=settings.aws_provider_version or None)
     info = tf.info()
     cache_root = settings.baseline_cache_dir()
     cache: Optional[Path] = None
     if cache_root is not None:
         key_tools = {"trivy": trivy.version() if trivy.available() else None, "trivy_skip_check_update": bool(trivy.skip_check_update),
-                     "terraform": (info.kind, info.version) if info.available else None}
+                     "terraform": (info.kind, info.version) if info.available else None, "aws_provider": settings.aws_provider_version or None}
         cache = cache_root / _baseline_key(Path(tf_dir), var_file, key_tools, settings.aws_region)
         cache.mkdir(parents=True, exist_ok=True)
 
@@ -165,6 +165,9 @@ def run_local_verification(settings: Settings, tf_dir: Path, candidate_files: Di
         cand_steps = tf.plan_pipeline(cand_wd, True, var_file=var_file, write_plan_json_to=out_dir / "plan_candidate.json")
         if tf.last_template_action:
             tools["terraform"]["provider_template"] = tf.last_template_action
+        # 실제로 쓰인 AWS provider 버전 (lock 파일) — 고정값과 다르면 plan 비교(V5)가 provider 차이를 패치 차이로 오인할 수 있다 (09-29 실측)
+        tools["terraform"]["aws_provider_pin"] = settings.aws_provider_version or None
+        tools["terraform"]["aws_provider"] = TerraformAdapter.locked_provider_version(cand_wd)
         layers.append(v3_validate(cand_steps, label))
         layers.append(v4_plan(cand_steps, label, True))
         if (out_dir / "plan_candidate.json").exists() and cand_steps.get("show") and cand_steps["show"].ok:
