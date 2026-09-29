@@ -1,0 +1,11 @@
+
+==== 2026-09-29T02:54:12 argv=['--console', '--report-only', '--no-open']
+trivy    : 없음  (trivy)  ← 없음: 해당 계층은 NOT_RUN
+terraform: 없음  (terraform)  ← 없음: 해당 계층은 NOT_RUN
+terraform 이 없으면 V3~V6 이 NOT_RUN 이 된다. scripts/setup_tools.bat 를 먼저 돌려라.
+설치 상태 검사 OK (python 3.14.7)
+
+================ 리포트 생성
+→ D:\a\cloud-security-capstone\cloud-security-capstone\report\index.html
+
+완료. 리포트: D:\a\cloud-security-capstone\cloud-security-capstone\report\index.html

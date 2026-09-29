@@ -1,0 +1,31 @@
+recovery for review 20260929-025325-9cf8ec → D:\a\cloud-security-capstone\cloud-security-capstone\infrastructure\sg-baseline
+step 1: restore pre-patch files (from run record) into the Terraform directory
+   - D:\a\cloud-security-capstone\cloud-security-capstone\infrastructure\sg-baseline\main.tf
+   - D:\a\cloud-security-capstone\cloud-security-capstone\infrastructure\sg-baseline\outputs.tf
+   - D:\a\cloud-security-capstone\cloud-security-capstone\infrastructure\sg-baseline\provider.tf
+   - D:\a\cloud-security-capstone\cloud-security-capstone\infrastructure\sg-baseline\variables.tf
+step 2: git commit as a revert (human)  →  step 3: terraform plan  →  step 4: terraform apply (human-approved)
+step 5: terraform plan -detailed-exitcode must report NO changes, and describe-security-groups is recorded → RECOVERED
+preview only (--execute not given). Nothing was changed.
+PR preparation for review 20260929-025325-e5ba80 (decision=LIGHT_REVIEW)
+  branch : iacpatch/pr-t-20260929-025325-e5ba80
+..................................................................................................................sssssss......................................................s...........................................
+----------------------------------------------------------------------
+Ran 219 tests in 15.759s
+  title  : [iacpatch] pr-t: AVD-AWS-0107 on aws_security_group.vulnerable_ssh
+  files  : main.tf -> infrastructure/sg-baseline/
+  body   : C:\Users\runneradmin\AppData\Local\Temp\iacpatch-pr-review-9i578wvn\20260929-025325-e5ba80\pr_body.md
+  script : C:\Users\runneradmin\AppData\Local\Temp\iacpatch-pr-review-9i578wvn\20260929-025325-e5ba80\pr_commands.sh
+preview only. Review pr_body.md, then either run the script above yourself or re-run with --execute.
+refusing to create a PR: review record not found: D:\a\cloud-security-capstone\cloud-security-capstone\data\reviews\no-such-review
+PR preparation for review 20260929-025325-e75c39 (decision=LIGHT_REVIEW)
+
+OK (skipped=8)
+  branch : iacpatch/pr-t-20260929-025325-e75c39
+  title  : [iacpatch] pr-t: AVD-AWS-0107 on aws_security_group.vulnerable_ssh
+  files  : main.tf -> infrastructure/sg-baseline/
+  body   : C:\Users\runneradmin\AppData\Local\Temp\iacpatch-pr-review-7o5xy7ho\20260929-025325-e75c39\pr_body.md
+  script : C:\Users\runneradmin\AppData\Local\Temp\iacpatch-pr-review-7o5xy7ho\20260929-025325-e75c39\pr_commands.sh
+preview only. Review pr_body.md, then either run the script above yourself or re-run with --execute.
+refusing to create a PR: review level is 'PENDING' (검증 미완(NOT_RUN/UNKNOWN 남음)); only LIGHT_REVIEW / FULL_REVIEW may become PRs. state=REVIEW_REQUIRED verification=PENDING review_level=PENDING
+refusing to create a PR: review level is 'BLOCKED' (정책 위반 또는 검증 FAIL); only LIGHT_REVIEW / FULL_REVIEW may become PRs. state=VALIDATION_FAILED verification=FAILED review_level=BLOCKED
