@@ -53,9 +53,12 @@ variable "ami_id" {
 }
 
 variable "instance_type" {
-  description = "EC2 크기. t3.micro 는 서울 리전에서 시간당 약 0.01 달러대(확인 필요) — 시연 1시간이면 수십 원."
+  description = <<-EOT
+    EC2 크기. 기본 t2.micro = 서울 리전 프리 티어 대상(12개월 월 750시간 무료). 2025-07 이후 새 계정(크레딧 플랜)은 어느 쪽이든 크레딧 안.
+    시연 1시간 × 2대 = 2시간 — 프리 티어 안이면 0원, 밖이어도 수십 원.
+  EOT
   type        = string
-  default     = "t3.micro"
+  default     = "t2.micro"
 }
 
 variable "bucket_name" {

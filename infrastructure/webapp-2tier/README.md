@@ -36,7 +36,7 @@ AWS 계정·실행 시연 순서는 [`docs/AWS_ACCESS_SETUP_B.md`](../../docs/AW
 | `iam.tf` | 역할, 정책, 연결, 인스턴스 프로필 | 권한 층 |
 | `outputs.tf` | — | 퍼블릭 IP·URL·SG ID·버킷 이름 출력 |
 
-AWS 공식 기본 패턴 "VPC with public and private subnets" 를 NAT 게이트웨이 없이(비용 0) 줄인 것이다. 이 저장소의 연구 대상 3유형(Security Group · Public S3 · IAM)이 전부 들어 있는 가장 작은 구성이라 골랐다.
+AWS 공식 기본 패턴 "VPC with public and private subnets" 를 NAT 게이트웨이 없이 줄인 것이다. **프리 티어 안**: t2.micro 2대(월 750시간 무료)·빈 S3·VPC/SG/IAM(무료) — 시연 1시간이면 0원 (`docs/AWS_ACCESS_SETUP_B.md` 0절). 이 저장소의 연구 대상 3유형(Security Group · Public S3 · IAM)이 전부 들어 있는 가장 작은 구성이라 골랐다.
 
 ## 돌리는 법
 

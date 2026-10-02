@@ -4,6 +4,21 @@
 
 **원칙**: 자격증명(액세스 키)은 파일·채팅·저장소에 절대 적지 않는다. 환경변수로만 쓰고, 시연 뒤 키를 비활성화한다. 이 저장소의 AI 세션은 AWS 에 접속하지 않고 apply 도 하지 않는다 — **apply 는 B 가 직접** 한다 (CLAUDE.md, 운영계획서 "사람 확인 없는 apply 금지").
 
+## 0. 돈이 드나? — 안 들게 설계했다 (B 질문 2026-10-02)
+
+이 아키텍처는 **프리 티어 안에 들어가도록 일부러** 만들었다: NAT 게이트웨이·RDS·로드밸런서 없음, EC2 는 t2.micro 2대(서울 프리 티어 대상, 월 750시간 무료), S3 는 빈 버킷(5GB 무료), VPC·서브넷·IGW·SG·IAM 은 원래 무료.
+
+| 계정 종류 | 시연 1시간 비용 | 조건 |
+|---|---|---|
+| 팀 샌드박스(운영계획서 "예산 0원, 프리 티어 안") — 만든 지 12개월 안 | **0원** | `instance_type` 기본값 t2.micro 그대로. 퍼블릭 IPv4 도 12개월 750시간 무료 |
+| 같은 계정인데 12개월 지남 | 퍼블릭 IPv4 1시간 ≈ 0.005달러(약 7원) + t2.micro 2시간 ≈ 0.023달러 `[확인 필요: 요금표]` | 수십 원. 예산 알림 1달러면 충분 |
+| 2025-07-15 이후 새 계정(프리 플랜) | **청구 0원** — 100달러 크레딧에서 0.05달러쯤 차감 | 유료 플랜으로 올리지 않는 한 요금이 발생하지 않음. 카드 등록은 본인 확인용 |
+| 학교 AWS Academy / AWS Educate 실습 계정 | 0원, 카드도 불필요 | **학과에 있는지 교수님께 확인** `[확인 필요]` |
+
+돈이 **나가는 경우**는 딱 셋: ① destroy 를 안 해서 며칠 켜 둠(2대 × 24시간 × 30일 = 1,440시간 > 750시간 무료) ② instance_type 을 큰 것으로 바꿈 ③ NAT·RDS 같은 걸 추가. 시연 뒤 `terraform destroy` + 예산 알림이 안전장치다.
+
+AWS 없이 하는 방법(LocalStack 같은 로컬 에뮬레이터)은 "AWS 에서 만들어지는지 보여 달라" 는 지시를 충족하지 못한다(EC2 가 가짜, Docker 설치 필요). 계정이 끝내 안 될 때의 임시 대체로만, 그때도 "에뮬레이터" 라고 밝힌다.
+
 ## 1. 계정 — 두 경로 중 하나
 
 ### 경로 A (권장): 팀 샌드박스 계정에 B 의 IAM 사용자 만들기
@@ -93,7 +108,7 @@ terraform output                 # web_url 등 출력
 ```powershell
 terraform destroy                # "yes" 입력. "Destroy complete! Resources: 17 destroyed."
 ```
-- 안 지우면 EC2 2대 + 퍼블릭 IPv4 가 시간당 과금된다 (t3.micro 서울 시간당 1~2센트 수준 + IPv4 시간당 0.005달러 `[확인 필요: 요금표]`; 크레딧 안이면 청구는 없지만 크레딧이 줄어든다).
+- 안 지우면 EC2 2대 + 퍼블릭 IPv4 가 계속 돈다. 프리 티어(월 750시간) 안이면 며칠은 0원이지만 한 달 내내면 넘친다(2대 × 720시간 = 1,440시간). 크레딧 플랜이면 크레딧이 줄어든다.
 - destroy 가 S3 에서 막히면: 버킷에 객체가 있어도 `force_destroy = true` 라 지워진다. 그래도 막히면 콘솔에서 버킷 비우고 다시.
 - 시연이 끝난 키는 IAM → 보안 자격 증명 → 액세스 키 → **비활성화**. 다음 시연 때 다시 활성화.
 
@@ -102,6 +117,7 @@ terraform destroy                # "yes" 입력. "Destroy complete! Resources: 1
 | 증상 | 뜻 | 할 일 |
 |---|---|---|
 | `InvalidAMIID.NotFound` / `InvalidAMIID.Malformed` | ami_id 가 자리표시자 그대로거나 다른 리전 값 | terraform.tfvars 의 ami_id 를 서울 리전 AL2023 ID 로 |
+| `InvalidParameterValue ... t2.micro` 류 | 리전·AMI 가 t2.micro 를 지원하지 않음(드묾) | `instance_type = "t3.micro"` 로 (크레딧 플랜이면 비용 차이 무시 가능) |
 | `BucketAlreadyExists` | 버킷 이름이 전 세계 누군가와 겹침 | bucket_name 을 `iacpatch-webapp-assets-<이니셜><날짜>` 로. (IAM intent 의 ARN 도 같이 — RESULTS.md 참고) |
 | `AccessDenied` + 액션 이름 (예: `iam:CreateInstanceProfile`) | IAM 사용자 권한 부족 | 1절 인라인 정책에 그 액션 추가 (A 에게) |
 | `aws_s3_bucket_policy` 에서 `AccessDenied` 인데 위 권한은 다 있음 | **계정 수준** S3 퍼블릭 액세스 차단이 켜져 있어 퍼블릭 정책이 거부됨 | 끄지 않는다. "계정 가드레일이 퍼블릭 정책을 막았다" 로 기록하고 S3 부분만 콘솔 캡처로 대체 — 이것도 결과다 |
