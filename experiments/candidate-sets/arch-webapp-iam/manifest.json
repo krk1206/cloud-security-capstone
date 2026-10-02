@@ -1,0 +1,75 @@
+{
+  "set_id": "arch-webapp-iam",
+  "_note": "지도교수 9/29 지시의 '다음 단계' — IAM 축. 원본 = infrastructure/webapp-2tier, 대상 finding = aws_iam_policy.web_assets 의 s3:* on * (AVD-AWS-0345, iam.tf). 후보는 iam.tf 전체 대체본. 규칙 기반 1 + seeded 5 (개발 중 작성한 예제, LLM 아님). expected 는 2026-10-02 실행 전 고정 (D-3/D-4). 실측과 다르면 불일치로 기록한다.",
+  "week4_label_replay": false,
+  "_week4_note": "4주차 라벨 표(25건)는 2026-09-22 고정 세트만. 이 세트의 등급 일치는 results.md 로 잰다.",
+  "tf_dir": "infrastructure/webapp-2tier",
+  "trivy_json": "experiments/arch-webapp-2tier/trivy-scan.json",
+  "rule": "AVD-AWS-0345",
+  "resource": "aws_iam_policy.web_assets",
+  "intent": "experiments/candidate-sets/arch-webapp-iam/intents/arch-webapp-web-role.json",
+  "local_tools": true,
+  "candidates": [
+    {
+      "id": "rule-based",
+      "candidate": "rule_based",
+      "source": "rule_based",
+      "expected": "correct",
+      "expected_reason": "Statement 1개·리터럴 Action/Resource → intent 의 approved_permissions(1개)로 통째 치환(지원). V1 PASS·V6 PASS",
+      "note": "규칙 기반 생성기 (LLM 아님). 리터럴 ARN 을 적는다",
+      "expected_risk": "MEDIUM",
+      "expected_risk_basis": "IAM 리소스 변경 → medium floor (점수 무관 최소 MEDIUM). 신뢰 정책·삭제·교체 없음",
+      "observed_2026-10-02": "실측 NOT_SUPPORTED(INFO_INSUFFICIENT) — 생성기가 aws_iam_policy 블록 안의 name = \"${var.project}-...\" 를 보고 '변수 경유 정책' 으로 거부했다(검사 범위가 policy 속성이 아니라 블록 전체). expected 는 실행 전 고정값이라 바꾸지 않는다(D-4). 기준을 policy 속성으로 좁힐지는 팀 결정(docs/DECISIONS.md D-16 후보) — 규칙 기반 baseline 의 한계로 기록"
+    },
+    {
+      "id": "correct-least-privilege",
+      "candidate": "manual:candidates/correct-least-privilege.tf",
+      "source": "seeded",
+      "expected": "correct",
+      "expected_reason": "최소 권한 + ARN 을 var.bucket_name 보간으로 적음(규칙 기반은 못 만드는 형태). plan 에서 값이 확정되므로 오라클 PASS 예상. V1 PASS·V6 PASS",
+      "note": "개발 중 작성한 seeded 예제 (2026-10-02, B 의 Claude 세션 작성·B 검수) — LLM 출력 아님",
+      "expected_risk": "MEDIUM",
+      "expected_risk_basis": "IAM medium floor"
+    },
+    {
+      "id": "deceptive-enumerated-actions",
+      "candidate": "manual:candidates/deceptive-enumerated-actions.tf",
+      "source": "seeded",
+      "expected": "deceptive",
+      "expected_reason": "s3:* 를 풀어서 나열(Put/Delete/PutBucketPolicy 포함) + Resource *. 리터럴 s3:* 만 없앴다 → V1 PASS. 오라클 EXCESS → V6 FAIL",
+      "note": "개발 중 작성한 seeded 예제 (2026-10-02)",
+      "expected_risk": "MEDIUM",
+      "expected_risk_basis": "IAM medium floor"
+    },
+    {
+      "id": "deceptive-resource-star",
+      "candidate": "manual:candidates/deceptive-resource-star.tf",
+      "source": "seeded",
+      "expected": "deceptive",
+      "expected_reason": "액션은 최소 권한, Resource 는 * 그대로 → V1 PASS. 오라클 EXCESS(리소스) → V6 FAIL",
+      "note": "개발 중 작성한 seeded 예제 (2026-10-02)",
+      "expected_risk": "MEDIUM",
+      "expected_risk_basis": "IAM medium floor"
+    },
+    {
+      "id": "breaks-required-wrong-bucket",
+      "candidate": "manual:candidates/breaks-required-wrong-bucket.tf",
+      "source": "seeded",
+      "expected": "breaks_required",
+      "expected_reason": "최소 권한이지만 버킷이 other-assets → EXCESS(승인 밖) + MISSING(필수 권한) → V6 FAIL",
+      "note": "개발 중 작성한 seeded 예제 (2026-10-02)",
+      "expected_risk": "MEDIUM",
+      "expected_risk_basis": "IAM medium floor"
+    },
+    {
+      "id": "unapproved-trust-policy-open",
+      "candidate": "manual:candidates/unapproved-trust-policy-open.tf",
+      "source": "seeded",
+      "expected": "unapproved",
+      "expected_reason": "정책은 고치면서 assume_role_policy 의 Principal 을 * 로 → 신뢰 정책 변경은 정책 위반(POLICY_BLOCKED) 이고 위험도는 hard HIGH",
+      "note": "개발 중 작성한 seeded 예제 (2026-10-02)",
+      "expected_risk": "HIGH",
+      "expected_risk_basis": "hard_high: iam_trust_policy_changed"
+    }
+  ]
+}

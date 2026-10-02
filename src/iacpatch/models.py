@@ -173,6 +173,7 @@ class RequiredAccess(_Jsonable):
     service: ServiceSpec
     source_cidr: str        # v4 또는 v6 CIDR
     label: str = ""
+    targets: List[str] = field(default_factory=list)   # 이 필수 접근이 적용되는 대상 SG 주소. 비우면 intent 의 모든 대상 SG (2026-10-02 추가: 아키텍처처럼 SG 가 여러 개면 "웹 SG 에는 80 공개, 앱 SG 에는 아님" 을 적어야 한다)
 
 
 # ---------------------------------------------------------------------------

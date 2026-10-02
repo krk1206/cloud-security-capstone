@@ -26,7 +26,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SET_DIR = ROOT / "experiments" / "candidate-sets" / "eval-claude-code"
 sys.path.insert(0, str(ROOT / "scripts"))
-from cc_cases import resolve  # noqa: E402
+from cc_cases import case_info  # noqa: E402
 EXPECTED = ["correct", "deceptive", "breaks_required", "unapproved", "unknown", "invalid"]
 _FENCE_RE = re.compile(r"```(?:hcl|terraform|tf)?[ \t]*\n(.*?)```", re.DOTALL)
 
@@ -48,9 +48,15 @@ def main() -> int:
     ap.add_argument("--note", default="", help="날짜·대화 식별·모델 표시 (Claude Code 화면에 보이는 대로)")
     ap.add_argument("--yes", action="store_true", help="diff 확인 질문 없이 등록")
     args = ap.parse_args()
-    kind, name, cdir, tf_dir, intent_rel, rule = resolve(args.case)
+    info = case_info(args.case)
+    kind, cdir, tf_dir, intent_rel, rule = info["kind"], info["cdir"], info["tf_dir"], info["intent_rel"], info["rule"]
     if not cdir.is_dir():
         print(f"케이스 없음: {cdir}"); return 2
+    # 원본 파일 = Trivy finding 이 가리키는 파일 (단일 파일 시나리오는 main.tf, 아키텍처는 security_groups.tf / iam.tf)
+    sys.path.insert(0, str(ROOT / "src"))
+    from iacpatch.review.inputs import list_findings, load_trivy_report  # noqa: E402
+    _fs = [f for f in list_findings(load_trivy_report(ROOT / info["trivy_json"])) if f.rule_id == rule and (not info["resource"] or f.resource == info["resource"])]
+    target_file = _fs[0].filename if _fs else "main.tf"
     src = Path(args.response)
     if not src.exists():
         print(f"응답 파일 없음: {src}"); return 2
@@ -64,8 +70,8 @@ def main() -> int:
     dst = SET_DIR / "candidates" / f"{cid}.tf"
     if dst.exists():
         print(f"이미 있음: {dst} — 다른 --rep 번호를 써라 (덮어쓰지 않는다)"); return 2
-    original = (cdir / "main.tf").read_text(encoding="utf-8")
-    diff = list(difflib.unified_diff(original.splitlines(), tf.splitlines(), "original/main.tf", f"{cid}.tf", lineterm=""))
+    original = (cdir / target_file).read_text(encoding="utf-8")
+    diff = list(difflib.unified_diff(original.splitlines(), tf.splitlines(), f"original/{target_file}", f"{cid}.tf", lineterm=""))
     print("\n".join(diff) if diff else "(원본과 동일 — expected 는 invalid 여야 한다)")
     print()
     print(f"expected={args.expected}  source=claude-code  sha256={hashlib.sha256(tf.encode('utf-8')).hexdigest()[:12]}")
@@ -79,11 +85,14 @@ def main() -> int:
     m = json.loads(man.read_text(encoding="utf-8"))
     if any(c["id"] == cid for c in m["candidates"]):
         print(f"manifest 에 이미 {cid} 가 있다"); return 2
-    m["candidates"].append({
-        "id": cid, "tf_dir": tf_dir, "trivy_json": f"{tf_dir}/trivy-scan.json", "intent": intent_rel, "rule": rule,
+    entry = {
+        "id": cid, "tf_dir": tf_dir, "trivy_json": info["trivy_json"], "intent": intent_rel, "rule": rule,
         "candidate": f"manual:candidates/{cid}.tf", "source": "claude-code", "expected": args.expected, "kind": kind,
         "note": (args.note or "Claude Code 응답을 사람이 저장") + f" | 원본 응답: {src.name}",
-    })
+    }
+    if info["resource"]:
+        entry["resource"] = info["resource"]
+    m["candidates"].append(entry)
     man.write_text(json.dumps(m, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     # 원본 응답도 보관 (나중에 "정말 모델이 이렇게 답했나" 확인용)
     keep = SET_DIR / "responses"; keep.mkdir(exist_ok=True)

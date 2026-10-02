@@ -18,6 +18,8 @@
 .iacpatch-work/
 __pycache__/
 data/reviews/*
+data/arch/*
+!data/arch/README.md
 data/cache/
 data/runs/*
 experiments/run_experiments.log

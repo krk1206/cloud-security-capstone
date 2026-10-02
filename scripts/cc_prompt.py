@@ -3,7 +3,8 @@
 
     python3 scripts/cc_prompt.py 00-baseline          # 화면에 출력 (복사해서 Claude Code 에 붙여넣기)
     python3 scripts/cc_prompt.py iam-00-literal-list  # IAM 케이스 (scenarios/eval/iam-probe, 룰 AVD-AWS-0345)
-    python3 scripts/cc_prompt.py --all                # 케이스마다 prompts/<case>.md 파일로 저장 (SG 9 + IAM 5)
+    python3 scripts/cc_prompt.py arch-sg              # B 의 아키텍처(infrastructure/webapp-2tier) 웹 SG 케이스 (2026-10-02)
+    python3 scripts/cc_prompt.py --all                # 케이스마다 prompts/<case>.md 파일로 저장 (SG 9 + IAM 5 + arch 2)
 
 - finding 위치(리소스·줄)는 A 의 Trivy 스캔(scenarios/eval/a-probe/<case>/trivy-scan.json)에서 읽는다. 사람이 적지 않는다.
 - 승인 출처는 intent 파일에서 읽는다 (팀 결정값). 프롬프트에는 규칙 기반 생성기가 받는 것과 같은 정보만 들어간다.
@@ -25,7 +26,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 from iacpatch.review.inputs import list_findings, load_trivy_report  # noqa: E402
 sys.path.insert(0, str(ROOT / "scripts"))
-from cc_cases import all_cases, resolve  # noqa: E402
+from cc_cases import all_cases, case_info  # noqa: E402
 
 SET_DIR = ROOT / "experiments" / "candidate-sets" / "eval-claude-code"
 
@@ -56,14 +57,17 @@ TEMPLATE_IAM = """다음 Terraform 파일에서 Trivy 가 아래 설정 오류�
 
 def build(case: str) -> tuple[str, str]:
     """returns (prompt, status). status: 'ok' | 'not_triggered' | 'ambiguous'."""
-    kind, name, cdir, _tf_dir, intent_rel, rule = resolve(case)
+    info = case_info(case)
+    kind, cdir, intent_rel, rule = info["kind"], info["cdir"], info["intent_rel"], info["rule"]
     if not cdir.is_dir():
         raise SystemExit(f"케이스 없음: {cdir}")
-    report = load_trivy_report(cdir / "trivy-scan.json")
-    findings = [f for f in list_findings(report) if f.rule_id == rule]
+    report = load_trivy_report(ROOT / info["trivy_json"])
+    findings = [f for f in list_findings(report) if f.rule_id == rule and (not info["resource"] or f.resource == info["resource"])]
     if not findings:
         return "", "not_triggered"
-    if len(findings) > 1:
+    # 같은 리소스·같은 줄을 가리키는 finding 이 여럿(IAM 0345 는 정책/역할 메시지 2개)이면 하나로 본다
+    distinct = {(f.resource, f.filename, f.start_line) for f in findings}
+    if len(distinct) > 1:
         return "", "ambiguous"
     f = findings[0]
     intent = json.loads((ROOT / intent_rel).read_text(encoding="utf-8"))

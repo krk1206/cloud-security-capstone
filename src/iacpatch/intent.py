@@ -18,7 +18,8 @@ Intent 는 Trivy 와 무관하게 사람이 작성한다. 형식은 JSON (policy
       ],
       "required_access": [
         {"label": "admin-ssh", "direction": "ingress", "protocol": "tcp", "from_port": 22, "to_port": 22,
-         "source_cidr": "203.0.113.0/24"}
+         "source_cidr": "203.0.113.0/24",
+         "targets": ["aws_security_group.vulnerable_ssh"]}   # 선택. 비우면 모든 대상 SG 에 요구 (SG 가 여럿인 아키텍처용, 2026-10-02)
       ]
     }
 
@@ -167,7 +168,11 @@ def parse_intent(data: Dict[str, Any], path: str = "") -> IntentSpec:
             n = parse_cidr(str(src))
         except CidrParseError as e:
             raise IntentError(f"{where}: {e}")
-        required.append(RequiredAccess(svc, str(n), str(r.get("label", ""))))
+        r_targets = [str(t) for t in (r.get("targets") or [])]
+        for t in r_targets:
+            if t not in [str(x) for x in sgs]:
+                raise IntentError(f"{where}: targets 의 {t!r} 가 targets.security_groups 에 없다")
+        required.append(RequiredAccess(svc, str(n), str(r.get("label", "")), r_targets))
     return IntentSpec(
         intent_id=intent_id,
         intent_version=str(data.get("intent_version", "1")),

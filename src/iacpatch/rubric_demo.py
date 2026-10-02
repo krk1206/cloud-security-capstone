@@ -258,6 +258,8 @@ def label_agreement(root: Optional[Path] = None) -> Dict[str, Any]:
         except ValueError:
             continue
         set_id = man.get("set_id") or m.parent.name
+        if man.get("week4_label_replay") is False:     # 4주차 라벨 표(25건, 2026-09-22 고정) 밖의 세트 — 자기 results.md 에서 도구 있는 실행으로 잰다
+            continue
         for c in man.get("candidates") or []:
             exp = c.get("expected_risk")
             if not exp:
@@ -328,6 +330,8 @@ def labeled_matrix(root: Optional[Path] = None, out_dir: Optional[Path] = None) 
         man = json.loads(m.read_text(encoding="utf-8"))
         set_dir = m.parent
         set_id = man.get("set_id") or set_dir.name
+        if man.get("week4_label_replay") is False:     # plan 쌍 fixture 가 없는 새 세트(아키텍처 등)는 4주차 25건 재계산에 넣지 않는다
+            continue
 
         def pick(c, key, default=None):
             return c[key] if key in c else man.get(key, default)

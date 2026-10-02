@@ -1,5 +1,7 @@
 # 구현 현황 (2026-09-13 기준)
 
+> 2026-10-02 아키텍처 과제(지도교수 9/29): `infrastructure/webapp-2tier/` 17 리소스 → Trivy 18 finding → AI 해석 등록(모델 응답 0건) → 패치·검증 세트 SG 7/7·IAM 5/6 — [`experiments/arch-webapp-2tier/RESULTS.md`](../experiments/arch-webapp-2tier/RESULTS.md). AWS apply·V7/V8 은 여전히 0회.
+>
 > 2026-09-15 B·C 3~4주차 작업(도구·API 없이 파일 입력만으로 동작하는 `iacpatch review` 흐름)은 [`BC_WEEK3-4_STATUS.md`](BC_WEEK3-4_STATUS.md) 에 따로 정리했다.
 
 "실제로 실행한 것" 과 "코드는 있으나 실행하지 못한 것" 을 구분한다. mock 성공은 API 연동 성공이 아니고, 스캐너 통과는 보안 검증 성공이 아니다.

@@ -1,0 +1,83 @@
+{
+  "intent_version": "1",
+  "intent_id": "arch-webapp-sg",
+  "status": "active",
+  "description": "infrastructure/webapp-2tier 의 SG 두 개(web, app)에 대한 의도. SSH(22)는 승인 출처 10.0.0.0/8(팀 결정값 D-2)에서만. 앱 포트(8080)는 웹 SG 가 붙은 인스턴스에서만(참조 SG). HTTP(80)는 인터넷 전체에서 들어와야 한다(공개 웹 서버 — 이것이 깨지면 정상 기능이 깨진 것). 2026-10-02 실행 전 고정.",
+  "target_dir": "infrastructure/webapp-2tier",
+  "targets": {
+    "security_groups": [
+      "aws_security_group.web",
+      "aws_security_group.app"
+    ],
+    "attachment_points": []
+  },
+  "guarded_services": [
+    {
+      "label": "ssh",
+      "direction": "ingress",
+      "protocol": "tcp",
+      "from_port": 22,
+      "to_port": 22,
+      "approved_sources": {
+        "cidrs_v4": [
+          "10.0.0.0/8"
+        ],
+        "cidrs_v6": [],
+        "security_group_refs": [],
+        "prefix_list_refs": []
+      }
+    },
+    {
+      "label": "rdp",
+      "direction": "ingress",
+      "protocol": "tcp",
+      "from_port": 3389,
+      "to_port": 3389,
+      "approved_sources": {
+        "cidrs_v4": [],
+        "cidrs_v6": [],
+        "security_group_refs": [],
+        "prefix_list_refs": []
+      }
+    },
+    {
+      "label": "app-8080",
+      "direction": "ingress",
+      "protocol": "tcp",
+      "from_port": 8080,
+      "to_port": 8080,
+      "approved_sources": {
+        "cidrs_v4": [],
+        "cidrs_v6": [],
+        "security_group_refs": [
+          "aws_security_group.web"
+        ],
+        "prefix_list_refs": []
+      }
+    }
+  ],
+  "required_access": [
+    {
+      "label": "admin-ssh",
+      "direction": "ingress",
+      "protocol": "tcp",
+      "from_port": 22,
+      "to_port": 22,
+      "source_cidr": "10.0.0.0/8",
+      "targets": [
+        "aws_security_group.web"
+      ]
+    },
+    {
+      "label": "public-http",
+      "direction": "ingress",
+      "protocol": "tcp",
+      "from_port": 80,
+      "to_port": 80,
+      "source_cidr": "0.0.0.0/0",
+      "targets": [
+        "aws_security_group.web"
+      ]
+    }
+  ]
+}

@@ -246,7 +246,11 @@ def _evaluate_scope(scope_id: str, scope_kind: str, sg_addrs: List[str], world: 
         ))
 
     required: List[RequiredEval] = []
+    scope_sgs = {_normalize_sg_ref(a, aliases) for a in sg_addrs} | set(sg_addrs)
     for req in intent.required_access:
+        # targets 가 적힌 필수 접근은 그 SG 가 이 범위에 있을 때만 요구한다 (웹 SG 의 '80 공개' 를 앱 SG 에 요구하지 않도록)
+        if req.targets and not any(_normalize_sg_ref(t, aliases) in scope_sgs or t in scope_sgs for t in req.targets):
+            continue
         svc = req.service
         v4, v6, sg_refs, unknown, partial, contributing, full_v4, full_v6 = _collect_sources(rules, svc, world, aliases)
         unknown = list(unknown) + inline_unknown_dirs.get(svc.direction, [])

@@ -85,6 +85,18 @@ python3 scripts/cc_prompt.py --all        # experiments/candidate-sets/eval-clau
 - 기대 라벨 대비 일치 수는 **검증 계층이 라벨대로 판정했나** 이지 LLM 점수가 아니다. `seeded` 는 우리가 만든 패턴이므로 "알려진 패턴 탐지 능력" 으로만 쓴다.
 - 발표에 적을 것: 후보 수·출처 분포·반복 횟수·프롬프트 버전·도구 버전·승인 출처(D-2)·라벨 고정 시점·NOT_RUN 건수·"배포 전 결과" 명시. 상용 도구 비교는 안 했다고 쓴다.
 
+## 3.5 아키텍처 과제 (B, 2026-10-02 — 지도교수 9/29 지시: Terraform → Trivy → AI 해석 → 패치·검증)
+
+| 단계 | 명령 (팀 PC, 저장소 폴더에서) | 결과 |
+|---|---|---|
+| ① 점검 (자격증명 없음, 아무것도 안 만듦) | `IaCPatch-console.exe --exec scripts/arch_scan.py` | `data\arch\<id>\findings.md` — finding 표(심각도·룰·리소스·파일:줄·CIS·파이프라인 범위), `plan.json`, `interpret_prompt.md` |
+| ② AI 해석 (사람이 세션을 염) | `interpret_prompt.md` 내용을 Claude Code 새 세션에 붙여 넣기 → 응답 JSON 을 `응답.json` 으로 저장 → `IaCPatch-console.exe --exec scripts/arch_interpret_add.py data\arch\<id> 응답.json --note "날짜·모델"` | `interpretation.md` — 지어낸 finding / 누락 / CIS 불일치 표시 |
+| ③ 패치 → 검증 | 화면 **5주차 탭** 에서 세트 `arch-webapp-sg` 또는 `arch-webapp-iam` 선택 → 후보(또는 규칙 기반 생성) → 실행. 콘솔: `IaCPatch-console.exe --exec scripts/run_candidate_set.py experiments/candidate-sets/arch-webapp-sg/manifest.json --local-tools` | V1~V6 표·위험도·검토 수준·PR 미리보기, 세트 폴더 `results.md` |
+| ④ Claude Code 후보 | `IaCPatch-console.exe --exec scripts/cc_prompt.py arch-sg` (또는 `arch-iam`) → 응답 저장 → `--exec scripts/cc_add.py arch-sg 응답.md --rep 1 --expected <라벨>` | eval-claude-code 세트에 등록, ③ 과 같은 검증 |
+| ⑤ 실제 AWS 에 만들기 (사람) | `docs/AWS_ACCESS_SETUP_B.md` 4절 순서 (`terraform init/validate/plan/apply`, 끝나면 `destroy`) | 콘솔 캡처 5장, V7/V8 첫 기록(A 와) |
+
+원본 Terraform: `infrastructure/webapp-2tier/` (설명 `docs/ARCH_WEBAPP_2TIER.md`, 문법 `docs/TERRAFORM_STUDY_B.md`, 실측 `experiments/arch-webapp-2tier/RESULTS.md`).
+
 ## 4. 선택: 그 다음 단계 (이 문서 범위 밖)
 
 - **PR 만들기** (C): 실험 기록에서 바로 — `python -m iacpatch pr --review <data/reviews id>` 미리보기(명령만 출력, 원본 안 건드림) → `pr_body.md` 확인 → GitHub 권한 있는 PC 에서 `--execute` (또는 출력된 `pr_commands.sh` 를 직접). 검토 수준이 LIGHT_REVIEW/FULL_REVIEW 인 기록만 받고 BLOCKED/PENDING 은 거부한다. 첫 후보는 B PC 실측의 `eval-a-probe-rule/00-baseline`(LIGHT_REVIEW) 기록이 적당하다. 실험 숫자에는 필요 없다.
