@@ -79,11 +79,11 @@ def validate_shape(doc: Dict[str, Any]) -> List[str]:
         for k in REQUIRED_FINDING_FIELDS:
             if not str(f.get(k) or "").strip():
                 errs.append(f"findings[{i}] ({f.get('rule_id')}@{f.get('resource')}): '{k}' 없음")
-        fr = str(f.get("fix_risk") or "").upper()
-        if fr and fr not in FIX_RISK:
+        fr = str(f.get("fix_risk") or "").strip().upper()
+        if fr and (fr.split()[0].strip("`\"'") if fr.split() else fr) not in FIX_RISK:
             errs.append(f"findings[{i}]: fix_risk 는 LOW/MEDIUM/HIGH 중 하나 ({fr!r})")
-        io = str(f.get("intended_or_incidental") or "").lower()
-        if io and io.split()[0] not in INTENDED:
+        io = str(f.get("intended_or_incidental") or "").strip().lower()
+        if io and (io.split()[0].strip("`\"'") if io.split() else io) not in INTENDED:
             errs.append(f"findings[{i}]: intended_or_incidental 은 intended/incidental/unknown 중 하나 ({io!r})")
     return errs
 

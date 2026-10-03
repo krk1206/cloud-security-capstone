@@ -27,7 +27,7 @@
 | 7 | HIGH | AVD-AWS-0345 | aws_iam_policy.web_assets | iam.tf:22 | IAM 정책이 `s3:*` 허용 | **의도적 (IAM 과다 권한)** — 파이프라인 대상 |
 | 8 | HIGH | AVD-AWS-0345 | aws_iam_policy.web_assets | iam.tf:22 | 역할이 `s3:*` 정책 사용 (같은 룰, 두 번째 메시지) | 의도적 (7과 같은 원인) |
 | 9 | HIGH | AVD-AWS-0164 | aws_subnet.public | network.tf:29 | 서브넷이 퍼블릭 IP 자동 부여 | 부수 (공개 웹 서버 설계상 필요) |
-| 10 | HIGH | AVD-AWS-0107 | aws_security_group.web | security_groups.tf:23 | SSH(22) 가 0.0.0.0/0 에 개방 | **의도적 (SG 과다 개방)** — 파이프라인 대상, CIS 직접 대응(v1.2 4.1·4.2, v3.0 5.2) |
+| 10 | HIGH | AVD-AWS-0107 | aws_security_group.web | security_groups.tf:23 | SSH(22) 가 0.0.0.0/0 에 개방 | **의도적 (SG 과다 개방)** — 파이프라인 대상, CIS 직접 대응(v1.2 4.1·4.2, v3.0 5.2 — 팀 매핑표 기준, 원문 대조 전) |
 | 11 | HIGH | AVD-AWS-0132 | aws_s3_bucket.assets | storage.tf:4 | KMS 고객 관리 키 미사용 | 부수 |
 | 12 | HIGH | AVD-AWS-0086 | aws_s3_bucket_public_access_block.assets | storage.tf:17 | 퍼블릭 ACL 차단 안 함 | **의도적 (Public S3)** — 파이프라인 밖(S3 오라클 미구현, D-10 6~7주차) |
 | 13 | HIGH | AVD-AWS-0087 | 〃 | storage.tf:18 | 퍼블릭 정책 차단 안 함 | 의도적 (Public S3) |

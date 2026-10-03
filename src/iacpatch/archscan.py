@@ -291,31 +291,51 @@ def render_findings_md(res: Dict[str, Any]) -> str:
     return "\n".join(L)
 
 
+# 예시는 **이 아키텍처와 무관한 가상의 finding** 으로 적는다 — 예시가 답(어느 finding 이 의도적인지, Trivy 가 못 잡는 것이 무엇인지)을 흘리면 해석 실험이 아니다.
 INTERPRETATION_SCHEMA = {
     "schema": "iacpatch-arch-interpretation-v1",
-    "scan_id": "<summary.json 의 scan_id 그대로>",
-    "model": "<화면에 보이는 모델 이름>",
+    "scan_id": "20261002-120000",
+    "model": "Claude (화면에 보이는 모델 이름)",
     "findings": [
         {
-            "rule_id": "AVD-AWS-0107",
-            "resource": "aws_security_group.web",
-            "file": "security_groups.tf",
-            "line": 23,
-            "what": "<무엇이 잘못됐는지 한두 문장, 설정값을 인용>",
-            "why_risky": "<이 설정이 그대로 배포되면 생기는 일>",
-            "attack_path": "<공격자가 이용하는 경로, 모르면 null>",
-            "intended_or_incidental": "intended | incidental | unknown  (이 아키텍처의 목적상 꼭 필요한 설정인데 스캐너가 잡은 것이면 incidental)",
-            "fix": "<Terraform 에서 어떻게 고치는지, 속성 이름까지>",
-            "fix_risk": "LOW | MEDIUM | HIGH  (고치면 정상 기능이 깨질 가능성)",
-            "cis_section": "<CIS AWS Foundations Benchmark 항목 번호, 확실하지 않으면 null>",
-            "confidence_note": "<근거가 약한 부분>",
+            "rule_id": "AVD-AWS-0124",
+            "resource": "aws_security_group.example",
+            "file": "main.tf",
+            "line": 12,
+            "what": "ingress 규칙에 description 이 없어 어떤 용도의 허용인지 코드만 보고 알 수 없다.",
+            "why_risky": "검토자가 규칙의 목적을 확인할 수 없어 불필요한 허용이 남아도 알아채기 어렵다.",
+            "attack_path": None,
+            "intended_or_incidental": "incidental",
+            "fix": "main.tf 의 해당 ingress 블록에 description = \"<용도>\" 를 추가한다.",
+            "fix_risk": "LOW",
+            "cis_section": None,
+            "confidence_note": "위생 규칙이라 직접적인 공격 경로는 없다.",
         }
     ],
     "not_flagged_but_risky": [
-        {"resource": "<리소스>", "file": "<파일>", "line": 0, "what": "<Trivy 가 잡지 않았지만 위험하다고 보는 설정>"}
+        {"resource": "aws_db_instance.example", "file": "main.tf", "line": 40,
+         "what": "(예시) publicly_accessible = true 인데 스캐너 목록에 없다면 여기에 적는다. 없으면 빈 리스트."}
     ],
-    "summary": {"fix_order": ["<rule_id@resource 를 고칠 순서>"], "overall": "<세 문장 이내 총평>"},
+    "summary": {"fix_order": ["AVD-AWS-0124@aws_security_group.example"], "overall": "세 문장 이내 총평."},
 }
+
+FIELD_DOCS = [
+    ("schema", "고정 문자열 `iacpatch-arch-interpretation-v1`"),
+    ("scan_id", "위 '스캔 정보' 의 scan_id 그대로"),
+    ("model", "응답을 만든 모델 이름(화면 표시 그대로)"),
+    ("findings[].rule_id / resource / file / line", "Trivy 표의 값을 **그대로 복사** (표에 없는 finding 금지, 표의 finding 누락 금지)"),
+    ("findings[].what", "무엇이 잘못됐는지 한두 문장. 설정값(속성 이름·값)을 인용"),
+    ("findings[].why_risky", "이 설정이 그대로 배포되면 생기는 일"),
+    ("findings[].attack_path", "공격자가 이용하는 경로. 모르면 null"),
+    ("findings[].intended_or_incidental", "`intended`(이 코드의 설계상 들어간 설정) / `incidental`(기본값을 스캐너가 잡은 것) / `unknown` 중 **하나만**"),
+    ("findings[].fix", "Terraform 에서 어떻게 고치는지 — 파일·속성 이름까지"),
+    ("findings[].fix_risk", "`LOW` / `MEDIUM` / `HIGH` 중 **하나만** — 고치면 정상 기능이 깨질 가능성"),
+    ("findings[].cis_section", "CIS AWS Foundations Benchmark 항목 번호(예: \"5.2\"). 확실하지 않으면 null"),
+    ("findings[].confidence_note", "근거가 약한 부분. 없으면 null"),
+    ("not_flagged_but_risky[]", "Trivy 가 잡지 않았지만 위험하다고 보는 설정 (없으면 빈 리스트)"),
+    ("summary.fix_order", "`rule_id@resource` 를 고칠 순서대로"),
+    ("summary.overall", "세 문장 이내 총평"),
+]
 
 
 def render_prompt(res: Dict[str, Any], tf_dir: Path) -> str:
@@ -363,10 +383,18 @@ def render_prompt(res: Dict[str, Any], tf_dir: Path) -> str:
         L.append(text.rstrip("\n"))
         L.append("```")
         L.append("")
-    L.append("## 출력 JSON 스키마 (이 형식 그대로, 설명 문장 없이 JSON 만)")
+    L.append("## 출력 형식 — 아래 예시와 같은 구조의 JSON 하나 (예시 값은 형식을 보여 주는 것이고, 내용은 네가 분석한 것으로 채운다)")
     L.append("")
     L.append("```json")
     L.append(json.dumps(INTERPRETATION_SCHEMA, ensure_ascii=False, indent=2))
     L.append("```")
+    L.append("")
+    L.append("필드 설명:")
+    L.append("")
+    for k, v in FIELD_DOCS:
+        L.append(f"- `{k}`: {v}")
+    L.append("")
+    L.append(f"Claude Code 안에서 돌고 있다면 결과를 `data/arch/{res['scan_id']}/response.json` 파일로 저장해도 된다 (다른 파일은 만들거나 고치지 마라). "
+             "그러면 등록은 `python scripts/arch_interpret_add.py data/arch/" + str(res['scan_id']) + " data/arch/" + str(res['scan_id']) + "/response.json` 이다.")
     L.append("")
     return "\n".join(L)

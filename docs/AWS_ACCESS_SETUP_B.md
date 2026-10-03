@@ -42,7 +42,8 @@ IAM 인라인 정책 (Terraform 이 `iam.tf` 의 역할·정책·인스턴스 �
     "Action": [
       "iam:CreateRole", "iam:DeleteRole", "iam:GetRole", "iam:PassRole", "iam:TagRole", "iam:ListRoleTags",
       "iam:ListRolePolicies", "iam:ListAttachedRolePolicies", "iam:ListInstanceProfilesForRole",
-      "iam:CreatePolicy", "iam:DeletePolicy", "iam:GetPolicy", "iam:GetPolicyVersion", "iam:ListPolicyVersions", "iam:TagPolicy", "iam:ListPolicyTags",
+      "iam:CreatePolicy", "iam:DeletePolicy", "iam:GetPolicy", "iam:GetPolicyVersion", "iam:ListPolicyVersions", "iam:DeletePolicyVersion",
+      "iam:ListEntitiesForPolicy", "iam:TagPolicy", "iam:ListPolicyTags", "iam:UpdateAssumeRolePolicy",
       "iam:AttachRolePolicy", "iam:DetachRolePolicy",
       "iam:CreateInstanceProfile", "iam:DeleteInstanceProfile", "iam:GetInstanceProfile",
       "iam:AddRoleToInstanceProfile", "iam:RemoveRoleFromInstanceProfile", "iam:TagInstanceProfile", "iam:ListInstanceProfileTags"

@@ -39,7 +39,7 @@
 
 | 유형 | 어디 | 무엇 | Trivy 가 잡나 | 파이프라인 |
 |---|---|---|---|---|
-| SG 과다 개방 | `security_groups.tf:23` web SG ingress 22 `cidr_blocks = ["0.0.0.0/0"]` | 관리용 SSH 를 인터넷 전체에 | 잡는다 — AVD-AWS-0107 (CIS v1.2 4.1/4.2, v3.0 5.2 직접 대응) | 패치→V1~V6 대상 (`arch-webapp-sg`) |
+| SG 과다 개방 | `security_groups.tf:23` web SG ingress 22 `cidr_blocks = ["0.0.0.0/0"]` | 관리용 SSH 를 인터넷 전체에 | 잡는다 — AVD-AWS-0107 (CIS v1.2 4.1/4.2, v3.0 5.2 직접 대응 — 팀 매핑표 기준, 원문 대조 전) | 패치→V1~V6 대상 (`arch-webapp-sg`) |
 | Public S3 | `storage.tf:17-20` 차단 4항목 false | 버킷을 퍼블릭으로 만들 수 있게 | 잡는다 — AVD-AWS-0086/0087/0091/0093 | 탐지·해석까지 (S3 오라클 미구현, D-10) |
 | Public S3 | `storage.tf:26-37` 버킷 정책 Principal `*` | 누구나 객체 읽기 | **못 잡는다** (0.74.0 S3 체크는 차단 설정만 본다) | AI 해석의 `not_flagged_but_risky` 로 잡히는지 확인 |
 | IAM 과다 권한 | `iam.tf:22-23` `Action ["s3:*"]`, `Resource "*"` | 웹 서버가 계정의 모든 S3 에 모든 작업 | 잡는다 — AVD-AWS-0345 (2개 메시지) | 패치→V1~V6 대상 (`arch-webapp-iam`) |

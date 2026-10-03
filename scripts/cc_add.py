@@ -97,7 +97,11 @@ def main() -> int:
     # 원본 응답도 보관 (나중에 "정말 모델이 이렇게 답했나" 확인용)
     keep = SET_DIR / "responses"; keep.mkdir(exist_ok=True)
     (keep / f"{cid}{src.suffix or '.txt'}").write_text(raw, encoding="utf-8")
-    print(f"등록: {dst.relative_to(ROOT)}  (manifest {len(m['candidates'])}건). 실행: scripts/run_experiments.sh 또는 run_candidate_set.py")
+    try:
+        shown = dst.relative_to(ROOT)
+    except ValueError:
+        shown = dst
+    print(f"등록: {shown}  (manifest {len(m['candidates'])}건). 실행: scripts/run_experiments.sh 또는 run_candidate_set.py")
     return 0
 
 
