@@ -1,0 +1,24 @@
+=== 1) IaCPatch-console.exe --selfcheck (root/frozen/tools/install check)
+root      : D:\a\cloud-security-capstone\cloud-security-capstone
+frozen    : True  (_MEIPASS=C:\Users\RUNNER~1\AppData\Local\Temp\_MEI000024502)
+executable: D:\a\cloud-security-capstone\cloud-security-capstone\IaCPatch-console.exe
+python    : 3.14.7 Windows 2025Server
+cwd       : D:\a\cloud-security-capstone\cloud-security-capstone
+trivy     : 없음  (trivy)  ← 없음
+terraform : 없음  (terraform)  ← 없음
+selfcheck : OK
+=== exit 0
+=== 2) IaCPatch-console.exe --exec scripts/pyver.py
+=== exit 0
+=== 3) IaCPatch-console.exe --console --report-only --no-open
+trivy    : 없음  (trivy)  ← 없음: 해당 계층은 NOT_RUN
+terraform: 없음  (terraform)  ← 없음: 해당 계층은 NOT_RUN
+terraform 이 없으면 V3~V6 이 NOT_RUN 이 된다. scripts/setup_tools.bat 를 먼저 돌려라.
+설치 상태 검사 OK (python 3.14.7)
+
+================ 리포트 생성
+→ D:\a\cloud-security-capstone\cloud-security-capstone\report\index.html
+
+완료. 리포트: D:\a\cloud-security-capstone\cloud-security-capstone\report\index.html
+=== exit 0
+=== report\index.html written: 68348 bytes
