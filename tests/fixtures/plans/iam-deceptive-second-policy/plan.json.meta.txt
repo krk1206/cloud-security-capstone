@@ -1,0 +1,6 @@
+generated: 2026-09-22T01:34:46Z
+terraform: OpenTofu v1.10.6
+source_dir: scenarios/eval/iam-report-worker
+candidate: experiments/candidate-sets/eval-seeded-iam/candidates/deceptive-second-policy.tf
+candidate_sha256: 9d6d851fe802eb4d3aed6da630a2140ba0f78a36e9a589c066dfad3611dc4236
+mode: offline (상태 없음, 전부 create; provider override 는 결과에 포함되지 않음)

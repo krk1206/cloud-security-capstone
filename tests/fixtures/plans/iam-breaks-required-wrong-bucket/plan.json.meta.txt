@@ -1,0 +1,6 @@
+generated: 2026-09-22T01:33:19Z
+terraform: OpenTofu v1.10.6
+source_dir: scenarios/eval/iam-report-worker
+candidate: experiments/candidate-sets/eval-seeded-iam/candidates/breaks-required-wrong-bucket.tf
+candidate_sha256: 91f99bea5d088b7dd943a01dd55c98a09b6d926f612b722dae8b17d6e51a6b78
+mode: offline (상태 없음, 전부 create; provider override 는 결과에 포함되지 않음)

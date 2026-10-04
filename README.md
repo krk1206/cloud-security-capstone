@@ -1,6 +1,11 @@
 # 졸업작품 통합 개발 계획
 
 > **처음 보신다면 [`한장요약.md`](한장요약.md)부터 읽어주세요.** (3분)
+> **실험을 직접 돌리려면 [`docs/SOLO_RUNBOOK.md`](docs/SOLO_RUNBOOK.md)** — 도구 받기 → `scripts/run_experiments.*` 한 방 → Claude Code 후보 채우기.
+> **실행기:** `IaCPatch.exe` 더블클릭 → 브라우저에 화면 (4주차 위험도 기준표 · 5주차 패치→검증→PR 미리보기 · 실험 8단계 · 리포트). exe 는 GitHub Actions(`build-exe.yml`)가 만든다 → Actions 아티팩트 / Releases. 받는 법·탭 설명은 [`docs/SOLO_RUNBOOK.md`](docs/SOLO_RUNBOOK.md). (Python 이 있으면 `IaCPatch.bat` 도 같은 화면.)
+> **다른 조와 비교해 뭘로 이기나:** [`docs/DEPTH_OVER_SCALE.md`](docs/DEPTH_OVER_SCALE.md) — 스캐너 사각 탐색(`experiments/FUZZ_RESULTS.md`)·오라클 차등 검증(`experiments/ORACLE_FUZZ.md`)·남은 3가지.
+> **아키텍처 과제(지도교수 9/29, B):** [`scenarios/arch/webapp-2tier/`](scenarios/arch/webapp-2tier/) — VPC 2계층 웹 17 리소스 → `scripts/arch_scan.py`(Trivy 점검) → AI 해석 등록(`scripts/arch_interpret_add.py`) → 패치·검증 세트 `arch-webapp-sg`/`arch-webapp-iam`. 설명 [`docs/ARCH_WEBAPP_2TIER.md`](docs/ARCH_WEBAPP_2TIER.md), 실측 [`experiments/arch-webapp-2tier/RESULTS.md`](experiments/arch-webapp-2tier/RESULTS.md), 혼자 끝까지(계정→apply→PR→V7/V8) [`docs/SOLO_ABC_RUNBOOK.md`](docs/SOLO_ABC_RUNBOOK.md), 계정·비용 세부 [`docs/AWS_ACCESS_SETUP_B.md`](docs/AWS_ACCESS_SETUP_B.md), 문법 [`docs/TERRAFORM_STUDY_B.md`](docs/TERRAFORM_STUDY_B.md). apply·V7/V8 은 아직 0회.
+> **지도교수 9/22 질문에 대한 답:** [`docs/WHY_8_LAYERS.md`](docs/WHY_8_LAYERS.md) (8계층 근거), [`docs/PATCH_GENERATION.md`](docs/PATCH_GENERATION.md) (패치 생성 방식), [`docs/TRIVY_CIS_MAPPING.md`](docs/TRIVY_CIS_MAPPING.md) (차주 매핑표 뼈대).
 
 
 ## AI가 생성한 테라폼 보안 패치의 실효성 검증 자동화 구현
@@ -27,6 +32,9 @@
 - **최종 완성 기준:** 설정 오류 2개 유형(과다 개방 보안그룹, IAM 과다권한) 필수 + 검증 스택 8계층 + 자율성 3등급 동작, Rule-based baseline 대비 정량 비교까지 테스트 완료된 상태. 퍼블릭 S3와 컨테이너 CVE는 여유가 있을 때만 추가한다.
 
 **관련 문서**
+- [`docs/BC_WEEK3-4_STATUS.md`](docs/BC_WEEK3-4_STATUS.md) — **B·C 3~4주차 현황**, [`docs/CODE_TOUR.md`](docs/CODE_TOUR.md) — 코드 투어, [`docs/IO_SPEC_A_B_C.md`](docs/IO_SPEC_A_B_C.md) — A→B→C 입출력 명세, [`docs/RISK_RUBRIC_DRAFT.md`](docs/RISK_RUBRIC_DRAFT.md) — 잠정 위험도 기준표, [`docs/INTENT_ORACLE_PLAN.md`](docs/INTENT_ORACLE_PLAN.md) — Intent Oracle 명세·테스트 계획, [`docs/EXPERIMENT_GUIDE.md`](docs/EXPERIMENT_GUIDE.md) — **실험 방법(쉬운 버전)**
+- [`docs/PLAN_2026-09-22.md`](docs/PLAN_2026-09-22.md) — **운영계획서(공식 계획) 요지 ↔ 저장소 현황**, [`docs/CI_FIRST_RUN.md`](docs/CI_FIRST_RUN.md) — Actions 첫 실행 기록(exe 빌드 실패 3회 → 성공)
+- [`docs/STATUS.md`](docs/STATUS.md) — 전체 구현 현황 (2026-09-13 기준), [`docs/RUNBOOK.md`](docs/RUNBOOK.md) — 실행 방법, [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — 코드 구조, [`docs/DOC_CORRECTIONS.md`](docs/DOC_CORRECTIONS.md) — 문서 정정 기록
 - [`criticism and rebuttal.md`](criticism%20and%20rebuttal.md) — 받은 비판과 답변
 - [`RoadMap.md`](RoadMap.md) — 동작 시나리오와 용어집
 - [`experiments/trivy-sg-probe/`](experiments/trivy-sg-probe/) — Trivy SG 우회 실험 기록
@@ -39,9 +47,9 @@
 
 2026년 6월 발표된 TerraProbe 연구(arXiv:2606.26590)는 LLM이 생성한 Terraform 보안 패치를 5단계 오라클로 검증했다.
 
-- 지목된 스캐너 finding 제거율 **83.3%**, 그러나 전체 스캔 통과율은 **10.4%**
-- 실제 GitHub 코드에서 plan 비교까지 도달한 패치의 **57.1~71.4%가 "기만적 패치"** — 스캐너·`validate`·`plan`을 모두 통과하면서 실제 권한은 그대로 유지
-- 모델 3종(Gemini / GPT-4o / Claude) 간 통계적으로 유의한 차이 없음 → 특정 모델의 결함이 아니라 구조적 문제
+- 주 모델(Gemini-2.5-flash-lite, n=96) 기준 지목된 스캐너 finding 제거율 **83.3%**(80/96), 그러나 전체 스캔 통과율은 **10.4%**(10/96)
+- 실제 GitHub 코드(TerraDS 트랙)에서 plan 비교까지 도달한 패치 **모델당 14건 중 57.1~71.4%가 "기만적 패치"**(Claude 3.5 Sonnet 8/14, GPT-4o 9/14, Gemini 10/14) — 스캐너·`validate`·`plan`을 모두 통과하면서 실제 권한은 그대로 유지. 주입 결함(통제) 트랙에서는 0/23 으로 기만적 패치가 없었다
+- 모델 3종(Gemini / GPT-4o / Claude 3.5 Sonnet) 간 쌍별 Fisher 검정에서 통계적으로 유의한 차이는 관측되지 않았다(p=0.27~0.62). 다만 모델당 14건이라 검정력이 낮으므로 "모델 차이가 없다"는 증명은 아니다. 논문은 이를 근거로 특정 모델의 결함이 아닌 구조적 문제로 해석한다 (원문 대조: `docs/DOC_CORRECTIONS.md`)
 - 논문의 실무 권고: plan 기준으로 게이팅하고, IAM 정책 시뮬레이션을 추가하고, 신규 finding 증가를 보조 신호로 쓸 것
 
 즉 **"재스캔에서 오류가 사라졌다"는 것은 성공 판정 기준으로 부적절하다.** 이 프로젝트가 검증 계층을 별도로 두는 이유다.
@@ -76,7 +84,7 @@ Security Group 우회 후보 9종을 스캔한 뒤, 0 FAIL이 나온 케이스�
 
 과장하지 않기 위해 명시한다.
 
-- `terraform validate`는 문법만 검증한다. **배포 후 실제 포트 개방 여부는 미확인**
+- `terraform validate`는 문법·provider 스키마·참조 정합성을 검사하지만 값의 의미(보안)나 배포 후 실제 상태는 검사하지 않는다. **배포 후 실제 포트 개방 여부는 미확인**
 - 06의 prefix list 참조가 실제 SG에 반영되는지 — 샌드박스 `apply` + `describe-security-groups` 필요
 - **LLM이 이 패턴을 실제로 생성하는지는 측정하지 않았다.** 본 실험은 탐지기 능력 측정이며, 자연 발생률 측정이 아니다. 논문과 주장의 층위가 다르므로 혼동하지 않는다
 
@@ -220,10 +228,10 @@ V7 실제 AWS 상태 실측 → V8 정상 기능 확인
 - **Trivy 출력을 입력으로 사용하지 않는다.** 독립성이 이 계층의 존재 이유다
 - Python 표준 라이브러리(`ipaddress`)만 사용. 외부 의존성 없음
 - V7도 같은 계산을 적용한다. `describe-security-groups` 결과에서 06 케이스는 `IpRanges`가 비고 `PrefixListIds`만 나오므로, `describe-managed-prefix-lists`로 전개해야 한다
-- 회귀 테스트: `experiments/trivy-sg-probe/cases/`의 01·06·08을 탐지하고, 00-baseline 정상 패치에서는 오탐이 없어야 한다
+- 회귀 테스트: `experiments/trivy-sg-probe/cases/`의 00(취약한 대조군)·01·06·08을 FAIL 시키고, 정상 수정본(`tests/fixtures/src/00b-baseline-fixed`)에서는 오탐이 없어야 한다 — `tests/unit/test_oracle_fixtures.py` 로 구현·통과 (2026-09-13)
 - IAM 확장 시에는 실효 권한 계산이 필요하다. 7주차에 구현 난이도를 재평가하고, 어려우면 **"IAM은 무조건 사람 승인"** 정책으로 대체한다
 
-**V2에 대한 주의** — 실측에서 05번이 FAIL 4개, 08번이 3개였으나 description 누락(AWS-0124), IMDSv2(AWS-0028), EBS 암호화(AWS-0131) 등 보안 의도와 무관한 항목이 섞여 있었다. TerraProbe도 정상 패치의 43.5%가 새 finding을 만든다고 보고했다. **V2는 차단 조건이 아니라 값싼 보조 신호로만 사용하고, 룰 카테고리별 가중치를 둔다.**
+**V2에 대한 주의** — 실측에서 05번이 FAIL 4개, 08번이 3개였으나 description 누락(AWS-0124), IMDSv2(AWS-0028), EBS 암호화(AWS-0131) 등 보안 의도와 무관한 항목이 섞여 있었다. TerraProbe도 정상 패치의 43.5%가 새 finding을 만든다고 보고했다. **V2는 차단 조건이 아니라 값싼 보조 신호로만 사용하고, 룰 카테고리별 가중치를 둔다.** (구현: 전후 finding 을 `룰|파일|리소스` 키 집합으로 비교해 **새로 생긴** CRITICAL/HIGH 만 차단하고 나머지는 WARN 으로 기록한다. 기존 finding(예: egress 0104)은 차단하지 않는다. 기준은 `policy/patch_policy.json` 의 `v2_block_severities` / `v2_ignore_rules`)
 
 ### 2.3 자율성 등급
 
@@ -307,16 +315,17 @@ Risk Rubric(변경 리소스 종류, 영향받는 리소스 수, IAM 관련 여�
 ## 4. 환경 구성
 
 ```
-GitHub Repository
-├─ .github/workflows/       # CI/CD 파이프라인
-├─ infra/                   # Terraform (의도적 설정 오류 포함, AWS 샌드박스 대상)
-├─ ai-agent/                # Analyzer · Patch Generator
-├─ oracle/                  # Intent Oracle(V6), Risk Scorer, Policy Validator
-├─ policy/                  # 패치 화이트리스트, CIS 매핑 테이블
-├─ tests/deceptive/         # Seeded Deceptive Patch 세트 (V6 회귀 테스트)
+GitHub Repository  (2026-09-13 실제 구현 기준)
+├─ .github/workflows/       # iac-scan.yml (A: Trivy 게이트), iacpatch-verify.yml (단위 테스트 + 실험 + PR 검증 표 댓글), build-exe.yml (Windows exe 자동 빌드)
+├─ infrastructure/          # Terraform (sg-baseline: 의도적 설정 오류, AWS 샌드박스 대상)
+├─ src/iacpatch/            # 파이프라인 코드 (generator=패치 생성, verify=V1~V8, policy=Validator/Risk/Gate)
+├─ policy/                  # patch_policy.json, risk_rubric.json, cis_mapping.json, intent/ (승인 출처)
+├─ scenarios/dev, eval/     # 개발용 / 평가용 시나리오 (분리)
+├─ tests/unit, fixtures/    # unittest + Seeded Deceptive 세트(mock_llm) + 실제 plan/Trivy fixture
 ├─ experiments/             # 실험 기록 (trivy-sg-probe 등)
-├─ app/                     # 샘플 애플리케이션 (선택 확장 진행 시)
-└─ data/sessions/           # 세션별 스캔 리포트, 등급 판정, PR 기록
+├─ scripts/                 # 실행 스크립트 (WSL sh / Windows ps1·bat)
+├─ data/runs/               # 실행 기록 (입력·출력·모델·프롬프트 버전·검증 결과), runs-sample/ 은 요약본
+└─ docs/                    # STATUS, RUNBOOK, ARCHITECTURE, MODULE_SPEC, IAM_SCOPE, DOC_CORRECTIONS, TEST_RECORD
 ```
 
 - **AWS 샌드박스 계정**: 실습·평가 전용으로 별도 분리, 프로덕션 자원과 격리. AWS 무료 플랜(6개월, 크레딧 기반) 사용을 전제로 하며, EKS·NAT Gateway 등 상시 과금 자원은 사용하지 않는다. 테스트 후 `terraform destroy`를 원칙으로 하고, Budgets 알림·루트 MFA·작업용 IAM 사용자 분리를 1주차에 완료한다. GitHub Actions의 AWS 접근은 액세스 키 대신 **OIDC 연동**을 사용한다.
@@ -377,7 +386,7 @@ GitHub Repository
 | 게이트 | 시점 | 통과 조건 |
 |---|---|---|
 | **게이트 A** | 5주차 말 | High 등급 설정 오류 1개 시나리오가 탐지→패치→PR까지 자동 동작하며 3회 재현 |
-| **게이트 B** | 6주차 말 | **V6가 01·06·08 케이스를 탐지하고, 00-baseline 정상 패치에서는 오탐 없음** |
+| **게이트 B** | 6주차 말 | **V6가 00(취약)·01·06·08 케이스를 FAIL 시키고, 정상 수정본(00b-baseline-fixed)에서는 오탐 없음** — 2026-09-13 코드로 선행 달성 (`docs/STATUS.md`) |
 | **게이트 C** | 8주차 말 | 검증 스택 V1~V7이 모두 동작하고, 실험 경로가 자동 revert까지 3회 재현 |
 
 ---
@@ -425,7 +434,7 @@ GitHub Repository
 - **A**: **Seeded Deceptive Patch 세트를 `tests/deceptive/`로 승격.** 01·06·08 사용
 - **B**: Medium 등급 — 검증 결과 첨부, 승인 필수 표시 로직
 - **여유 시**: LLM에게 00-baseline 패치를 20~30회 시켜 01 같은 패턴이 자연 발생하는지 관찰. **0건이어도 정직하게 보고한다**
-- **완료 기준(게이트 B):** V6가 01·06·08을 탐지하고 00-baseline에서 오탐이 없다
+- **완료 기준(게이트 B):** V6가 00(취약)·01·06·08을 FAIL 시키고 정상 수정본(00b-baseline-fixed)에서 오탐이 없다
 
 ### 7주차 (10/20~10/26) — Low 처리 + IAM 확장 + baseline 착수
 - **B**: Low 등급 — 패치 시도 없이 리포트만 생성, 미패치 사유 기록

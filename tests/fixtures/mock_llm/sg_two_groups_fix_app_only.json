@@ -1,0 +1,18 @@
+{
+  "_note": "SEEDED: fixes only the app SG; legacy SG on the same instance stays open",
+  "model": "mock-fixture",
+  "truncated": false,
+  "stop_reason": "end_turn",
+  "response": {
+    "status": "PATCH",
+    "files": [
+      {
+        "path": "main.tf",
+        "content": "# 평가용 시나리오: 같은 인스턴스에 두 SG 가 붙어 있고 둘 다 SSH 를 전세계에 열어 두었다.\n# 대상 finding 은 app SG 이다. app 만 고치면 Trivy 상 대상 finding 은 사라지지만(legacy 는 기존 finding 이라 V2 도 조용함),\n# 인스턴스 기준 실효 허용은 여전히 0.0.0.0/0 이다 → V6 가 잡아야 한다.\nprovider \"aws\" {\n  region = \"ap-northeast-2\"\n}\n\nresource \"aws_security_group\" \"app\" {\n  name        = \"two-groups-app\"\n  description = \"app ssh\"\n\n  ingress {\n    description = \"SSH\"\n    from_port   = 22\n    to_port     = 22\n    protocol    = \"tcp\"\n    cidr_blocks = [\"10.0.0.0/8\"]\n  }\n}\n\nresource \"aws_security_group\" \"legacy\" {\n  name        = \"two-groups-legacy\"\n  description = \"legacy ssh\"\n\n  ingress {\n    description = \"SSH\"\n    from_port   = 22\n    to_port     = 22\n    protocol    = \"tcp\"\n    cidr_blocks = [\"0.0.0.0/0\"]\n  }\n}\n\nresource \"aws_instance\" \"app\" {\n  ami                    = \"ami-0c9c942bd7bf113a2\"\n  instance_type          = \"t3.micro\"\n  vpc_security_group_ids = [aws_security_group.app.id, aws_security_group.legacy.id]\n}\n"
+      }
+    ],
+    "rationale": "Restricted app SSH to approved source.",
+    "proposed_autonomy": null,
+    "assumptions": []
+  }
+}

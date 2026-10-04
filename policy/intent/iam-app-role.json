@@ -1,0 +1,23 @@
+{
+  "kind": "iam",
+  "intent_id": "iam-app-role",
+  "intent_version": "1",
+  "status": "active",
+  "description": "앱 서버 역할(app-role)은 app-data 버킷의 객체 읽기와 목록 조회만 허용한다. 그 외 어떤 권한도 허용하지 않는다.",
+  "targets": {
+    "policies": ["aws_iam_policy.app"],
+    "roles": ["aws_iam_role.app"]
+  },
+  "approved_permissions": [
+    {
+      "actions": ["s3:GetObject", "s3:ListBucket"],
+      "resources": ["arn:aws:s3:::app-data", "arn:aws:s3:::app-data/*"]
+    }
+  ],
+  "required_permissions": [
+    {"label": "read-app-data-objects", "action": "s3:GetObject", "resource": "arn:aws:s3:::app-data/*"},
+    {"label": "list-app-data-bucket", "action": "s3:ListBucket", "resource": "arn:aws:s3:::app-data"}
+  ],
+  "approved_managed_policy_arns": [],
+  "_decision": "D-7 (2026-09-22): 평가용 고정값. 버킷 이름 app-data 는 실제 계정의 버킷일 필요가 없다. 실행 전에 고정하고 결과를 보고 바꾸지 않는다."
+}

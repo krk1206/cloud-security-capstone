@@ -1,0 +1,44 @@
+{
+  "_comment": [
+    "V8(통신 확인) 체크 정의 예시 — sandbox 에 apply 한 뒤 A/C 가 값을 채워서 policy/intent/sg-baseline.v8.json 으로 저장한다.",
+    "host: 대상 EC2 의 공인 IP(또는 DNS). expect=open 은 승인 출처(approved)에서 통해야 하는 것, expect=closed 는 승인 밖(unapproved) 에서 막혀야 하는 것.",
+    "vantage=local 인 검사만 이 러너가 직접 시도한다. 다른 vantage(예: 승인 밖 SG 의 임시 EC2, 핫스팟)는 그 지점에서 nc/ssh 로 확인한 결과를 observed 에 적는다 (open|closed|timeout|refused).",
+    "보호 서비스(ssh, rdp)마다 source_class=unapproved 인 closed 검사가 하나는 있어야 PASS 가 된다. 없으면 UNKNOWN (통과가 아니다).",
+    "이 파일의 host/observed 는 자리표시자다. 실제 값 없이 --execute 하면 로컬 검사는 실패하고 원격 검사는 NOT_RUN 으로 남는다."
+  ],
+  "intent_id": "sg-baseline",
+  "checks": [
+    {
+      "label": "approved-source-ssh-open",
+      "service_label": "ssh",
+      "host": "<EC2_PUBLIC_IP>",
+      "port": 22,
+      "expect": "open",
+      "vantage": "local",
+      "source_class": "approved",
+      "timeout_s": 5,
+      "_note": "실행하는 PC 의 공인 IP 가 sandbox intent 의 approved_sources 에 들어 있어야 한다 (D-2: sandbox 용 intent 는 실제 공인 IP /32)"
+    },
+    {
+      "label": "unapproved-vantage-ssh-closed",
+      "service_label": "ssh",
+      "host": "<EC2_PUBLIC_IP>",
+      "port": 22,
+      "expect": "closed",
+      "vantage": "unapproved-ec2",
+      "source_class": "unapproved",
+      "observed": null,
+      "_note": "승인 밖 SG 에 붙인 임시 EC2(또는 핫스팟)에서 `nc -vz -w 5 <EC2_PUBLIC_IP> 22` 결과를 observed 에 적는다: timeout|refused → closed 로 판정"
+    },
+    {
+      "label": "unapproved-vantage-rdp-closed",
+      "service_label": "rdp",
+      "host": "<EC2_PUBLIC_IP>",
+      "port": 3389,
+      "expect": "closed",
+      "vantage": "unapproved-ec2",
+      "source_class": "unapproved",
+      "observed": null
+    }
+  ]
+}
