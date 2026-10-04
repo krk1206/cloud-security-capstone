@@ -1,6 +1,6 @@
-# 아키텍처 `scenarios/arch/webapp-2tier` — Terraform → Trivy → 패치 → 검증 실측 (2026-10-02, 개발 환경)
+# 아키텍처 `scenarios/arch/webapp-2tier` — Terraform → Trivy → 패치 → 검증 실측 (2026-10-02 개발 환경, 2026-10-04 실제 AWS)
 
-지도교수 9/29 지시 흐름의 실측 기록. 환경: 개발 샌드박스(Linux), OpenTofu 1.10.6 (`tools/terraform` 이름으로 설치), Trivy 0.74.0, AWS provider 5.100.0 (오프라인 미러). **AWS 에 만든 것은 없다** (apply 는 사람이 팀 PC 에서 — `docs/AWS_ACCESS_SETUP_B.md`). 팀 PC(Windows, Terraform 1.16.1) 재실행은 아직 0회 → `[확인 필요: 팀 PC]`.
+지도교수 9/29 지시 흐름의 실측 기록. 1~4절 환경: 개발 샌드박스(Linux), OpenTofu 1.10.6 (`tools/terraform` 이름으로 설치), Trivy 0.74.0, AWS provider 5.100.0 (오프라인 미러). **5절은 10-04 B 의 PC(Windows, Terraform 1.16.1, AWS CLI 2.37.9)에서 B 본인 프리 플랜 계정(서울)에 실제로 만들고 → 전 측정 → PR → 패치 apply → 후 측정 → destroy 까지 한 기록이다.** 계정 번호·키는 적지 않는다.
 
 ## 1. Terraform 자체 검사
 
@@ -78,9 +78,64 @@
 
 `data/arch/<id>/interpret_prompt.md` → 사람이 Claude Code 새 세션에 붙여 넣기 → `scripts/arch_interpret_add.py <폴더> <응답.json>` 로 등록. 등록 스크립트의 대조(지어낸 finding·누락·CIS 불일치)는 개발 중 작성한 예제 응답으로만 검증했다(`tests/unit/test_arch.py`). **모델 응답으로 등록한 기록은 아직 0건** → B 가 팀 PC 에서 1회 실행 후 이 절에 기록 ID 를 적는다.
 
-## 5. 아직 안 된 것
+## 5. 실제 AWS 실측 — 10-04, B 의 PC + B 본인 프리 플랜 계정(서울 ap-northeast-2)
 
-- AWS 실제 apply 0회 (계정 접근 준비 중 — `docs/AWS_ACCESS_SETUP_B.md`), 따라서 V7·V8 도 0회.
-- 팀 PC(Terraform 1.16.1, Windows)에서 1~3절 재실행 0회.
+전부 B 가 혼자 A·B·C 역할로 수행(`docs/SOLO_ABC_RUNBOOK.md`). 숫자는 화면 출력·캡처에서 옮긴 것이고, 안 한 것은 안 했다고 적는다.
+
+### 5.1 팀 PC 재실행 (0단계) — 1회
+
+`IaCPatch-console.exe --exec scripts/arch_scan.py` (빌드 `IaCPatch-ffa0cca`, Terraform 1.16.1 Windows) → `data\arch\20261004-124254` — **finding 18개, 등급 분포·대상 줄 모두 1~2절(OpenTofu 1.10.6)과 동일**. plan 도 17 create.
+
+### 5.2 취약한 원본 apply (3-2) — 리소스 17개 생성, apply 시도 3회
+
+| 시도 | 결과 |
+|---|---|
+| 1 | `terraform plan -out plan.bin` → "17 to add" → apply: 15개 생성 뒤 EC2 2대에서 **`instance type is not eligible for Free Tier`** (기본값 t2.micro) |
+| 2 | tfvars 에 `instance_type` 줄을 적었지만 앞에 `#` 가 있어 주석 → 같은 오류 |
+| 3 | `aws ec2 describe-instance-types --filters Name=free-tier-eligible,Values=true` 로 대상 목록 확인(t3.micro 포함, t2.micro 없음) → `instance_type = "t3.micro"` → plan "2 to add" → **apply 2 added** → 합계 17 |
+
+- AMI: 콘솔의 Amazon Linux 2023 x86_64(서울). 인스턴스 2대 t3.micro, ap-northeast-2a.
+- `terraform output`: web_public_ip 3.35.139.78 · app_private_ip 10.0.2.70 · web_security_group_id sg-0a745a68a2e0bc469 · vpc vpc-09670e9d97bc9b9e7 · bucket iacpatch-webapp-assets-demo (전부 destroy 로 사라진 값).
+- 브라우저 `http://3.35.139.78/` → "iacpatch-webapp web tier" 페이지 표시 = **정상 기능 기준값**.
+- 콘솔 캡처: 웹 페이지 / EC2 인스턴스 2대 / 웹 SG 인바운드(80·22 ← 0.0.0.0/0) / S3 버킷 정책 Principal `*` / IAM 정책은 콘솔 목록이 IAM 사용자 권한으로 "거부" 라 **`aws iam get-policy-version` 출력으로 대체**(s3:* on *).
+- 부수적으로 배운 것: 2회째 이후 `terraform apply plan.bin` 에 `Saved plan is stale` — plan.bin 은 1회용(무해).
+
+### 5.3 "전" 측정 (3-3) — V7 FAIL · V8 FAIL → `DEPLOY_FAILED` (정답)
+
+- `arch_v8_checks.py --web-ip 3.35.139.78 --app-ip 10.0.2.70` → `sandbox/v8-checks.json` (5검사: web-http-open 승인 / ssh·rdp·app-8080 closed 승인 밖 PC / 핫스팟 선택).
+- `iacpatch_cli.py postdeploy --intent arch-webapp-sg.json --tf-dir scenarios/arch/webapp-2tier --v8-checks … --execute` → 기록 **`data/runs/20261004-154105-143eaf`**:
+  - **V7 FAIL** — describe-security-groups 로 읽은 실제 웹 SG 의 22 번이 `0.0.0.0/0` 이라 승인 대역 `10.0.0.0/8` 을 뺀 나머지가 **EXCESS** (인터페이스 eni-01bd15b6e69f702fe).
+  - **V8 FAIL** — 승인 밖인 B 의 PC 에서 22 번 TCP 연결이 **열림**(닫혀야 통과). 80 은 열림(통과).
+  - 해석: 코드의 설정 오류(AVD-AWS-0107)가 실제 인프라에서도 같은 상태로 재현됐다 — "스캐너 finding = 실제 노출" 의 측정값.
+
+### 5.4 패치 기록 → PR → 사람 승인 → 병합 (4단계)
+
+- 화면 5주차 탭 → `arch-webapp-sg` → 규칙 기반 생성 → 기록 **`20261004-154935-dc5b50`**: V1~V6 전부 PASS, 위험도 **LOW**, 검토 수준 **LIGHT_REVIEW**.
+- `iacpatch_cli.py pr --review 20261004-154935-dc5b50 --base sandbox` → 브랜치 이름·제목·pr_body·commit_message 생성(실행 안 함).
+- GitHub Desktop: `sandbox` 브랜치 생성(= 배포 상태 브랜치, D-17) → 패치 브랜치 → 후보 `candidate/security_groups.tf` 를 `scenarios/arch/webapp-2tier/security_groups.tf` 에 덮어쓰기.
+  - **버그 발견**: 후보 파일이 CRLF 로 써져 Desktop 이 파일 전체 변경으로 표시 → PowerShell 로 LF 변환 후 **1줄 diff** 확인. 원인은 기록 쓰기의 줄바꿈(10-05 수정, `src/iacpatch/textio.py`).
+- **PR #5 → base `sandbox`**, Actions 3개 통과, 승인 댓글(김보성) → Merge → 커밋 **17ba8ac**. PR 작성자는 Desktop 로그인 계정(A, krk1206)으로 표시됨 — 승인 댓글이 사람 승인 기록.
+
+### 5.5 패치 apply + "후" 측정 (5단계) — V7 PASS · V8 PASS → `VERIFIED`
+
+- `terraform plan -out plan.bin` → **"0 to add, 1 to change, 0 to destroy"** (웹 SG 제자리 수정, 교체 아님) → `apply` → **"0 added, 1 changed, 0 destroyed"**.
+- `postdeploy --review 20261004-154935-dc5b50 … --execute` → 기록 **`data/runs/20261004-235735-b463c7`**: **V7 PASS**(22 ← 10.0.0.0/8 만) · **V8 PASS**(80 열림, 22·3389·8080 은 승인 밖 PC 에서 닫힘) → **VERIFIED**.
+- 브라우저 `http://3.35.139.78/` 여전히 표시 → **정상 기능 보존**. 콘솔 캡처: 웹 SG 인바운드 22 번 소스 `10.0.0.0/8`.
+
+### 5.6 정리 (6단계)
+
+- `terraform destroy` → **"Destroy complete! Resources: 17 destroyed."** (S3 는 force_destroy, 의존성 오류 없음, 1회에 완료). 콘솔 EC2: 2대 "종료됨".
+- IAM 액세스 키 **비활성화** 완료(콘솔 메시지 "액세스 키 비활성화됨"). 다음 시연은 새 키로.
+- 요금 확인: IAM 사용자로 Billing → "권한 필요" → **미확인** `[확인 필요: 루트로 로그인해 청구서·크레딧 — 10-05 이후]`.
+
+### 5.7 한 줄 요약 (발표용 숫자)
+
+apply 1세트(17 리소스) · 전 측정 1회(V7 FAIL·V8 FAIL) · 패치 기록 1건(LOW·LIGHT_REVIEW·V1~V6 PASS) · PR 1건 병합(사람 승인) · 패치 apply 1회(1 changed) · 후 측정 1회(V7 PASS·V8 PASS·VERIFIED) · 정상 기능 보존 1/1 · destroy 1회(17). 비용: 청구 0원 예상, 크레딧 차감액 미확인.
+
+## 6. 아직 안 된 것
+
+- 요금·크레딧 차감액 확인 0회 (루트 로그인 필요).
+- AI 해석 모델 응답 등록 0건 (`arch_interpret_add.py`), Claude Code 후보(arch-sg / arch-iam) 0건.
+- 라벨 손 검산 0/25.
+- IAM 세트(`arch-webapp-iam`)의 실제 AWS 전/후 측정 0회 (SG 만 했음; IAM 의 배포 후 검증 V7-IAM 은 미구현 — `docs/IAM_SCOPE.md`).
 - S3 유형은 탐지·해석까지만 (오라클·패치 파이프라인 없음, D-10).
-- Claude Code 후보(arch-sg / arch-iam) 0건.

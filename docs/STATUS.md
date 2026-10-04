@@ -1,6 +1,8 @@
 # 구현 현황 (2026-09-13 기준)
 
-> 2026-10-02 아키텍처 과제(지도교수 9/29): `scenarios/arch/webapp-2tier/` 17 리소스 → Trivy 18 finding → AI 해석 등록(모델 응답 0건) → 패치·검증 세트 SG 7/7·IAM 5/6 — [`experiments/arch-webapp-2tier/RESULTS.md`](../experiments/arch-webapp-2tier/RESULTS.md). AWS apply·V7/V8 은 여전히 0회.
+> **2026-10-04 실제 AWS 1바퀴(B 본인 프리 플랜 계정, 서울)**: 아키텍처 apply 17 → 전 측정 V7 FAIL·V8 FAIL(DEPLOY_FAILED) → 패치 기록 LOW·LIGHT_REVIEW → PR #5 사람 승인·병합 → apply 1 changed → 후 측정 V7 PASS·V8 PASS(VERIFIED) → destroy 17 — [`experiments/arch-webapp-2tier/RESULTS.md`](../experiments/arch-webapp-2tier/RESULTS.md) 5절. V7·V8 실측 2회. 요금·크레딧 확인은 아직.
+>
+> 2026-10-02 아키텍처 과제(지도교수 9/29): `scenarios/arch/webapp-2tier/` 17 리소스 → Trivy 18 finding → AI 해석 등록(모델 응답 0건) → 패치·검증 세트 SG 7/7·IAM 5/6.
 >
 > 2026-09-15 B·C 3~4주차 작업(도구·API 없이 파일 입력만으로 동작하는 `iacpatch review` 흐름)은 [`BC_WEEK3-4_STATUS.md`](BC_WEEK3-4_STATUS.md) 에 따로 정리했다.
 
@@ -34,10 +36,10 @@
 | 항목 | 위치 | 상태 | 필요한 것 |
 |---|---|---|---|
 | 실제 LLM API 제공자 (anthropic / openai / openai_compatible) | `generator/llm_providers.py` | 코드 작성, **미실행**. 키 없음·제공업체 미정. 키 없이 호출하면 error 로 끝나는 것만 확인 | 제공업체 결정 + 키(환경변수) + 첫 실행 기록 |
-| V7 AWS 실측 (describe-security-groups / network-interfaces / prefix-list 전개 → 오라클) | `postdeploy.py`, `tools/awscli.py` | 코드 + FakeCli 단위 테스트. **실제 AWS 미호출** | 샌드박스 apply 후 `postdeploy --execute` (사람 승인) |
-| V8 통신 확인 (허용 성공 + 승인 밖 vantage 에서 실패) | `postdeploy.py` | 로컬 소켓 단위 테스트만. 실제 인스턴스 없음. 체크 정의 예시 `policy/intent/sg-baseline.v8.example.json` (09-22) | EC2 인스턴스 + 승인 밖 관측 지점(예: 별도 SG 의 임시 EC2, 핫스팟) + 체크 JSON |
+| V7 AWS 실측 (describe-security-groups / network-interfaces / prefix-list 전개 → 오라클) | `postdeploy.py`, `tools/awscli.py` | 코드 + FakeCli 단위 테스트. **10-04 실제 AWS 2회**: 전 FAIL(22 ← 0.0.0.0/0 EXCESS) / 후 PASS (`RESULTS.md` 5.3·5.5) | IAM 세트·prefix-list 케이스는 아직 |
+| V8 통신 확인 (허용 성공 + 승인 밖 vantage 에서 실패) | `postdeploy.py`, `scripts/arch_v8_checks.py` | **10-04 실제 인스턴스 2회**: 승인 밖인 B 의 PC 에서 전 FAIL(22 열림) / 후 PASS(80 열림, 22·3389·8080 닫힘) | 핫스팟 관측 지점은 선택(미실행) |
 | 복구 절차 (파일 복원 → plan → apply → 수렴 확인 + describe 기록) | `postdeploy.run_recover` | 미리보기 모드만 실행. 09-22: `--review <id>` 로 실험 기록의 `original/` 에서 복원 가능(단위 테스트) | 샌드박스에서 `--execute` (사람 승인) |
-| 배포 후 결과를 실험 기록에 연결 (`postdeploy --review`) | `postdeploy.py` | 09-22 구현. FakeCli 로 VERIFIED / DEPLOY_FAILED / UNVERIFIED 경로 단위 테스트. metrics 표에 V7/V8/배포후 열. **실제 AWS 실행 0회** | A 가 sandbox apply 후 `--execute` |
+| 배포 후 결과를 실험 기록에 연결 (`postdeploy --review`) | `postdeploy.py` | 09-22 구현. FakeCli 단위 테스트 + **10-04 실제 1회** (`20261004-154935-dc5b50` ← `20261004-235735-b463c7` VERIFIED) | — |
 | 위험도 기준표 | `policy/risk_rubric.json` risk-v2, `docs/RISK_RUBRIC_V2.md` | 2026-09-22 확정안. 등급 일치율(손 적용 vs 코드) 25/25 (샌드박스 4세트). 팀 OK 후 고정 | 팀 확인 |
 | PR 생성 (브랜치/커밋/push/REST) | `tools/github.py` | 미리보기 모드(명령 출력)만 실행. push 미실행. 2026-09-22: `--review <id>` 로 실험 기록(data/reviews)도 받음 — LIGHT/FULL_REVIEW 만 허용, 단위 테스트 4건 | 저장소 권한 + `--execute` (사람) |
 | GitHub Actions `iacpatch-verify.yml`(단위 테스트 + 후보 세트 4개 실측 + PR 댓글) / `build-exe.yml`(Windows exe) | `.github/workflows/` | 2026-09-28 작성 (`bc-unit-tests.yml`·`patch-verify.yml` 을 대체). PR #4 첫 실행: **verify 2회 성공**(5m13s, 4m25s — 러너의 Terraform 1.16.1 + Trivy 0.74.0), build-exe #1~#3 실패(원인 셋: exe 에 `iacpatch.fuzz` 누락, 스크립트 모드 상대 import, onefile 임시 폴더 루트) → **#4 성공**(Windows 러너: 단위 테스트 206 OK, exe 스모크·창 없는 exe·exe 안 테스트 206 OK, 아티팩트 `IaCPatch-portable` 45.4 MB). 로그는 브랜치 `ci-logs`. `docs/CI_FIRST_RUN.md` | **팀 PC 실측 완료(09-29)**: exe 더블클릭 → 도구 받기 → 8단계 전체 실행 → 리포트. 38/38 라벨 일치, 사각 탐색 44/44/0, 차등 검증 0 — 샌드박스와 동일 (`docs/worklog/2026-09-28.md`) |

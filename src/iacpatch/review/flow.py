@@ -28,6 +28,7 @@ from ..models import Finding, PatchCandidate, PolicyResult, ReviewLevel, ReviewS
 from ..policy.risk import score_risk
 from ..policy.validator import validate_candidate
 from ..report import unified_diff
+from ..textio import write_text_lf
 from ..verify.combine import combine
 from ..verify.plan_model import build_world, load_plan
 from .candidates import CandidateSpec, load_candidate, validate_candidate_shape
@@ -124,9 +125,8 @@ class _Run:
         p.write_text(json.dumps(obj, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
 
     def write_text(self, rel: str, text: str) -> None:
-        p = self.dir / rel
-        p.parent.mkdir(parents=True, exist_ok=True)
-        p.write_text(text, encoding="utf-8")
+        # LF 고정: candidate/*.tf 가 저장소로 되돌아갈 때 줄바꿈 때문에 파일 전체 diff 가 되지 않게 (textio.py 참고)
+        write_text_lf(self.dir / rel, text)
 
 
 def run_review(settings: Settings, opt: ReviewOptions) -> ReviewResult:

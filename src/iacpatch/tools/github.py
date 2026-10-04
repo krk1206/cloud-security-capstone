@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from ..config import Settings
+from ..textio import write_text_lf
 from .runner import run, which
 
 REVIEW_LEVELS_FOR_PR = ("LIGHT_REVIEW", "FULL_REVIEW")
@@ -180,8 +181,7 @@ def prepare_pr(settings: Settings, run_id: Optional[str] = None, execute: bool =
     for p in src.files:
         rel = p.relative_to(src.files_root)
         dst = repo_root / target_dir / rel
-        dst.parent.mkdir(parents=True, exist_ok=True)
-        dst.write_text(p.read_text(encoding="utf-8"), encoding="utf-8")
+        write_text_lf(dst, p.read_text(encoding="utf-8"))   # 저장소 파일은 LF 로 (textio.py)
     for argv in (["git", "add", target_dir], ["git", "commit", "-F", str(record_dir / "commit_message.txt")], ["git", "push", "-u", remote, branch]):
         r = run(argv, cwd=str(repo_root))
         if not r.ok:

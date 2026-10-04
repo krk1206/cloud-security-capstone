@@ -30,6 +30,7 @@ from .policy.risk import score_risk
 from .policy.validator import validate_candidate
 from .report import console_summary, intent_summary_md, pr_body, unified_diff
 from .runrecord import RunRecord
+from .textio import write_text_lf
 from .tools.terraform import TerraformAdapter
 from .tools.trivy import TrivyAdapter, TrivyScan
 from .verify.combine import combine
@@ -185,9 +186,7 @@ def run_predeploy(settings: Settings, target_dir: str, intent_path: str, scenari
                                 "usage": raw.usage, "error": raw.error})
             rec.write_json(str((cdir / "candidate.json").relative_to(rec.dir)), candidate.to_dict())
             for name, content in candidate.files.items():
-                p = cdir / "files" / name
-                p.parent.mkdir(parents=True, exist_ok=True)
-                p.write_text(content, encoding="utf-8")
+                write_text_lf(cdir / "files" / name, content)   # LF 고정 (textio.py)
             rec.step(f"generate[{attempt}]", candidate.status, candidate.error or candidate.rationale[:120])
             if candidate.status != "PATCH":
                 break

@@ -26,7 +26,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SET_DIR = ROOT / "experiments" / "candidate-sets" / "eval-claude-code"
 sys.path.insert(0, str(ROOT / "scripts"))
+sys.path.insert(0, str(ROOT / "src"))
 from cc_cases import case_info  # noqa: E402
+from iacpatch.textio import write_text_lf  # noqa: E402
 EXPECTED = ["correct", "deceptive", "breaks_required", "unapproved", "unknown", "invalid"]
 _FENCE_RE = re.compile(r"```(?:hcl|terraform|tf)?[ \t]*\n(.*?)```", re.DOTALL)
 
@@ -79,8 +81,7 @@ def main() -> int:
         ans = input("이 diff 를 보고 적은 라벨이 맞나? 등록하려면 y: ").strip().lower()
         if ans != "y":
             print("등록 안 함"); return 1
-    dst.parent.mkdir(parents=True, exist_ok=True)
-    dst.write_text(tf, encoding="utf-8")
+    write_text_lf(dst, tf)   # 저장소에 들어가는 .tf 는 LF 로 (Windows 에서도)
     man = SET_DIR / "manifest.json"
     m = json.loads(man.read_text(encoding="utf-8"))
     if any(c["id"] == cid for c in m["candidates"]):

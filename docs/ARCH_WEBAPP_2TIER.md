@@ -48,29 +48,31 @@ Trivy 가 추가로 잡는 11건(egress 전체 허용, IMDSv2, 루트 볼륨 암
 
 ## 4. 지시 5단계 ↔ 저장소 현황
 
-| 교수 지시 | 저장소 | 상태 (2026-10-02) |
+| 교수 지시 | 저장소 | 상태 (2026-10-05, 10-04 실측 반영) |
 |---|---|---|
 | ① 아키텍처 선정 | 이 문서 1~2절 | 됨 (B 선정, 이유 기록) |
-| ② Terraform 으로 구성 | `scenarios/arch/webapp-2tier/` 9 파일 17 리소스 | 됨 — fmt/validate/오프라인 plan 통과 (개발 환경). 팀 PC 재실행 `[확인 필요]` |
-| ③ Terraform 실행 시연 (AWS 에 실제로 만들어지는지) | `docs/AWS_ACCESS_SETUP_B.md` 순서 | **안 됨 — apply 0회.** 계정 접근(IAM 사용자·키)이 먼저. 이 저장소의 AI 세션은 apply 를 하지 않는다(CLAUDE.md) |
+| ② Terraform 으로 구성 | `scenarios/arch/webapp-2tier/` 9 파일 17 리소스 | 됨 — fmt/validate/오프라인 plan 통과 (개발 환경 + B 의 PC, Terraform 1.16.1, 결과 동일) |
+| ③ Terraform 실행 시연 (AWS 에 실제로 만들어지는지) | `docs/SOLO_ABC_RUNBOOK.md` 3단계, 기록 `RESULTS.md` 5.2 | **됨 (10-04)** — B 본인 프리 플랜 계정(서울)에 17 리소스 생성, 웹 페이지 표시, 콘솔 캡처 5종. t2.micro 거부 → t3.micro (D-18). 시연 뒤 destroy 17. 이 저장소의 AI 세션은 apply 를 하지 않는다(CLAUDE.md) |
 | ④ Trivy 점검 결과물 | `scripts/arch_scan.py` → `findings.md`; 실측 `experiments/arch-webapp-2tier/RESULTS.md` 2절 | 됨 — finding 18 (의도적 7 + 부수 11), CIS 대응은 매핑표에 있는 3룰만 표시 |
 | ⑤ AI 에이전트가 해석 | `interpret_prompt.md` → Claude Code 새 세션(사람이 염) → `scripts/arch_interpret_add.py` 등록 + 기계 대조 | **반만 됨** — 프롬프트·등록·대조 코드와 테스트는 있음, **모델 응답 등록 0건** (B 가 PC 에서 1회) |
-| 다음 단계: 스캔 결과로 패치 → 검증 | `experiments/candidate-sets/arch-webapp-sg` (7), `arch-webapp-iam` (6) | 됨 — SG 7/7 기대 일치, IAM 5/6 (규칙 기반이 변수 이름 때문에 거부, 기록) |
+| 다음 단계: 스캔 결과로 패치 → 검증 | `experiments/candidate-sets/arch-webapp-sg` (7), `arch-webapp-iam` (6); 실제 AWS 전/후 `RESULTS.md` 5.3~5.5 | 됨 — SG 7/7 기대 일치, IAM 5/6 (규칙 기반이 변수 이름 때문에 거부, 기록). **실제 AWS 1회**: 전 측정 V7·V8 FAIL → PR #5 사람 승인·병합 → 패치 apply(1 changed) → 후 측정 V7·V8 PASS(VERIFIED), 정상 기능 보존 |
 
 "AI 에이전트" 를 어떻게 구현했나 (정직한 설명): 파이프라인이 모델을 자동 호출하지 않는다(D-5: 유료 API 안 씀, CLI 자동 호출 안 함). 대신 ① 코드가 증거(Trivy 원문 + Terraform 전체 + 스키마)를 프롬프트 파일로 만들고, ② 사람이 Claude Code 새 세션에 붙여 넣고, ③ 응답 JSON 을 코드가 등록하면서 **실제 스캔 결과와 대조**한다 — 응답이 없는 finding 을 지어내면 "지어냄", 빠뜨리면 "누락", CIS 번호가 팀 매핑표와 다르면 "불일치" 로 표시한다. AI 의 해석을 그대로 믿지 않는 신뢰 경계가 등록 단계에 있다.
 
 ## 5. 이 아키텍처로 뒤에 할 것
 
-- **apply 시연 + V7/V8 첫 기록**: apply 뒤 `terraform output web_security_group_id` 의 SG 를 `describe-security-groups` 로 읽으면 V7(실제 AWS 상태), `curl http://<web_public_ip>/` 가 200 이면 V8(정상 기능). 둘 다 이 아키텍처가 처음으로 실제 기준을 준다 (지금까지 0회).
+- ~~apply 시연 + V7/V8 첫 기록~~ → **10-04 에 1회 완료** (`RESULTS.md` 5절). 남은 것: 요금·크레딧 차감액 확인(루트), 같은 절차를 IAM 세트로(배포 후 IAM 검증 V7-IAM 은 미구현).
 - **Claude Code 후보**: `scripts/cc_prompt.py arch-sg` / `arch-iam` → 응답을 `scripts/cc_add.py arch-sg <응답> --rep 1 --expected <라벨>` 로 등록 → 같은 검증. 특히 IAM 은 규칙 기반이 거부한 케이스라 E1 비교의 첫 실데이터가 된다.
 - **S3 유형**: 탐지·해석까지만. 오라클(퍼블릭 액세스 차단 4항목 + 정책 Principal 전개)은 6~7주차 범위(D-10).
 
 ## 6. 교수께 말할 문장 (그대로 읽어도 됨)
 
-> 아키텍처는 AWS 기본 패턴인 VPC 안의 공개 서브넷·사설 서브넷 2계층 웹 구성으로 골랐습니다. 웹 서버, 앱 서버, 정적 자산 S3 버킷, 웹 서버가 쓰는 IAM 역할까지 17개 리소스를 Terraform 파일 9개로 작성했고, 문법 검사와 plan 까지 통과했습니다. 실제 계정에 만드는 시연은 계정 접근을 준비해서 [날짜] 에 합니다.
+> 아키텍처는 AWS 기본 패턴인 VPC 안의 공개 서브넷·사설 서브넷 2계층 웹 구성으로 골랐습니다. 웹 서버, 앱 서버, 정적 자산 S3 버킷, 웹 서버가 쓰는 IAM 역할까지 17개 리소스를 Terraform 파일 9개로 작성했고, 문법 검사와 plan 까지 통과했습니다. 10월 4일에 제 프리 플랜 계정 서울 리전에 실제로 apply 해서 17개가 만들어지고 웹 페이지가 뜨는 것까지 확인했고, 시연 뒤 destroy 로 전부 지웠습니다. 청구는 0원입니다(크레딧 차감액은 확인 중).
 >
 > Trivy 로 점검하면 85개 검사 중 18개가 걸립니다. 그중 7개는 제가 연구 대상으로 일부러 넣은 설정 오류 — SSH 전체 개방, S3 퍼블릭 차단 해제 4개, IAM s3:* 2개 — 이고 11개는 암호화·로그 같은 기본값입니다. Trivy 가 못 잡는 것도 하나 확인했는데, 버킷 정책의 Principal "*" 공개 읽기입니다.
 >
 > AI 해석은 Trivy 결과와 코드 전체를 프롬프트로 만들어 Claude Code 세션에 넣고, 응답을 등록할 때 실제 결과와 기계적으로 대조합니다. 지어낸 항목·빠진 항목·CIS 번호 불일치를 표시합니다.
 >
 > 다음 단계로 이 아키텍처의 SSH 설정 오류에 패치 후보 7개, IAM 에 6개를 넣어 검증 6계층을 돌렸습니다. SSH 는 7개 전부 기대대로 — 정상 패치 2개 통과, 스캐너만 속이는 패치 5개 차단 — 였고, IAM 은 6개 중 5개가 기대대로였고 1개는 규칙 기반 생성기가 이름에 변수가 있다고 거부해서 후보를 못 만들었습니다. 그 한계는 그대로 기록했습니다.
+>
+> 그리고 패치가 실제로 효과가 있는지를 실제 AWS 에서 전·후로 쟀습니다. 취약한 상태로 apply 한 직후에 실제 보안 그룹을 API 로 읽으니 22번이 전체 개방이라 V7 이 FAIL 이었고, 승인 대역 밖인 제 PC 에서 22번에 접속되는 것도 확인돼 V8 도 FAIL 이었습니다 — 코드의 설정 오류가 실제 인프라의 노출로 그대로 나타난 겁니다. 그 다음 파이프라인이 만든 패치 기록은 검증 6계층을 다 통과하고 위험도 LOW·LIGHT_REVIEW 로 판정됐고, 이걸 PR 로 올려 제가 승인 댓글을 달고 병합한 뒤 apply 했습니다. plan 은 보안 그룹 하나만 제자리 수정하는 1 change 였습니다. apply 뒤 다시 재면 22번이 10.0.0.0/8 로만 열려 V7 PASS, 제 PC 에서 22번은 닫히고 80번은 열려 있어 V8 PASS, 웹 페이지도 그대로 떠서 정상 기능이 보존됐습니다. 그래서 탐지 → 패치 → 위험도 판정 → PR → 사람 승인 → 적용 → 재검증을 실제 계정에서 한 바퀴 돌린 기록이 생겼습니다.

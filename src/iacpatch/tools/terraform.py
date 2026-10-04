@@ -23,6 +23,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from ..textio import write_text_lf
 from .runner import CmdResult, ToolNotFound, run, which
 
 OFFLINE_OVERRIDE_FILENAME = "zz_iacpatch_offline_override.tf"
@@ -173,9 +174,7 @@ class TerraformAdapter:
             shutil.rmtree(dst)
         shutil.copytree(src, dst, ignore=COPY_IGNORE)
         for rel, content in (file_overrides or {}).items():
-            target = dst / rel
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_text(content, encoding="utf-8")
+            write_text_lf(dst / rel, content)   # LF 고정 (textio.py)
         return dst
 
     def offline_override_text(self) -> str:

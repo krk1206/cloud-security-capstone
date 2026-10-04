@@ -54,11 +54,13 @@ variable "ami_id" {
 
 variable "instance_type" {
   description = <<-EOT
-    EC2 크기. 기본 t2.micro = 서울 리전 프리 티어 대상(12개월 월 750시간 무료). 2025-07 이후 새 계정(크레딧 플랜)은 어느 쪽이든 크레딧 안.
-    시연 1시간 × 2대 = 2시간 — 프리 티어 안이면 0원, 밖이어도 수십 원.
+    EC2 크기. 기본 t3.micro — 2026-10-04 실측: 2025-07-15 이후 만든 프리 플랜 계정(서울)에서 t2.micro 는
+    apply 가 "instance type is not eligible for Free Tier" 로 거부됐고, 그 계정의 프리 티어 대상 목록
+    (describe-instance-types 로 조회)에 있는 t3.micro 로 2대가 만들어졌다. 12개월 프리 티어 옛 계정은 t2.micro 도 된다.
+    시연 1시간 × 2대 = 2시간 — 프리 플랜은 크레딧에서 차감(청구 0원), 옛 프리 티어는 월 750시간 안이면 0원.
   EOT
   type        = string
-  default     = "t2.micro"
+  default     = "t3.micro"
 }
 
 variable "bucket_name" {

@@ -27,6 +27,7 @@ from .config import Settings, load_json
 from .intent import try_load_intent
 from .models import LayerResult, Verdict
 from .runrecord import RunRecord
+from .textio import write_text_lf
 from .tools.awscli import AwsCli, AwsError, build_world_from_aws
 from .tools.terraform import TerraformAdapter
 from .verify.combine import combine
@@ -335,7 +336,7 @@ def run_recover(settings: Settings, run_id: Optional[str], execute: bool, tf_dir
         print("preview only (--execute not given). Nothing was changed.")
         return 0
     for name, content in baseline_files.items():
-        (target / name).write_text(content, encoding="utf-8")
+        write_text_lf(target / name, content)   # 저장소 파일은 LF 로 (textio.py)
     rec.step("restore_files", "OK", ", ".join(baseline_files))
     init = tf.init(target)
     if not init.ok:

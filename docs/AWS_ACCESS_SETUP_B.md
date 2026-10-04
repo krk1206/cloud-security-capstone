@@ -8,13 +8,15 @@
 
 ## 0. 돈이 드나? — 안 들게 설계했다 (B 질문 2026-10-02)
 
-이 아키텍처는 **프리 티어 안에 들어가도록 일부러** 만들었다: NAT 게이트웨이·RDS·로드밸런서 없음, EC2 는 t2.micro 2대(서울 프리 티어 대상, 월 750시간 무료), S3 는 빈 버킷(5GB 무료), VPC·서브넷·IGW·SG·IAM 은 원래 무료.
+이 아키텍처는 **프리 티어 안에 들어가도록 일부러** 만들었다: NAT 게이트웨이·RDS·로드밸런서 없음, EC2 는 micro 2대, S3 는 빈 버킷(5GB 무료), VPC·서브넷·IGW·SG·IAM 은 원래 무료.
+
+**10-04 실측(B 본인 프리 플랜 계정, 서울)**: 기본값이던 t2.micro 는 apply 가 `instance type is not eligible for Free Tier` 로 거부됐다. 그 계정의 프리 티어 대상 목록(`aws ec2 describe-instance-types --filters Name=free-tier-eligible,Values=true`)에는 t3.micro·t3.small·t4g.micro·t4g.small·t8i.micro·t8i.small·c7i-flex.large·m7i-flex.large 가 있었고, AL2023 x86 AMI 에 맞는 **t3.micro** 로 2대가 만들어졌다. 그래서 기본값을 t3.micro 로 바꿨다(D-18). 12개월 프리 티어 방식의 옛 계정은 t2.micro 도 된다.
 
 | 계정 종류 | 시연 1시간 비용 | 조건 |
 |---|---|---|
-| 팀 샌드박스(운영계획서 "예산 0원, 프리 티어 안") — 만든 지 12개월 안 | **0원** | `instance_type` 기본값 t2.micro 그대로. 퍼블릭 IPv4 도 12개월 750시간 무료 |
-| 같은 계정인데 12개월 지남 | 퍼블릭 IPv4 1시간 ≈ 0.005달러(약 7원) + t2.micro 2시간 ≈ 0.023달러 `[확인 필요: 요금표]` | 수십 원. 예산 알림 1달러면 충분 |
-| 2025-07-15 이후 새 계정(프리 플랜) | **청구 0원** — 100달러 크레딧에서 0.05달러쯤 차감 | 유료 플랜으로 올리지 않는 한 요금이 발생하지 않음. 카드 등록은 본인 확인용 |
+| 팀 샌드박스(운영계획서 "예산 0원, 프리 티어 안") — 만든 지 12개월 안 | **0원** | 퍼블릭 IPv4 도 12개월 750시간 무료. t2.micro·t3.micro 둘 다 대상 `[확인 필요: 그 계정에서]` |
+| 같은 계정인데 12개월 지남 | 퍼블릭 IPv4 1시간 ≈ 0.005달러(약 7원) + micro 2시간 ≈ 0.023달러 `[확인 필요: 요금표]` | 수십 원. 예산 알림 1달러면 충분 |
+| 2025-07-15 이후 새 계정(프리 플랜) — **10-04 B 계정이 이것** | **청구 0원** — 크레딧에서 차감 | 유료 플랜으로 올리지 않는 한 요금이 발생하지 않음. t2.micro 는 거부되고 t3.micro 가 됐다(위). 차감액은 루트로 Billing → 크레딧에서 확인 `[확인 필요: 10-05 이후 수치]` |
 | 학교 AWS Academy / AWS Educate 실습 계정 | 0원, 카드도 불필요 | **학과에 있는지 교수님께 확인** `[확인 필요]` |
 
 돈이 **나가는 경우**는 딱 셋: ① destroy 를 안 해서 며칠 켜 둠(2대 × 24시간 × 30일 = 1,440시간 > 750시간 무료) ② instance_type 을 큰 것으로 바꿈 ③ NAT·RDS 같은 걸 추가. 시연 뒤 `terraform destroy` + 예산 알림이 안전장치다.
@@ -120,7 +122,9 @@ terraform destroy                # "yes" 입력. "Destroy complete! Resources: 1
 | 증상 | 뜻 | 할 일 |
 |---|---|---|
 | `InvalidAMIID.NotFound` / `InvalidAMIID.Malformed` | ami_id 가 자리표시자 그대로거나 다른 리전 값 | terraform.tfvars 의 ami_id 를 서울 리전 AL2023 ID 로 |
-| `InvalidParameterValue ... t2.micro` 류 | 리전·AMI 가 t2.micro 를 지원하지 않음(드묾) | `instance_type = "t3.micro"` 로 (크레딧 플랜이면 비용 차이 무시 가능) |
+| apply 에서 `instance type is not eligible for Free Tier` (**10-04 실측**) | 프리 플랜 계정은 정해진 타입만 허용. t2.micro 가 그 목록에 없었다 | 0절의 조회 명령으로 목록 확인 → tfvars 에 `instance_type = "t3.micro"` (주석 `#` 없이) → `terraform plan -out plan.bin` 부터 다시. 기본값은 이제 t3.micro |
+| `InvalidParameterValue ... <타입>` 류 | 리전·AMI 가 그 타입을 지원하지 않음(드묾) | 0절 목록의 다른 x86 타입으로 |
+| Billing 콘솔에서 "권한 필요" (**10-04 실측**) | IAM 사용자는 기본적으로 결제 정보를 못 본다 | 루트로 로그인해서 본다 (또는 루트가 "IAM 사용자의 결제 정보 액세스" 를 켜고 권한 부여) |
 | `BucketAlreadyExists` | 버킷 이름이 전 세계 누군가와 겹침 | bucket_name 을 `iacpatch-webapp-assets-<이니셜><날짜>` 로. (IAM intent 의 ARN 도 같이 — RESULTS.md 참고) |
 | `AccessDenied` + 액션 이름 (예: `iam:CreateInstanceProfile`) | IAM 사용자 권한 부족 | 1절 인라인 정책에 그 액션 추가 (A 에게) |
 | `aws_s3_bucket_policy` 에서 `AccessDenied` 인데 위 권한은 다 있음 | **계정 수준** S3 퍼블릭 액세스 차단이 켜져 있어 퍼블릭 정책이 거부됨 | 끄지 않는다. "계정 가드레일이 퍼블릭 정책을 막았다" 로 기록하고 S3 부분만 콘솔 캡처로 대체 — 이것도 결과다 |

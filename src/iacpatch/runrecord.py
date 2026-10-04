@@ -26,6 +26,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 from .config import SECRET_ENV_NAMES
+from .textio import write_text_lf
 
 
 def _now_iso() -> str:
@@ -71,10 +72,7 @@ class RunRecord:
         return p
 
     def write_text(self, rel: str, text: str) -> Path:
-        p = self.dir / rel
-        p.parent.mkdir(parents=True, exist_ok=True)
-        p.write_text(text, encoding="utf-8")
-        return p
+        return write_text_lf(self.dir / rel, text)   # LF 고정 (textio.py)
 
     def candidate_dir(self, attempt: int) -> Path:
         d = self.dir / "candidates" / f"{attempt:02d}"

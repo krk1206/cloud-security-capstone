@@ -115,7 +115,7 @@ aws sts get-caller-identity
   $env:Path = "<새 폴더>\tools;" + $env:Path
   $env:TF_PLUGIN_CACHE_DIR = "<새 폴더>\tools\plugin-cache"
   copy terraform.tfvars.example terraform.tfvars
-  notepad terraform.tfvars          # ami_id 를 복사한 값으로. instance_type 은 건드리지 않는다(t2.micro)
+  notepad terraform.tfvars          # ami_id 를 복사한 값으로. instance_type 은 기본값 t3.micro 그대로 (10-04 실측: 프리 플랜 계정은 t2.micro 거부)
   ```
 
 ### 3-2 실행 시연 (교수 지시 3번째 — 이 화면을 캡처)
@@ -159,8 +159,9 @@ cd <새 폴더>
    1. Current branch → `claude/iacpatch-sg-slice` 선택 → New branch `sandbox` → Publish branch. (처음 한 번)
    2. New branch → 이름은 2번 출력의 `branch :` 값 → 기준 `sandbox`.
    3. 탐색기에서 `data\reviews\<기록 id>\candidate\security_groups.tf` 를 복사해 `scenarios\arch\webapp-2tier\security_groups.tf` 에 덮어쓰기.
+      Desktop 의 diff 가 **한 줄**(22 의 cidr_blocks)이어야 한다. 파일 전체가 바뀐 것으로 보이면 줄바꿈(CRLF) 문제다 — ffa0cca 이전 빌드의 버그로, 이후 빌드는 후보 파일을 LF 로 쓴다(`src/iacpatch/textio.py`). 옛 빌드면 PowerShell 로 LF 로 바꿔 저장한 뒤 다시 본다.
    4. Desktop 에 변경 1파일 보임 → Summary 에 `commit_message.txt` 첫 줄 → Commit → Publish branch.
-   5. Desktop 의 "Create Pull Request" → 웹에서 **base 를 `sandbox` 로 바꾸고** 본문에 `pr_body.md` 내용 붙여넣기 → Create.
+   5. Desktop 의 **Preview Pull Request**(버전에 따라 "Create Pull Request") → 웹에서 **base 를 `sandbox` 로 바꾸고** 본문에 `pr_body.md` 내용 붙여넣기 → Create. Desktop 이 A 의 GitHub 계정으로 로그인돼 있으면 PR 작성자가 A 로 보인다 — 승인 댓글에 네 이름을 적어 기록을 남긴다.
 4. Actions 의 `iacpatch-verify` 가 PR 에 검증 표 댓글을 단다(수 분). 같은 PR 에 댓글 "승인: 김보성 — LIGHT_REVIEW, 위험도 LOW, V1~V6 PASS, 전 측정 DEPLOY_FAILED(기록 id)" 를 남기고 **Merge pull request**. (본인 PR 은 Approve 버튼을 못 누른다 — 병합 자체가 사람 승인 기록이다.)
 5. Desktop → Current branch `sandbox` → Fetch/Pull. 이제 로컬 `scenarios\arch\webapp-2tier\security_groups.tf` 가 패치본이다.
 
@@ -191,9 +192,14 @@ plan 이 `1 to change` 가 아니면 멈추고 보고(다른 게 바뀐다는 �
 cd <새 폴더>\scenarios\arch\webapp-2tier
 terraform destroy                              # yes → "Destroy complete! Resources: 17 destroyed."
 ```
-→ IAM → 액세스 키 **비활성화** → Billing 에서 요금 0 / 크레딧 차감액 확인 → 보고. 다음 시연 때 키를 다시 활성화하면 된다.
+→ IAM → 액세스 키 **비활성화** → Billing 에서 요금 0 / 크레딧 차감액 확인 → 보고. 다음 시연 때는 키를 새로 만들어 쓴다.
+
+- Billing 페이지는 IAM 사용자로는 기본적으로 "권한 필요" 가 뜬다(10-04 실측) — **루트로 로그인**해서 본다. 요금 데이터는 최대 하루 늦게 반영되므로 다음날 한 번 더 본다.
+- destroy 뒤 `terraform state list` 가 아무것도 안 찍으면 state 가 빈 것(정상). 콘솔 EC2 에 "종료됨" 인스턴스가 1시간쯤 남아 보이는 건 요금과 무관.
 
 `terraform.tfvars`·`terraform.tfstate`·`sandbox\v8-checks.json` 은 git 에 안 올라간다(.gitignore). state 는 destroy 가 끝날 때까지 지우지 않는다.
+
+**10-04 실측 결과**: 0~6단계 전부 1회 완료 — apply 17 added → 전 측정 V7·V8 FAIL → PR #5(`sandbox`) 병합 → apply 1 changed → 후 측정 V7·V8 PASS → destroy 17 destroyed. 기록 id 와 숫자는 `experiments/arch-webapp-2tier/RESULTS.md` 5절.
 
 ---
 
@@ -208,7 +214,11 @@ worklog(날짜)·`experiments/arch-webapp-2tier/RESULTS.md` 5절(apply 1회, V7/
 | 1-1 | 카드 없음 / 가입 심사 지연 | A 의 샌드박스 IAM 사용자로(`AWS_ACCESS_SETUP_B.md` 1절), 또는 학과 AWS Academy 여부를 교수께 |
 | 1-7 | `get-caller-identity` 가 InvalidClientTokenId | 키를 잘못 붙여 넣음(앞뒤 공백). 새 창에서 다시 |
 | 3-2 | `InvalidAMIID`, `BucketAlreadyExists`, `AccessDenied`, S3 정책 `AccessDenied` | `AWS_ACCESS_SETUP_B.md` 6절 표 |
-| 3-2 | `Unsupported ... t2.micro ... Availability Zone` | tfvars 에 `availability_zone = "ap-northeast-2c"` 추가해 재시도 |
+| 3-2 | `Unsupported ... Availability Zone` | tfvars 에 `availability_zone = "ap-northeast-2c"` 추가해 재시도 |
+| 3-2 | apply 에서 `instance type is not eligible for Free Tier` (10-04 실측, t2.micro) | 그 계정의 대상 목록을 `aws ec2 describe-instance-types --filters Name=free-tier-eligible,Values=true --query "InstanceTypes[].InstanceType"` 로 보고, 거기 있는 x86 타입(t3.micro)을 tfvars 에 **# 없이** `instance_type = "t3.micro"` 로 적고 plan 부터 다시 (기본값은 이제 t3.micro) |
+| 3-2 | tfvars 에 적었는데 plan 이 그대로 | 줄 앞에 `#` 가 있으면 주석이라 무시된다. `#` 지우고 다시 |
+| 3-2 | apply 뒤 `Saved plan is stale` | plan.bin 은 1회용. 이미 apply 된 것이면 무시, 다시 하려면 `terraform plan -out plan.bin` 부터 |
+| 3-3 | `postdeploy` 가 PowerShell 에서 경로 오류 | 폴더 이름에 공백·괄호가 있으면 경로를 따옴표로 감싼다. `<새 폴더>` 같은 자리표시자는 실제 경로로 바꿔 쓴다 |
 | 3-3 | V7 `cannot map target addresses to GroupIds` | apply 가 안 됐거나 다른 폴더에서 실행. `terraform state list` 로 확인 |
 | 3-3 | V8 web-http-open FAIL | 부팅 직후. 2분 뒤 재실행. 계속이면 user_data 의 nginx 설치 실패 — 콘솔 EC2 → 인스턴스 → 모니터링/시스템 로그 |
 | 4 | Desktop 에 변경이 80개 | 그 폴더가 zip 에서 푼 새 클론이 아님. zip 폴더로 |
