@@ -1,9 +1,9 @@
 {
   "set_id": "arch-webapp-sg",
-  "_note": "지도교수 9/29 지시의 '다음 단계'(스캔 결과 → 패치 → 검증). 원본 = infrastructure/webapp-2tier (B 가 선정·작성한 VPC 2계층 웹 아키텍처, 17 리소스). 대상 finding = 웹 SG 의 SSH 0.0.0.0/0 (AVD-AWS-0107, security_groups.tf). 후보는 security_groups.tf 전체 대체본. 규칙 기반 1 + 사람이 만든 seeded 6 — LLM 아님(개발 중 작성한 예제, B 의 Claude 세션이 쓰고 B 가 검수). expected 는 2026-10-02 실행 전에 고정 (D-3/D-4). 실측 결과와 다르면 결과를 고치지 않고 불일치로 기록한다.",
+  "_note": "지도교수 9/29 지시의 '다음 단계'(스캔 결과 → 패치 → 검증). 원본 = scenarios/arch/webapp-2tier (B 가 선정·작성한 VPC 2계층 웹 아키텍처, 17 리소스). 대상 finding = 웹 SG 의 SSH 0.0.0.0/0 (AVD-AWS-0107, security_groups.tf). 후보는 security_groups.tf 전체 대체본. 규칙 기반 1 + 사람이 만든 seeded 6 — LLM 아님(개발 중 작성한 예제, B 의 Claude 세션이 쓰고 B 가 검수). expected 는 2026-10-02 실행 전에 고정 (D-3/D-4). 실측 결과와 다르면 결과를 고치지 않고 불일치로 기록한다.",
   "week4_label_replay": false,
   "_week4_note": "4주차 라벨 표(25건)는 2026-09-22 에 고정된 세트만 센다. 이 세트의 등급 일치(expected_risk vs 코드)는 도구 있는 실행의 results.md 로 잰다 (plan 쌍 fixture 없음 — tests/fixtures 는 사람이 넣는다).",
-  "tf_dir": "infrastructure/webapp-2tier",
+  "tf_dir": "scenarios/arch/webapp-2tier",
   "trivy_json": "experiments/arch-webapp-2tier/trivy-scan.json",
   "rule": "AVD-AWS-0107",
   "resource": "aws_security_group.web",

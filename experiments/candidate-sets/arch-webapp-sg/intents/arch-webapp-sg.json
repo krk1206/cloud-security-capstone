@@ -2,8 +2,8 @@
   "intent_version": "1",
   "intent_id": "arch-webapp-sg",
   "status": "active",
-  "description": "infrastructure/webapp-2tier 의 SG 두 개(web, app)에 대한 의도. SSH(22)는 승인 출처 10.0.0.0/8(팀 결정값 D-2)에서만. 앱 포트(8080)는 웹 SG 가 붙은 인스턴스에서만(참조 SG). HTTP(80)는 인터넷 전체에서 들어와야 한다(공개 웹 서버 — 이것이 깨지면 정상 기능이 깨진 것). 2026-10-02 실행 전 고정.",
-  "target_dir": "infrastructure/webapp-2tier",
+  "description": "scenarios/arch/webapp-2tier 의 SG 두 개(web, app)에 대한 의도. SSH(22)는 승인 출처 10.0.0.0/8(팀 결정값 D-2)에서만. 앱 포트(8080)는 웹 SG 가 붙은 인스턴스에서만(참조 SG). HTTP(80)는 인터넷 전체에서 들어와야 한다(공개 웹 서버 — 이것이 깨지면 정상 기능이 깨진 것). 2026-10-02 실행 전 고정.",
+  "target_dir": "scenarios/arch/webapp-2tier",
   "targets": {
     "security_groups": [
       "aws_security_group.web",

@@ -1,6 +1,6 @@
 """아키텍처 Terraform → Trivy 점검 → 결과물 (지도교수 9/29 지시: "테라폼 → 트리비 점검 → 결과가 나오는 플로우").
 
-입력: Terraform 폴더 하나 (기본 infrastructure/webapp-2tier).
+입력: Terraform 폴더 하나 (기본 scenarios/arch/webapp-2tier).
 출력: data/arch/<실행 ID>/ 에
     trivy.json            Trivy 원문 (바꾸지 않는다)
     plan.json             자격증명 없는 오프라인 plan (terraform 이 있을 때) — "이 코드가 무엇을 만드는가" 의 근거

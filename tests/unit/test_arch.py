@@ -1,7 +1,7 @@
 """아키텍처 과제(2026-10-02, 지도교수 9/29 지시): Terraform → Trivy → 결과물 → AI 해석 등록 → 패치 세트.
 
 도구 없이 도는 것: 인벤토리·표 렌더·프롬프트·해석 등록 대조·intent targets 범위·cc 케이스.
-도구 있을 때만(TERRAFORM_BIN/TRIVY_BIN 또는 tools/): infrastructure/webapp-2tier 의 validate + 오프라인 plan + trivy 실측(17 리소스, finding 18).
+도구 있을 때만(TERRAFORM_BIN/TRIVY_BIN 또는 tools/): scenarios/arch/webapp-2tier 의 validate + 오프라인 plan + trivy 실측(17 리소스, finding 18).
 """
 from __future__ import annotations
 
@@ -26,7 +26,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import cc_cases  # noqa: E402
 import cc_prompt  # noqa: E402
 
-ARCH = ROOT / "infrastructure" / "webapp-2tier"
+ARCH = ROOT / "scenarios" / "arch" / "webapp-2tier"
 MAPPING = load_json(ROOT / "policy" / "cis_mapping.json")
 POLICY = load_json(ROOT / "policy" / "patch_policy.json")
 
@@ -42,7 +42,7 @@ def _tool(name: str) -> str | None:
 
 def _fake_scan_summary(scan_id="t1"):
     return {
-        "schema": "iacpatch-arch-scan-v1", "scan_id": scan_id, "tf_dir": "infrastructure/webapp-2tier",
+        "schema": "iacpatch-arch-scan-v1", "scan_id": scan_id, "tf_dir": "scenarios/arch/webapp-2tier",
         "files": [{"name": "security_groups.tf", "lines": 10, "resources": ["aws_security_group.web"], "data_sources": []}],
         "tools": {"terraform": {"available": False}, "trivy": {"available": True, "version": "0.74.0"}},
         "plan": {"status": "NOT_RUN"},
@@ -164,7 +164,7 @@ class ArchClaudeCodeCasesTests(unittest.TestCase):
     def test_arch_cases_resolve_to_the_architecture_and_build_prompts(self):
         self.assertIn("arch-sg", cc_cases.all_cases()); self.assertIn("arch-iam", cc_cases.all_cases())
         info = cc_cases.case_info("arch-sg")
-        self.assertEqual(info["tf_dir"], "infrastructure/webapp-2tier"); self.assertEqual(info["resource"], "aws_security_group.web")
+        self.assertEqual(info["tf_dir"], "scenarios/arch/webapp-2tier"); self.assertEqual(info["resource"], "aws_security_group.web")
         p, st = cc_prompt.build("arch-sg")
         self.assertEqual(st, "ok"); self.assertIn("security_groups.tf", p); self.assertIn("10.0.0.0/8", p); self.assertIn("aws_security_group.web", p)
         p2, st2 = cc_prompt.build("arch-iam")        # 0345 는 같은 리소스·줄에 finding 2개 → 하나로 본다 (ambiguous 아님)
@@ -175,7 +175,7 @@ class ArchClaudeCodeCasesTests(unittest.TestCase):
         for sid in ("arch-webapp-sg", "arch-webapp-iam"):
             m = load_json(ROOT / "experiments" / "candidate-sets" / sid / "manifest.json")
             self.assertIs(m["week4_label_replay"], False)
-            self.assertEqual(m["tf_dir"], "infrastructure/webapp-2tier")
+            self.assertEqual(m["tf_dir"], "scenarios/arch/webapp-2tier")
             for c in m["candidates"]:
                 self.assertIn(c["expected"], ("correct", "deceptive", "unapproved", "breaks_required"))
                 self.assertIn(c["expected_risk"], ("LOW", "MEDIUM", "HIGH"))
@@ -201,3 +201,30 @@ class ArchWithToolsTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SoloKitTests(unittest.TestCase):
+    """혼자 A·B·C 하기용 도구 (2026-10-04): V8 체크 생성기, exe 용 CLI 래퍼."""
+
+    def test_v8_checks_cover_every_guarded_service_from_the_unapproved_pc(self):
+        import arch_v8_checks as g
+        from iacpatch.postdeploy import v8_connectivity
+        doc = g.build("203.0.113.10", "10.0.2.50")
+        intent = parse_intent(load_json(ROOT / "experiments" / "candidate-sets" / "arch-webapp-sg" / "intents" / "arch-webapp-sg.json"))
+        guarded = {gs.service.label for gs in intent.guarded_services}
+        closed_local = {c["service_label"] for c in doc["checks"] if c["expect"] == "closed" and c["source_class"] == "unapproved" and c["vantage"] == "local"}
+        self.assertTrue(guarded <= closed_local, (guarded, closed_local))          # ssh·rdp·app-8080 전부 이 PC 에서 closed 검사 가능
+        self.assertTrue(any(c["port"] == 80 and c["expect"] == "open" for c in doc["checks"]))
+        r = v8_connectivity(doc, intent, execute=False)
+        self.assertEqual(r.verdict.value, "SKIPPED")                              # --execute 없이는 실행하지 않는다
+        with self.assertRaises(ValueError):
+            g.build("not-an-ip", "10.0.2.50")
+
+    def test_cli_wrapper_runs_a_read_only_subcommand(self):
+        import contextlib, io
+        import iacpatch_cli
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            rc = iacpatch_cli.main(["findings", "--trivy-json", "experiments/arch-webapp-2tier/trivy-scan.json", "--rule", "AVD-AWS-0107"])
+        self.assertEqual(rc, 0)
+        self.assertIn("aws_security_group.web", buf.getvalue())

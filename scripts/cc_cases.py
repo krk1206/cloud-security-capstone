@@ -3,7 +3,7 @@
 케이스 이름:
   SG  : a-probe 의 폴더 이름 그대로 (예: 00-baseline)              → scenarios/eval/a-probe/<case>, 룰 AVD-AWS-0107
   IAM : "iam-" + iam-probe 의 폴더 이름 (예: iam-00-literal-list)  → scenarios/eval/iam-probe/<case>, 룰 AVD-AWS-0345
-  ARCH: arch-sg / arch-iam (2026-10-02)                             → infrastructure/webapp-2tier (B 의 아키텍처, 파일 여러 개),
+  ARCH: arch-sg / arch-iam (2026-10-02)                             → scenarios/arch/webapp-2tier (B 의 아키텍처, 파일 여러 개),
         대상 파일은 Trivy finding 이 가리키는 파일(security_groups.tf / iam.tf), 스캔은 experiments/arch-webapp-2tier/trivy-scan.json
 """
 from __future__ import annotations
@@ -20,10 +20,10 @@ SETS: Dict[str, Dict[str, str]] = {
 
 
 ARCH: Dict[str, Dict[str, str]] = {
-    "arch-sg": {"kind": "sg", "tf_dir": "infrastructure/webapp-2tier", "trivy_json": "experiments/arch-webapp-2tier/trivy-scan.json",
+    "arch-sg": {"kind": "sg", "tf_dir": "scenarios/arch/webapp-2tier", "trivy_json": "experiments/arch-webapp-2tier/trivy-scan.json",
                 "rule": "AVD-AWS-0107", "resource": "aws_security_group.web",
                 "intent": "experiments/candidate-sets/arch-webapp-sg/intents/arch-webapp-sg.json"},
-    "arch-iam": {"kind": "iam", "tf_dir": "infrastructure/webapp-2tier", "trivy_json": "experiments/arch-webapp-2tier/trivy-scan.json",
+    "arch-iam": {"kind": "iam", "tf_dir": "scenarios/arch/webapp-2tier", "trivy_json": "experiments/arch-webapp-2tier/trivy-scan.json",
                  "rule": "AVD-AWS-0345", "resource": "aws_iam_policy.web_assets",
                  "intent": "experiments/candidate-sets/arch-webapp-iam/intents/arch-webapp-web-role.json"},
 }

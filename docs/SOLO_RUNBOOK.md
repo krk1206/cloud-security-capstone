@@ -95,7 +95,7 @@ python3 scripts/cc_prompt.py --all        # experiments/candidate-sets/eval-clau
 | ④ Claude Code 후보 | `IaCPatch-console.exe --exec scripts/cc_prompt.py arch-sg` (또는 `arch-iam`) → 응답 저장 → `--exec scripts/cc_add.py arch-sg 응답.md --rep 1 --expected <라벨>` | eval-claude-code 세트에 등록, ③ 과 같은 검증 |
 | ⑤ 실제 AWS 에 만들기 (사람) | `docs/AWS_ACCESS_SETUP_B.md` 4절 순서 (`terraform init/validate/plan/apply`, 끝나면 `destroy`) | 콘솔 캡처 5장, V7/V8 첫 기록(A 와) |
 
-원본 Terraform: `infrastructure/webapp-2tier/` (설명 `docs/ARCH_WEBAPP_2TIER.md`, 문법 `docs/TERRAFORM_STUDY_B.md`, 실측 `experiments/arch-webapp-2tier/RESULTS.md`).
+⑤ 부터 끝(PR→`sandbox` 브랜치 병합→패치 apply→V7/V8→destroy)까지 혼자 하는 순서는 `docs/SOLO_ABC_RUNBOOK.md`. 원본 Terraform: `scenarios/arch/webapp-2tier/` (설명 `docs/ARCH_WEBAPP_2TIER.md`, 문법 `docs/TERRAFORM_STUDY_B.md`, 실측 `experiments/arch-webapp-2tier/RESULTS.md`).
 
 ## 4. 선택: 그 다음 단계 (이 문서 범위 밖)
 

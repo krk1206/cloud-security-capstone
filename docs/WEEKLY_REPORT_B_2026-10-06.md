@@ -6,7 +6,7 @@
 
 | 피드백 | 대응 | 상태 |
 |---|---|---|
-| Terraform 이 너무 부족함, 많이 만들 것 | 아키텍처 Terraform 9 파일 / 17 리소스 (`infrastructure/webapp-2tier/`), 후보 변형 12 파일 추가 | 됨 |
+| Terraform 이 너무 부족함, 많이 만들 것 | 아키텍처 Terraform 9 파일 / 17 리소스 (`scenarios/arch/webapp-2tier/`), 후보 변형 12 파일 추가 | 됨 |
 | 본인이 한 작업을 설명할 수 있어야 함 | `docs/TERRAFORM_STUDY_B.md` (파일 줄 단위 문법 + 10문제), `docs/ARCH_WEBAPP_2TIER.md` 6절 문장 | 됨 (외우는 건 B) |
 | Terraform → Trivy → 결과 플로우 테스트 | `scripts/arch_scan.py` 1회 실행으로 fmt/validate/plan + Trivy → findings.md (`experiments/arch-webapp-2tier/RESULTS.md`) | 됨 (개발 환경), [ ] 팀 PC 재실행 |
 | 아키텍처 선정 → Terraform 구성 → 실행 시연 | VPC 2계층 웹 선정 (이유 문서화). **실제 apply 는 0회** — 계정 접근이 먼저 | [ ] 계정·키 (A), [ ] apply 1회 |
@@ -34,8 +34,8 @@
 
 ## 다음 주 계획 (10/6~10/12) — B
 
-1. [ ] A 에게 IAM 사용자·권한 받기 → PC 에서 `init/validate/plan/apply/output/destroy` 1회, 캡처 5장, worklog.
-2. [ ] apply 된 상태에서 A 와 V7(describe-security-groups)·V8(web_url 200) 첫 기록.
+1. [ ] AWS 계정 접근(A 의 샌드박스 IAM 사용자 또는 본인 프리 플랜 계정) → `init/validate/plan/apply/output` 1회, 캡처 5장 (`docs/SOLO_ABC_RUNBOOK.md` 1·3단계).
+2. [ ] 전/후 측정: 취약 상태에서 V7·V8(FAIL 이 정답) → PR(`sandbox` 브랜치) → 패치 apply → V7·V8(PASS) → destroy. A·C 역할을 B 가 혼자 수행(10-04 결정).
 3. [ ] `interpret_prompt.md` 를 Claude Code 에 넣어 해석 1회 등록 (`arch_interpret_add.py`) — 지어냄/누락/CIS 불일치 수 보고.
 4. [ ] `cc_prompt.py arch-sg`, `arch-iam` 로 Claude Code 후보 각 3회 → 등록 → 검증 (규칙 기반이 거부한 IAM 케이스와 비교).
 5. [ ] 25건 라벨 손 검산 (`expected_risk_verified_by`).

@@ -36,3 +36,7 @@ packaging/*.spec
 /IaCPatch-console.exe
 # 스캐너 사각 탐색 원문(변형 main.tf·trivy.json·plan.json, 실행마다 수 MB) — 요약 FUZZ_RESULTS.md 만 커밋
 experiments/fuzz/
+
+# 아키텍처 배포 뒤 사람이 채우는 값(실제 IP) — 예시(.example.json)만 커밋
+scenarios/arch/webapp-2tier/sandbox/v8-checks.json
+scenarios/arch/webapp-2tier/sandbox/intent.sandbox.json

@@ -3,7 +3,7 @@
 
     python3 scripts/cc_prompt.py 00-baseline          # 화면에 출력 (복사해서 Claude Code 에 붙여넣기)
     python3 scripts/cc_prompt.py iam-00-literal-list  # IAM 케이스 (scenarios/eval/iam-probe, 룰 AVD-AWS-0345)
-    python3 scripts/cc_prompt.py arch-sg              # B 의 아키텍처(infrastructure/webapp-2tier) 웹 SG 케이스 (2026-10-02)
+    python3 scripts/cc_prompt.py arch-sg              # B 의 아키텍처(scenarios/arch/webapp-2tier) 웹 SG 케이스 (2026-10-02)
     python3 scripts/cc_prompt.py --all                # 케이스마다 prompts/<case>.md 파일로 저장 (SG 9 + IAM 5 + arch 2)
 
 - finding 위치(리소스·줄)는 A 의 Trivy 스캔(scenarios/eval/a-probe/<case>/trivy-scan.json)에서 읽는다. 사람이 적지 않는다.

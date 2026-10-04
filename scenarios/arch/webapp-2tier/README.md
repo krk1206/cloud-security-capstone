@@ -1,8 +1,8 @@
 # webapp-2tier — VPC 2계층 웹 아키텍처 (B 김보성, 2026-10-02)
 
 지도교수 9/29 지시 "아키텍처 하나 선정 → Terraform 으로 구성 → 실행 시연 → Trivy 점검 → AI 해석" 의 1단계. 이 폴더가 **그 아키텍처의 Terraform** 이다.
-설명·선정 이유·점검 결과는 [`docs/ARCH_WEBAPP_2TIER.md`](../../docs/ARCH_WEBAPP_2TIER.md), 문법 공부는 [`docs/TERRAFORM_STUDY_B.md`](../../docs/TERRAFORM_STUDY_B.md),
-AWS 계정·실행 시연 순서는 [`docs/AWS_ACCESS_SETUP_B.md`](../../docs/AWS_ACCESS_SETUP_B.md).
+설명·선정 이유·점검 결과는 [`docs/ARCH_WEBAPP_2TIER.md`](../../../docs/ARCH_WEBAPP_2TIER.md), 문법 공부는 [`docs/TERRAFORM_STUDY_B.md`](../../../docs/TERRAFORM_STUDY_B.md),
+AWS 계정·실행 시연 순서는 [`docs/AWS_ACCESS_SETUP_B.md`](../../../docs/AWS_ACCESS_SETUP_B.md).
 
 ## 무엇을 만드나 (17 리소스)
 
@@ -51,7 +51,7 @@ python3 scripts/arch_scan.py                               # 개발 환경
 **B. 실제 AWS 에 만들기 — 사람이 직접, 샌드박스 계정에서만** (`docs/AWS_ACCESS_SETUP_B.md` 의 순서대로)
 
 ```
-cd infrastructure\webapp-2tier
+cd scenarios\arch\webapp-2tier
 copy terraform.tfvars.example terraform.tfvars     # ami_id 를 콘솔에서 복사해 채운다
 terraform init
 terraform validate

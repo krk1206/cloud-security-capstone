@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """아키텍처 Terraform → Trivy 점검 → 결과물 (지도교수 9/29 지시 흐름의 2단계).
 
-    python3 scripts/arch_scan.py                                   # infrastructure/webapp-2tier 점검 → data/arch/<실행 ID>/
-    python3 scripts/arch_scan.py --dir infrastructure/webapp-2tier --no-plan
+    python3 scripts/arch_scan.py                                   # scenarios/arch/webapp-2tier 점검 → data/arch/<실행 ID>/
+    python3 scripts/arch_scan.py --dir scenarios/arch/webapp-2tier --no-plan
     IaCPatch-console.exe --exec scripts/arch_scan.py               # 팀 PC (python 없이, tools\\ 의 trivy·terraform 사용)
 
 하는 것: *.tf 목록·리소스 집계 → terraform fmt/validate/오프라인 plan (자격증명 없음, 아무것도 만들지 않음) → trivy config →
@@ -29,7 +29,7 @@ from iacpatch.config import package_root  # noqa: E402
 def main(argv=None) -> int:
     root = package_root() if (package_root() / "policy" / "patch_policy.json").exists() else ROOT
     ap = argparse.ArgumentParser(description="아키텍처 Terraform 점검 (fmt/validate/plan + trivy config)")
-    ap.add_argument("--dir", default="infrastructure/webapp-2tier", help="Terraform 폴더 (저장소 루트 기준)")
+    ap.add_argument("--dir", default="scenarios/arch/webapp-2tier", help="Terraform 폴더 (저장소 루트 기준)")
     ap.add_argument("--out", default=None, help="결과 폴더 (기본 data/arch/<YYYYmmdd-HHMMSS>)")
     ap.add_argument("--no-plan", action="store_true", help="terraform 단계 생략 (trivy 만)")
     a = ap.parse_args(argv)

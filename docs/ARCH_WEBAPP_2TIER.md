@@ -2,7 +2,7 @@
 
 지도교수 9/29 지시: "**아키텍처 하나 선정 → Terraform 으로 자동화해서 구성 → Terraform 실행 시연 → Trivy 점검 결과물 → AI 에이전트가 해석**", 그리고 "Terraform 이 너무 부족하다, 많이 만들 것, 본인이 한 작업은 설명할 수 있어야 한다", "다음 단계(스캔 결과로 패치 → 검증)까지".
 
-이 문서는 그 지시를 이 저장소에서 어디까지 했는지, 무엇이 아직 안 됐는지의 기록이다. 코드: [`infrastructure/webapp-2tier/`](../infrastructure/webapp-2tier/). 실측: [`experiments/arch-webapp-2tier/RESULTS.md`](../experiments/arch-webapp-2tier/RESULTS.md).
+이 문서는 그 지시를 이 저장소에서 어디까지 했는지, 무엇이 아직 안 됐는지의 기록이다. 코드: [`scenarios/arch/webapp-2tier/`](../scenarios/arch/webapp-2tier/) — `infrastructure/` 가 아니라 `scenarios/` 에 두는 이유: 일부러 취약하게 만든 **실험 재료** 라서. A 의 PR 게이트(`iac-scan.yml`, `infrastructure/**` 변경 폴더에 HIGH/CRITICAL 이 남아 있으면 실패)는 그 폴더에 적용되고, 이 아키텍처는 세 유형을 다 고치기 전엔 HIGH 가 남는 게 당연하다(2026-10-04 이동, 처음 커밋은 `infrastructure/` 였다). 실측: [`experiments/arch-webapp-2tier/RESULTS.md`](../experiments/arch-webapp-2tier/RESULTS.md).
 
 ## 1. 왜 이 아키텍처인가
 
@@ -51,7 +51,7 @@ Trivy 가 추가로 잡는 11건(egress 전체 허용, IMDSv2, 루트 볼륨 암
 | 교수 지시 | 저장소 | 상태 (2026-10-02) |
 |---|---|---|
 | ① 아키텍처 선정 | 이 문서 1~2절 | 됨 (B 선정, 이유 기록) |
-| ② Terraform 으로 구성 | `infrastructure/webapp-2tier/` 9 파일 17 리소스 | 됨 — fmt/validate/오프라인 plan 통과 (개발 환경). 팀 PC 재실행 `[확인 필요]` |
+| ② Terraform 으로 구성 | `scenarios/arch/webapp-2tier/` 9 파일 17 리소스 | 됨 — fmt/validate/오프라인 plan 통과 (개발 환경). 팀 PC 재실행 `[확인 필요]` |
 | ③ Terraform 실행 시연 (AWS 에 실제로 만들어지는지) | `docs/AWS_ACCESS_SETUP_B.md` 순서 | **안 됨 — apply 0회.** 계정 접근(IAM 사용자·키)이 먼저. 이 저장소의 AI 세션은 apply 를 하지 않는다(CLAUDE.md) |
 | ④ Trivy 점검 결과물 | `scripts/arch_scan.py` → `findings.md`; 실측 `experiments/arch-webapp-2tier/RESULTS.md` 2절 | 됨 — finding 18 (의도적 7 + 부수 11), CIS 대응은 매핑표에 있는 3룰만 표시 |
 | ⑤ AI 에이전트가 해석 | `interpret_prompt.md` → Claude Code 새 세션(사람이 염) → `scripts/arch_interpret_add.py` 등록 + 기계 대조 | **반만 됨** — 프롬프트·등록·대조 코드와 테스트는 있음, **모델 응답 등록 0건** (B 가 PC 에서 1회) |

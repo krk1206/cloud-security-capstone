@@ -4,6 +4,8 @@
 
 **원칙**: 자격증명(액세스 키)은 파일·채팅·저장소에 절대 적지 않는다. 환경변수로만 쓰고, 시연 뒤 키를 비활성화한다. 이 저장소의 AI 세션은 AWS 에 접속하지 않고 apply 도 하지 않는다 — **apply 는 B 가 직접** 한다 (CLAUDE.md, 운영계획서 "사람 확인 없는 apply 금지").
 
+> **혼자 A·B·C 전부 하는 순서(계정 가입부터 apply·PR·V7/V8·destroy 까지)는 [`SOLO_ABC_RUNBOOK.md`](SOLO_ABC_RUNBOOK.md).** 이 문서는 계정·권한·비용·실패 처리의 세부.
+
 ## 0. 돈이 드나? — 안 들게 설계했다 (B 질문 2026-10-02)
 
 이 아키텍처는 **프리 티어 안에 들어가도록 일부러** 만들었다: NAT 게이트웨이·RDS·로드밸런서 없음, EC2 는 t2.micro 2대(서울 프리 티어 대상, 월 750시간 무료), S3 는 빈 버킷(5GB 무료), VPC·서브넷·IGW·SG·IAM 은 원래 무료.
@@ -81,7 +83,7 @@ $env:AWS_DEFAULT_REGION    = "ap-northeast-2"
 준비 (한 번): 콘솔 EC2 → 인스턴스 시작 화면에서 "Amazon Linux 2023" 의 AMI ID(`ami-0…`, 서울 리전) 를 복사해 둔다.
 
 ```powershell
-cd <저장소 폴더>\infrastructure\webapp-2tier
+cd <저장소 폴더>\scenarios\arch\webapp-2tier
 $env:Path = "<저장소 폴더>\tools;" + $env:Path       # tools\terraform.exe (1.16.1) 를 쓰게
 $env:TF_PLUGIN_CACHE_DIR = "<저장소 폴더>\tools\plugin-cache"   # exe 가 이미 받아 둔 provider 5.100.0 재사용 (없으면 init 이 내려받음, 수십 MB)
 copy terraform.tfvars.example terraform.tfvars

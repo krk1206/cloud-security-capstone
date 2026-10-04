@@ -1,9 +1,9 @@
 {
   "set_id": "arch-webapp-iam",
-  "_note": "지도교수 9/29 지시의 '다음 단계' — IAM 축. 원본 = infrastructure/webapp-2tier, 대상 finding = aws_iam_policy.web_assets 의 s3:* on * (AVD-AWS-0345, iam.tf). 후보는 iam.tf 전체 대체본. 규칙 기반 1 + seeded 5 (개발 중 작성한 예제, LLM 아님). expected 는 2026-10-02 실행 전 고정 (D-3/D-4). 실측과 다르면 불일치로 기록한다.",
+  "_note": "지도교수 9/29 지시의 '다음 단계' — IAM 축. 원본 = scenarios/arch/webapp-2tier, 대상 finding = aws_iam_policy.web_assets 의 s3:* on * (AVD-AWS-0345, iam.tf). 후보는 iam.tf 전체 대체본. 규칙 기반 1 + seeded 5 (개발 중 작성한 예제, LLM 아님). expected 는 2026-10-02 실행 전 고정 (D-3/D-4). 실측과 다르면 불일치로 기록한다.",
   "week4_label_replay": false,
   "_week4_note": "4주차 라벨 표(25건)는 2026-09-22 고정 세트만. 이 세트의 등급 일치는 results.md 로 잰다.",
-  "tf_dir": "infrastructure/webapp-2tier",
+  "tf_dir": "scenarios/arch/webapp-2tier",
   "trivy_json": "experiments/arch-webapp-2tier/trivy-scan.json",
   "rule": "AVD-AWS-0345",
   "resource": "aws_iam_policy.web_assets",
