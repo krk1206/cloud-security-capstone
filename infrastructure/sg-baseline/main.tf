@@ -19,3 +19,4 @@ resource "aws_security_group" "vulnerable_ssh" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
+# plan 자동 실행 확인 1회차 2026-10-05
