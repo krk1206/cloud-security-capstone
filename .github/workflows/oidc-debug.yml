@@ -1,0 +1,41 @@
+name: OIDC Debug
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_DEFAULT_REGION: ap-northeast-2
+  ROLE_ARN: arn:aws:iam::825450315433:role/github-actions-plan
+
+jobs:
+  debug:
+    name: oidc token claims
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print token claims
+        run: |
+          python3 - <<'PY'
+          import os, json, base64, urllib.request
+          url = os.environ["ACTIONS_ID_TOKEN_REQUEST_URL"] + "&audience=sts.amazonaws.com"
+          req = urllib.request.Request(url, headers={"Authorization": "bearer " + os.environ["ACTIONS_ID_TOKEN_REQUEST_TOKEN"]})
+          tok = json.load(urllib.request.urlopen(req))["value"]
+          p = tok.split(".")[1]; p += "=" * (-len(p) % 4)
+          c = json.loads(base64.urlsafe_b64decode(p))
+          for k in ("iss", "aud", "sub", "repository", "repository_owner", "event_name", "ref"):
+              print(f"{k} = {c.get(k)}")
+          open("/tmp/tok", "w").write(tok)
+          PY
+
+      - name: Raw STS call (full error)
+        run: |
+          aws sts assume-role-with-web-identity \
+            --role-arn "$ROLE_ARN" \
+            --role-session-name dbg \
+            --web-identity-token "file:///tmp/tok" \
+            --duration-seconds 900 \
+            --query 'AssumedRoleUser.Arn' --output text
