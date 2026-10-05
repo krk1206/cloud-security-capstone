@@ -10,7 +10,7 @@ terraform {
 
 provider "aws" {
   region  = var.region
-  profile = "capstone"
+  profile = var.aws_profile
 
   default_tags {
     tags = {

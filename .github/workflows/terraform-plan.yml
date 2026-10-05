@@ -1,0 +1,92 @@
+name: Terraform Plan
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  id-token: write      # OIDC 토큰 발급 (액세스 키 없이 AWS 역할 사용)
+  contents: read
+  pull-requests: write
+
+env:
+  AWS_REGION: ap-northeast-2
+  TF_VERSION: 1.16.1
+  TF_IN_AUTOMATION: "true"
+  ROLE_ARN: arn:aws:iam::825450315433:role/github-actions-plan
+
+jobs:
+  plan:
+    name: terraform plan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # 이 PR 에서 바뀐 infrastructure/ 하위 폴더만 대상으로 한다 (수동 실행이면 전부)
+      - name: Changed infrastructure dirs
+        id: dirs
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+            CHANGED=$(git diff --name-only "$BASE"...HEAD -- infrastructure/ | xargs -r -n1 dirname | sort -u | tr '\n' ' ')
+          else
+            CHANGED=$(find infrastructure -name '*.tf' -printf '%h\n' | sort -u | tr '\n' ' ')
+          fi
+          echo "dirs=$CHANGED" >> "$GITHUB_OUTPUT"
+          echo "대상 폴더: ${CHANGED:-없음 (plan 생략)}"
+
+      - name: Configure AWS credentials (OIDC)
+        if: steps.dirs.outputs.dirs != ''
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Who am I (역할 확인)
+        if: steps.dirs.outputs.dirs != ''
+        run: aws sts get-caller-identity
+
+      - name: Setup Terraform
+        if: steps.dirs.outputs.dirs != ''
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      # V3 (fmt/validate) + V4 (plan). 하나라도 실패하면 체크 실패.
+      - name: fmt / validate / plan
+        if: steps.dirs.outputs.dirs != ''
+        run: |
+          OUT="$GITHUB_WORKSPACE/plan-results"
+          mkdir -p "$OUT"
+          RC=0
+          for d in ${{ steps.dirs.outputs.dirs }}; do
+            [ -d "$d" ] || continue
+            name=$(basename "$d")
+            echo "=============== $d"
+            (
+              cd "$d"
+              terraform init -input=false -no-color
+              terraform fmt -check -diff || { echo "V3 fmt 실패: $d"; exit 1; }
+              terraform validate -no-color || { echo "V3 validate 실패: $d"; exit 1; }
+              VARS=""
+              [ -f terraform.tfvars.example ] && VARS="-var-file=terraform.tfvars.example"
+              terraform plan -input=false -no-color -out=tfplan $VARS || { echo "V4 plan 실패: $d"; exit 1; }
+              terraform show -json tfplan > "$OUT/${name}.plan.json"
+              terraform show -no-color tfplan > "$OUT/${name}.plan.txt"
+              echo "plan.json 저장: ${name}.plan.json ($(wc -c < "$OUT/${name}.plan.json") bytes)"
+            ) || RC=1
+          done
+          exit $RC
+
+      - name: Upload plan results
+        if: always() && steps.dirs.outputs.dirs != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plan-${{ github.run_number }}
+          path: plan-results/
+          retention-days: 14
