@@ -37,7 +37,7 @@
 | AWS-0105 | Network ACL 인바운드 0.0.0.0/0 → 22/3389 | MEDIUM | 없음 | 5.1 | 5.1† | 5.2† | 직접 | Trivy 메타 `cis-aws-1.4: 5.1`; Security Hub EC2.21 | 범위 밖(NACL) |
 | AWS-0099 | SG에 description 없음 | LOW | 없음 | 없음 | 없음 | 없음 | 없음 | 위생 규칙 | 패치 시 description 추가 허용(화이트리스트 4절) |
 | AWS-0124 | SG 규칙에 description 없음 | LOW | 없음 | 없음 | 없음 | 없음 | 없음 | 위생 규칙 | 위와 같음 |
-| AWS-0057 | IAM 정책 문서의 Action·Resource 와일드카드 | HIGH | 1.22† | 1.16 | 확인 필요 (Security Hub 표에 항목 없음. 원문 기준 1.16‡) | 확인 필요 | 부분 | Trivy 메타 `cis-aws-1.4: 1.16`; Security Hub IAM.1. CIS 항목은 `*:*` 전체 관리자 권한만 다루고, Trivy는 부분 와일드카드(`s3:*`, `Resource: *`)도 탐지 → Trivy가 더 넓음 | IAM 필수 시나리오 |
+| AWS-0057 | IAM 정책 문서의 Action·Resource 와일드카드 | HIGH | 1.22† | 1.16 | 확인 필요 (Security Hub 표에 항목 없음. 원문 기준 1.16‡) | 확인 필요 | 부분 | Trivy 메타 `cis-aws-1.4: 1.16`; Security Hub IAM.1. **주의(2026-10-13 확인): AWS-0057은 trivy-checks c292eb67(2024-12-18)에서 본체가 제거된 스텁이라 실제로는 아무것도 탐지하지 않는다.** 메타데이터만 남아 매핑 근거로는 쓸 수 있으나 탐지는 커스텀 체크 CAPSTONE-IAM-0001(`policy/checks/`)이 한다. CIS 1.16은 `*:*` 전체 관리자 권한만 다루고, 커스텀 체크는 Action 또는 Resource 단독 와일드카드도 잡는다 → 커스텀 체크가 더 넓음 | IAM 필수 시나리오 |
 | AWS-0143 | 사용자에게 정책 직접 연결 | LOW | 1.16 | 1.15 | 1.15† | 1.14† | 직접 | Trivy 메타 `cis-aws-1.2: 1.16, cis-aws-1.4: 1.15`; Security Hub IAM.2 | IAM 선택 |
 | AWS-0345 | S3 전체 권한(`s3:*`) 정책 | HIGH | 없음 | 없음 | 없음 | 없음 | 없음 | Security Hub IAM.21(서비스 와일드카드)도 CIS 대응 없음 | IAM 선택(와일드카드 하위 유형) |
 | AWS-0346 | S3 버킷에 불필요한 접근을 허용하는 IAM 정책 | HIGH | 없음 | 없음 | 없음 | 없음 | 없음 | - | 범위 밖 |
@@ -90,7 +90,7 @@ Terraform의 `aws_iam_account_password_policy`, 루트 계정 설정 등에 적�
 
 1. **게이트 기준과 CIS 기준이 다르다.** 현재 CI 게이트는 Trivy 심각도(HIGH/CRITICAL)로 동작한다. baseline에서 함께 잡히는 AWS-0104(아웃바운드, CRITICAL)는 CIS 항목이 없고, CIS 항목이 있는 AWS-0173(기본 SG)은 LOW다. 제안: 게이트는 Trivy 심각도 기준을 유지하고, Evidence Bundle과 PR 댓글에 CIS 대응 번호를 함께 표기한다. 평가용 시나리오는 CIS 대응이 있는 룰(AWS-0107, AWS-0057)을 1차 대상으로 한다. [팀 결정 필요]
 2. **Trivy 메타데이터는 오래된 CIS 버전만 담고 있다.** `cis-aws-1.2`, `cis-aws-1.4`뿐이라 v3.0.0·v5.0.0 번호는 Security Hub 문서로 보강했다(†). 발표·보고서에서는 버전을 반드시 함께 쓴다(예: "CIS v3.0.0 5.2").
-3. **AWS-0057은 CIS 1.16보다 넓다.** CIS는 `*:*` 전체 관리자 권한만 금지하지만 Trivy는 부분 와일드카드도 탐지한다. IAM 시나리오에서 "CIS 위반"이라고 말할 수 있는 것은 `*:*` 사례뿐이고, `s3:*` 같은 사례는 "최소 권한 원칙 위반(Trivy 기준)"으로 구분해 말한다.
+3. **AWS-0057은 현재 Trivy에서 동작하지 않는다(2026-10-13 확인).** trivy-checks 커밋 c292eb67(2024-12-18)에서 Go 구현이 제거되고 메타데이터 스텁만 남았다. `--include-deprecated-checks`를 줘도 deny 규칙이 없다. 남은 IAM 규칙 AWS-0345(`s3:*`), AWS-0346(`s3:get*`+`s3:put*`)은 `Action: "*"`를 보지 않는다. 따라서 IAM 시나리오 탐지는 커스텀 체크 CAPSTONE-IAM-0001로 하고, CIS 1.16 대응은 "`*:*` 전체 관리자 권한" 사례에만 주장한다. `s3:*` 같은 부분 와일드카드는 "최소 권한 원칙 위반(커스텀 체크 기준)"으로 구분해 말한다.
 4. **Trivy 메타데이터 오류 의심 1건.** AWS-0145(콘솔 사용자 MFA)의 `cis-aws-1.4: 1.4`. 같은 번호가 AWS-0141(루트 액세스 키)에도 붙어 있어 둘 중 하나는 틀렸고, Security Hub 기준으로는 AWS-0145 쪽이 1.10이다. 원문 확인 후 필요하면 trivy-checks에 이슈 제출 가능.
 5. **AWS 문서 내부 불일치 1건.** EC2.53/EC2.54의 v5.0.0 번호가 표준 페이지(5.3/5.4, 두 번 조회 일치)와 컨트롤 페이지(5.6)에서 다르다. 표준 페이지 값을 쓰되 원문 확인 전까지 v5.0.0 번호는 인용하지 않는다.
 6. **v1.4.0의 SG 항목(5.2)은 Trivy에도 Security Hub에도 표기가 없다.** Trivy 메타데이터는 v1.2.0(4.1, 4.2)까지만 적었고, Security Hub는 v1.4.0 표준에 이 항목을 구현하지 않았다. 원문 기준으로만 5.2다(‡).
@@ -122,4 +122,5 @@ Terraform의 `aws_iam_account_password_policy`, 루트 계정 설정 등에 적�
 | ‡ 표시 항목: CIS v1.4.0 5.2, v3.0.0 1.16 | CIS 원문 다운로드 후 대조 |
 | v5.0.0의 EC2.53/54 번호(5.3/5.4 vs 5.6) | CIS v5.0.0 원문 5절 대조 |
 | AWS-0145 메타데이터 오류 여부 | CIS v1.4.0 원문 1.4·1.10 대조 |
-| AWS-0107이 22/3389 외 포트에서는 발화하지 않는지 | 80번 포트를 0.0.0.0/0에 여는 SG를 Trivy 0.74.0으로 스캔 (사전 실험 케이스 09로 추가) |
+| AWS-0107이 22/3389 외 포트에서는 발화하지 않는지 | 80번 포트를 0.0.0.0/0에 여는 SG를 Trivy 0.74.0으로 스캔 (사전 실험 케이스 09로 추가). 2026-10-12 three-tier ALB SG(80/tcp 0.0.0.0/0)에서 미발화 확인 |
+| AWS-0057 스텁 여부를 사용자 PC의 Trivy 0.74.0 번들에서도 재확인 | `trivy config scenarios/iam-overprivileged --format json`에서 AWS-0057이 안 나오고, `--config-check policy/checks --check-namespaces user`를 주면 CAPSTONE-IAM-0001이 2건 나오는지 (step7-1 스크립트가 출력) |

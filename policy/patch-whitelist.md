@@ -70,9 +70,11 @@ AI 또는 규칙 기반 생성기가 만든 패치가 손댈 수 있는 범위�
 
 규칙: 패치의 각 CIDR은 `approved_cidrs` 중 하나에 부분집합으로 포함되어야 한다. 포함되는 항목이 없으면 패치를 만들지 않고 Low 등급 리포트만 낸다("승인된 출발지 정보 없음"을 사유로 기록).
 
-## 6. IAM (초안, 7주차에 확정)
+## 6. IAM (v0.3 초안, 2026-10-13 갱신. B·C 검토 후 7주차에 확정)
 
 대상: `aws_iam_policy`, `aws_iam_role_policy`, `aws_iam_user_policy`의 정책 문서.
+탐지 규칙: Trivy 내장 AWS-0057은 2024-12-18 이후 본체가 제거된 스텁이라 아무것도 잡지 않는다. 시나리오 3은 커스텀 체크 `CAPSTONE-IAM-0001`(`policy/checks/`)로 잡는다. 시나리오 코드는 `scenarios/iam-overprivileged`.
+허용값 출처: `policy/required_permissions.yaml` (역할별 필요 statement 목록, 사람이 관리).
 
 | 변경 | 허용 여부 |
 |---|---|
@@ -80,7 +82,7 @@ AI 또는 규칙 기반 생성기가 만든 패치가 손댈 수 있는 범위�
 | `Resource: "*"`를 정책 파일의 ARN 목록으로 교체 | 허용 (등급 상한 Medium) |
 | `Effect`, `Principal`, 신뢰 정책(`assume_role_policy`) 변경 | 금지 |
 | 새 정책 생성, 관리형 정책 연결/해제, 역할 생성 | 금지 |
-| Condition 추가 | 보류 (7주차 판단) |
+| Condition 추가 | 금지 (v1). 제안: Condition으로 범위를 좁히는 패치는 실효 권한 계산이 필요해 V5가 판정할 수 없으므로 첫 버전에서는 받지 않는다 [B·C 검토 필요] |
 
 필요 권한 목록을 정의할 수 없는 경우 "IAM은 무조건 사람 승인"으로 대체한다(계획서 명시).
 IAM 실효 판정의 초기 버전은 선행 연구(TerraProbe) 부록 B의 방식을 따른다: plan JSON의 정책 문서에서 `Resource` 또는 `Action`에 `*`가 남아 있는 Statement 수를 세고, 0이 아니면 보류.
@@ -126,3 +128,5 @@ IAM 실효 판정의 초기 버전은 선행 연구(TerraProbe) 부록 B의 방�
 | 2 | 규칙 블록 삭제 허용 여부 | 허용, 등급 상한 Medium | 규칙 제거도 정당한 수정. 기능 영향은 V8이 확인 |
 | 3 | 승인 CIDR의 실제 값 | 샌드박스 VPC CIDR + 운영자 출발지 IP/32. 라즈베리파이 공인 IP는 V8 구축 시 추가 | 현재 확정 가능한 값만 |
 | 4 | 변수 기본값 변경 허용 여부 | 금지 | 변수 경유 값은 스캐너가 `--tf-vars` 없이 못 읽는 것을 사전 실험에서 확인. 첫 버전은 직접 속성 변경만 허용해 검증을 단순하게 유지 |
+| 5 (2026-10-13) | IAM 와일드카드 탐지 수단 | 커스텀 Trivy 체크 CAPSTONE-IAM-0001 | 내장 AWS-0057이 스텁임을 trivy-checks 소스(c292eb67)와 실측으로 확인. 파이프라인 입력 형식(Trivy JSON)을 유지하기 위해 커스텀 체크로 복원 |
+| 6 (2026-10-13) | IAM 허용값 출처 | policy/required_permissions.yaml | 생성기가 권한을 지어내지 못하게 사람이 관리하는 목록으로 고정 |

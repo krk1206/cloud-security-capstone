@@ -1,0 +1,56 @@
+name: Scenario Scan (report only)
+
+# scenarios/ 는 의도적으로 잘못된 코드라 게이트를 걸지 않는다. 내장 + 커스텀 체크 결과를 아티팩트로 남긴다.
+on:
+  pull_request:
+    paths:
+      - 'scenarios/**'
+      - 'policy/checks/**'
+  push:
+    branches: [main]
+    paths:
+      - 'scenarios/**'
+      - 'policy/checks/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scenario-scan:
+    name: Trivy scenario scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Trivy
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget gnupg
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key \
+            | gpg --dearmor | sudo tee /usr/share/keyrings/trivy.gpg > /dev/null
+          echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb generic main" \
+            | sudo tee /etc/apt/sources.list.d/trivy.list
+          sudo apt-get update
+          sudo apt-get install -y trivy
+          trivy --version
+
+      - name: Scan every scenario (built-in + custom checks, never fails the job)
+        run: |
+          mkdir -p scan-results
+          for d in scenarios/*/; do
+            d="${d%/}"; name=$(basename "$d")
+            [ -f "$d/main.tf" ] || continue
+            echo "=== $d"
+            trivy config "$d" --config-check policy/checks --check-namespaces user --exit-code 0
+            trivy config "$d" --config-check policy/checks --check-namespaces user --exit-code 0 \
+              --format json --output "scan-results/$name.json"
+          done
+
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: scenario-scan-${{ github.run_number }}
+          path: scan-results/
+          retention-days: 14
