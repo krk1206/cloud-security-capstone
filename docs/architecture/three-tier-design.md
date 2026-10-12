@@ -177,22 +177,22 @@
 
 | 항목 | 값 |
 |---|---|
-| terraform validate | [기입] Success |
-| terraform plan | [기입] Plan: N to add, 0 to change, 0 to destroy |
-| trivy config (HIGH,CRITICAL) | [기입] 0 failures |
-| terraform apply 시작~완료 | [기입] 분 초 |
-| 리소스 수 | [기입] Apply complete! Resources: N added |
-| ALB 응답 | [기입] HTTP 200, 인스턴스 ID |
-| Bastion SSH | [기입] 성공/실패 |
-| Bastion → RDS mysql SELECT VERSION() | [기입] 8.0.x |
-| S3 읽기(WEB 역할) | [기입] |
-| terraform destroy 소요 | [기입] 분 초, Resources: N destroyed |
-| destroy 후 잔여 자원 확인 | [기입] NAT/ALB/RDS/EC2 0건 |
+| terraform validate | Success! The configuration is valid. |
+| terraform plan | 54 to add, 0 to change, 0 to destroy |
+| trivy config (HIGH,CRITICAL) | 0건 (전체: MEDIUM 2, LOW 3. 로컬 스캔과 동일) |
+| terraform apply 시작~완료 | 19:01:02 ~ 19:10:12, 9분 10초 (NAT Gateway 1분 54초, ALB 2분 22초, RDS 8분 52초) |
+| 리소스 수 | Apply complete! Resources: 54 added |
+| ALB 응답 | HTTP 200, instance i-070d0f07353ff175e (ap-northeast-2a), 첫 시도에 성공 |
+| Bastion SSH | 성공 (ip-10-10-0-219, mysql 클라이언트 10.5.29-MariaDB 설치 확인) |
+| Bastion → RDS mysql SELECT VERSION() | 8.0.46 |
+| S3 읽기(WEB 역할) | SSM send-command로 WEB 인스턴스에서 실행: ListBucket·GetObject 성공, PutObject는 AccessDenied(역할 정책에 없음) |
+| terraform destroy 소요 | 6분 46초 (19:26:28 ~ 19:33:14), Resources: 54 destroyed |
+| destroy 후 잔여 자원 확인 | EC2/NAT/EIP/ALB/RDS/VPC/S3 모두 0건. 전체 가동 시간 32분 (`docs/worklog/evidence-2026-10-12-three-tier.txt`) |
 
 ### 3.4 비용 관리
 - 시간당 과금 자원: NAT Gateway, ALB, RDS, EC2(프리티어 초과분). apply 당일 destroy를 규칙으로 한다.
-- destroy 후 태그(Stack=three-tier)로 잔여 자원을 조회한다. AWS Budgets 월 한도 알림 설정 여부: [기입]
-- 계정의 프리티어 방식(12개월 프리티어 / 크레딧) 확인: [기입]
+- destroy 후 태그(Stack=three-tier)로 잔여 자원을 조회한다. AWS Budgets 월 한도 알림 설정 여부: 미설정 (확인 필요, 7주차에 설정)
+- 계정의 프리티어 방식(12개월 프리티어 / 크레딧) 확인: 확인 필요 (Billing → Free Tier). 오늘 32분 가동분 요금은 다음 날 Billing에서 확인
 
 ### 3.5 파이프라인과의 연결
 - 이 폴더를 PR로 올리면 3주차에 만든 `iac-scan.yml`이 변경 폴더만 `trivy config --severity HIGH,CRITICAL --exit-code 1`로 검사하고, 5주차의 `terraform-plan.yml`이 OIDC 역할로 `terraform plan`을 돌려 plan.json을 저장한다.
