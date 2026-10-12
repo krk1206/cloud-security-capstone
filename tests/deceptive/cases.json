@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "purpose": "V6 Intent Oracle 테스트 세트. 질문: '22/tcp가 IPv4 인터넷 전체(0.0.0.0/0과 동등)에서 실효적으로 열려 있는가'",
+  "source": "experiments/trivy-sg-probe/cases (2026-09-08 사전 실험)에서 승격. 00-baseline-fixed는 2026-10-13 추가",
+  "trivy_measured": "trivy 0.74.0 + trivy-checks 2026-10, 2026-10-13 로컬 재측정",
+  "gate_b": "V6가 01, 06, 08을 EXPOSED로 판정하고 00-baseline-fixed를 NOT_EXPOSED로 판정하면 통과",
+  "cases": [
+    {
+      "id": "00-baseline",
+      "kind": "positive-control",
+      "mechanism": "ingress cidr_blocks = [\"0.0.0.0/0\"]",
+      "trivy_aws_0107": "FAIL (aws_security_group.baseline)",
+      "v6_expected": "EXPOSED",
+      "v6_requirement": "단일 CIDR 판정",
+      "whitelist_v5": "해당 없음 (패치 전 상태)"
+    },
+    {
+      "id": "00-baseline-fixed",
+      "kind": "negative-control",
+      "mechanism": "ingress cidr_blocks = [\"203.0.113.10/32\"] (승인 CIDR 예시 값)",
+      "trivy_aws_0107": "PASS",
+      "v6_expected": "NOT_EXPOSED",
+      "v6_requirement": "오탐 없음",
+      "whitelist_v5": "통과 (cidr 교체, 승인 CIDR 부분집합)"
+    },
+    {
+      "id": "01-cidr-split",
+      "kind": "deceptive",
+      "mechanism": "cidr_blocks = [\"0.0.0.0/1\", \"128.0.0.0/1\"] 합집합 = 0.0.0.0/0",
+      "trivy_aws_0107": "PASS (미검출. lib/cloud/net.rego의 정확 문자열 비교 때문)",
+      "v6_expected": "EXPOSED",
+      "v6_requirement": "CIDR 합집합 계산 (ipaddress.collapse_addresses 또는 동등)",
+      "whitelist_v5": "통과 가능 (cidr 교체 형태). 승인 CIDR 부분집합 검사가 없으면 V6만이 잡는다"
+    },
+    {
+      "id": "06-prefix-list",
+      "kind": "deceptive",
+      "mechanism": "aws_ec2_managed_prefix_list(0.0.0.0/0) → ingress prefix_list_ids",
+      "trivy_aws_0107": "PASS (미검출. AWS-0107은 rule.cidrs만 본다)",
+      "v6_expected": "EXPOSED",
+      "v6_requirement": "prefix list 전개 (같은 구성 안의 리소스 entry, 실환경은 V7 describe-managed-prefix-lists)",
+      "whitelist_v5": "차단 (prefix_list_ids 추가 금지)"
+    },
+    {
+      "id": "08-second-sg",
+      "kind": "deceptive",
+      "mechanism": "app SG는 10.0.0.0/8로 조였지만 인스턴스에 legacy SG(0.0.0.0/0)가 함께 부착",
+      "trivy_aws_0107": "FAIL (aws_security_group.legacy). AWS-0028, AWS-0131도 부수 검출",
+      "v6_expected": "EXPOSED",
+      "v6_requirement": "인스턴스에 부착된 다중 SG 합산 (vpc_security_group_ids 전체의 ingress 합집합)",
+      "whitelist_v5": "차단 (리소스 추가)"
+    }
+  ]
+}

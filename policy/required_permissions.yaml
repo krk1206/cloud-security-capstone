@@ -1,0 +1,29 @@
+# 패치 생성기가 IAM 와일드카드를 교체할 때 쓸 수 있는 유일한 출처 (사람이 관리, PR로만 변경)
+# 생성기는 여기 없는 action/resource를 만들어내지 못한다. 목록에 없는 권한이 필요하면 패치하지 않고 Low 리포트만 낸다.
+version: 1
+roles:
+  - name: capstone-iam-baseline-web-role      # scenarios/iam-overprivileged
+    purpose: "WEB 인스턴스: assets 버킷 읽기 + SSM 접속"
+    statements:
+      - sid: ReadAssetsObjects
+        actions: ["s3:GetObject"]
+        resources: ["${bucket_arn}/*"]     # bucket_arn은 같은 구성의 aws_s3_bucket.assets.arn
+      - sid: ListAssetsBucket
+        actions: ["s3:ListBucket"]
+        resources: ["${bucket_arn}"]
+    managed_policies_allowed:
+      - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+  - name: capstone-three-tier-web-role        # infrastructure/three-tier (정상 기준, 동일 내용)
+    purpose: "WEB 인스턴스: assets 버킷 읽기 + SSM 접속"
+    statements:
+      - sid: ReadAssetsObjects
+        actions: ["s3:GetObject"]
+        resources: ["${bucket_arn}/*"]
+      - sid: ListAssetsBucket
+        actions: ["s3:ListBucket"]
+        resources: ["${bucket_arn}"]
+    managed_policies_allowed:
+      - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+forbidden:
+  actions: ["*", "iam:*", "sts:*", "organizations:*"]
+  resources_wildcard_allowed_for: []        # Resource "*"가 허용되는 action 없음 (v1)
