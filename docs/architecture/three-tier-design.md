@@ -200,7 +200,7 @@
 
 ## 4. 보안 관점 - Trivy 결과
 
-로컬 스캔(trivy-checks 2026-10 기준, `--tf-vars terraform.tfvars.example`): HIGH/CRITICAL 0, MEDIUM 2, LOW 3. CI 재현 결과: [기입]
+로컬 스캔(trivy-checks 2026-10 기준, `--tf-vars terraform.tfvars.example`): HIGH/CRITICAL 0, MEDIUM 2, LOW 3. CI 재현 결과: PR 체크 통과 - iac-scan 22초, terraform-plan 29초(OIDC 읽기 전용 역할, plan.json 아티팩트 생성)
 
 ### 4.1 코드에서 충족한 HIGH 규칙
 AWS-0052(ALB 잘못된 헤더 차단), AWS-0028/0130(IMDSv2), AWS-0131/0008(EBS 암호화), AWS-0180(RDS 비공개), AWS-0080(RDS 암호화), AWS-0086/0087/0091/0093(S3 퍼블릭 차단), AWS-0088(S3 암호화), AWS-0164(서브넷 자동 공인 IP 끔)
