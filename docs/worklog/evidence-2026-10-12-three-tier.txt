@@ -1,0 +1,57 @@
+===== verify 2026-10-12 19:11:48 =====
+== 1. ALB http://capstone-three-tier-alb-1099826511.ap-northeast-2.elb.amazonaws.com/
+  try 1: HTTP 200
+capstone three-tier - web tier
+instance: i-070d0f07353ff175e
+az: ap-northeast-2a
+== 2. Bastion SSH (52.79.247.217)
+Warning: Permanently added '52.79.247.217' (ED25519) to the list of known hosts.
+  host: ip-10-10-0-219.ap-northeast-2.compute.internal
+mysql  Ver 15.1 Distrib 10.5.29-MariaDB, for Linux (x86_64) using  EditLine wrapper
+== 3. Bastion -> RDS (capstone-three-tier-mysql.cp8o4ok026yx.ap-northeast-2.rds.amazonaws.com)
+version	now
+8.0.46	2026-10-12 10:11:50
+== 4. S3 읽기 (WEB 인스턴스의 IAM 역할로, SSM send-command 사용)
+  (관리자가 test.txt 업로드)
+  web instance: i-070d0f07353ff175e
+  Success	2026-10-12 10:11:52         54 test.txt
+  capstone three-tier test Mon Oct 12 19:11:50 KST 2026
+  Completed 48 Bytes/48 Bytes (1.1 KiB/s) with 1 file(s) remainingPUT-DENIED-AS-EXPECTED
+  	upload failed: ../../etc/hostname to s3://capstone-three-tier-assets-20261012100105441000000001/should-fail.txt An error occurred (AccessDenied) when calling the PutObject operation: User: arn:aws:sts::825450315433:assumed-role/capstone-three-tier-web-role/i-070d0f07353ff175e is not authorized to perform: s3:PutObject on resource: "arn:aws:s3:::capstone-three-tier-assets-20261012100105441000000001/should-fail.txt" because no identity-based policy allows the s3:PutObject action
+  
+== 5. AWS 상태
+------------------------------------------------------------------------------------------------------------------------
+|                                                   DescribeInstances                                                  |
++------------------------------+----------------------+------------------+---------------+----------------+------------+
+|  capstone-three-tier-web     |  i-070d0f07353ff175e |  ap-northeast-2a |  10.10.10.217 |  None          |  required  |
+|  capstone-three-tier-bastion |  i-049323f5b18e2a7f0 |  ap-northeast-2a |  10.10.0.219  |  52.79.247.217 |  required  |
++------------------------------+----------------------+------------------+---------------+----------------+------------+
+---------------------
+|DescribeDBInstances|
++-------------------+
+|  available        |
+|  8.0.46           |
+|  False            |
+|  True             |
+|  False            |
+|  ap-northeast-2a  |
++-------------------+
+-------------------------------------------
+|           DescribeNatGateways           |
++------------+----------------------------+
+|  available |  subnet-0673f72d41ac1ce63  |
++------------+----------------------------+
+------------------------------------
+|       DescribeTargetHealth       |
++----------------------+-----------+
+|  i-070d0f07353ff175e |  healthy  |
++----------------------+-----------+
+===== destroy check 2026-10-12 19:33:14 (소요 6분) =====
+EC2:  
+NAT:  
+EIP:  
+ALB:  
+RDS:  
+VPC:  
+S3:   
+(전부 비어 있어야 정상. RDS는 deleting 상태가 몇 분 보일 수 있음)
