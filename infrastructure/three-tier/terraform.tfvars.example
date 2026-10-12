@@ -1,0 +1,7 @@
+# terraform.tfvars.example - CI(trivy --tf-vars, terraform plan)와 문서용 예시 값.
+# 실제 값은 terraform.tfvars(.gitignore로 커밋 제외)에 넣는다. step 스크립트가 만들어 준다.
+# aws_profile은 여기 두지 않는다: CI는 OIDC 역할의 환경 자격증명을 쓰므로 profile이 있으면 plan이 실패한다.
+admin_cidr     = "203.0.113.10/32" # 문서용 예시 IP(TEST-NET-3). 실제는 내 공인 IP/32
+ssh_public_key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIL4ijJ+GllOZmTu4xjysuyhKV2LyWthmB2zvRH9oWB7z example-only" # 예시 전용 키. 개인키는 생성 직후 폐기
+db_password    = "ExampleOnly-ChangeMe123"
+web_desired    = 1
