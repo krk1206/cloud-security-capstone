@@ -1,0 +1,53 @@
+{
+  "intent_version": "1",
+  "intent_id": "a-probe-dev-02-var-default",
+  "status": "active",
+  "description": "A 의 trivy-sg-probe 케이스 02-var-default 용 intent. 승인 출처 ['10.0.0.0/8'] 는 2026-09-15 팀 결정값(평가용 고정값, docs/DECISIONS.md D-2).",
+  "target_dir": "scenarios/eval/a-probe/02-var-default",
+  "targets": {
+    "security_groups": [
+      "aws_security_group.var_default"
+    ],
+    "attachment_points": []
+  },
+  "guarded_services": [
+    {
+      "label": "ssh",
+      "direction": "ingress",
+      "protocol": "tcp",
+      "from_port": 22,
+      "to_port": 22,
+      "approved_sources": {
+        "cidrs_v4": [
+          "10.0.0.0/8"
+        ],
+        "cidrs_v6": [],
+        "security_group_refs": [],
+        "prefix_list_refs": []
+      }
+    },
+    {
+      "label": "rdp",
+      "direction": "ingress",
+      "protocol": "tcp",
+      "from_port": 3389,
+      "to_port": 3389,
+      "approved_sources": {
+        "cidrs_v4": [],
+        "cidrs_v6": [],
+        "security_group_refs": [],
+        "prefix_list_refs": []
+      }
+    }
+  ],
+  "required_access": [
+    {
+      "label": "admin-ssh",
+      "direction": "ingress",
+      "protocol": "tcp",
+      "from_port": 22,
+      "to_port": 22,
+      "source_cidr": "10.0.0.0/8"
+    }
+  ]
+}

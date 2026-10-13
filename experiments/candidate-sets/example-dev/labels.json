@@ -1,0 +1,18 @@
+{
+  "example-dev/fixed-01": {
+    "expected": "correct",
+    "source": "seeded"
+  },
+  "example-dev/split-01": {
+    "expected": "deceptive",
+    "source": "seeded"
+  },
+  "example-dev/rule-01": {
+    "expected": "correct",
+    "source": "rule_based"
+  },
+  "example-dev/nover-01": {
+    "expected": "unknown",
+    "source": "seeded"
+  }
+}

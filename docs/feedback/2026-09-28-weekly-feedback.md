@@ -134,9 +134,9 @@
 | 모듈 | 담당 | 내용 | 작성 방식 |
 |---|---|---|---|
 | V2 전후 비교 | A | Trivy JSON 두 개에서 (룰 ID, 리소스) 집합 차이 | AI 초안 완료, 연습 과제 미완 |
-| V6 Intent Oracle | B | plan JSON에서 SG 규칙 수집, `ipaddress`로 합집합 계산, 0.0.0.0/0이 덮이면 실패 | 미착수 |
-| V5 plan 차이 검사 | C | plan JSON의 변경 리소스·속성이 화이트리스트 안인지 | 미착수 |
-| 규칙 기반 baseline | C | 0.0.0.0/0을 정책 파일의 승인 CIDR로 치환 | 미착수 |
+| V6 Intent Oracle | B | plan JSON에서 SG 규칙 수집, `ipaddress`로 합집합 계산, 0.0.0.0/0이 덮이면 실패 | B 브랜치에 구현됨 (`src/iacpatch/verify/sg_oracle.py`, `iam_oracle.py`; 실제 plan 37개 실측 `experiments/ORACLE_RESULTS.md`, 교차검증 `docs/CROSS_VERIFICATION_2026-09-22.md`). AI 초안 — B 가 설명·연습 과제 남길 것 |
+| V5 plan 차이 검사 | C | plan JSON의 변경 리소스·속성이 화이트리스트 안인지 | 기본형은 B 브랜치에 있음 (`verify/layers.py v5_plan_diff`). C 과제 = 화이트리스트 7절의 5·6·7단계 보강 (`docs/WHITELIST_VS_POLICY.md` 5절) |
+| 규칙 기반 baseline | C | 0.0.0.0/0을 정책 파일의 승인 CIDR로 치환 | B 브랜치에 있음 (`generator/rule_based.py`, SG 7 케이스 중 4 생성·IAM 5 중 2 생성, 나머지는 '지원 안 함' 으로 정직하게 종료). C 가 인수·설명 |
 | Risk Rubric | 전원 합의 | 어떤 변경이 High/Medium/Low인지 | 직접 작성 |
 | 시나리오 .tf, V8 테스트베드 | 각자 / A | 손으로 작성 | 직접 작성 |
 

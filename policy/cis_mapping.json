@@ -1,0 +1,81 @@
+{
+  "_comment": "Trivy 룰 ↔ CIS AWS Foundations Benchmark 대응. 사람용 원본 표는 docs/cis-mapping.md (A, v0.2, 2026-09-28) 이고 이 파일은 그 표에서 우리 파이프라인이 다루는 룰만 기계용으로 옮긴 것이다. source 가 'trivy-meta' 면 Trivy 내장 체크 메타데이터(cis-aws-1.2 / cis-aws-1.4 태그), 'security-hub' 면 AWS Security Hub 문서에서 교차 확인한 값(†), 'cis-original-unverified' 면 원문 추정(‡)이라 발표·보고서에 인용하지 않는다. verified=true 는 CIS 원문 PDF 로 대조한 경우에만 사람이 바꾼다 (아직 0건). 모든 Trivy 룰이 CIS 와 1:1 대응한다고 가정하지 않는다.",
+  "mapping_table_version": "docs/cis-mapping.md v0.2 (2026-09-28)",
+  "rule_id_note": "Trivy 0.74.0 JSON 의 ID 는 'AWS-0107' 형식이고 이 파이프라인은 내부적으로 'AVD-AWS-0107' 로 정규화한다 (tools/trivy.py normalize_rule_id). 두 표기는 같은 룰이다.",
+  "rules": {
+    "AVD-AWS-0107": {
+      "trivy_id": "AWS-0107",
+      "trivy_title": "Security groups should not allow unrestricted ingress to SSH or RDP from any IP address.",
+      "trivy_severity": "HIGH",
+      "trivy_references": [
+        "https://docs.aws.amazon.com/securityhub/latest/userguide/ec2-controls.html#ec2-13",
+        "https://docs.aws.amazon.com/securityhub/latest/userguide/ec2-controls.html#ec2-14"
+      ],
+      "aws_security_hub_controls": ["EC2.13 (SSH 0.0.0.0/0, v1.2.0)", "EC2.14 (RDP 0.0.0.0/0, v1.2.0)", "EC2.53 (IPv4, v3.0.0/v5.0.0)", "EC2.54 (IPv6, v3.0.0/v5.0.0)"],
+      "cis_candidates": [
+        {"benchmark": "CIS AWS Foundations Benchmark v1.2.0", "section": "4.1", "title": "Ensure no security groups allow ingress from 0.0.0.0/0 to port 22", "source": "trivy-meta", "verified": false},
+        {"benchmark": "CIS AWS Foundations Benchmark v1.2.0", "section": "4.2", "title": "Ensure no security groups allow ingress from 0.0.0.0/0 to port 3389", "source": "trivy-meta", "verified": false},
+        {"benchmark": "CIS AWS Foundations Benchmark v3.0.0", "section": "5.2", "title": "Ensure no security groups allow ingress from 0.0.0.0/0 to remote server administration ports", "source": "security-hub", "verified": false},
+        {"benchmark": "CIS AWS Foundations Benchmark v3.0.0", "section": "5.3", "title": "Ensure no security groups allow ingress from ::/0 to remote server administration ports", "source": "security-hub", "verified": false},
+        {"benchmark": "CIS AWS Foundations Benchmark v1.4.0", "section": "5.2", "title": "(원문 추정 — 인용 금지)", "source": "cis-original-unverified", "verified": false}
+      ],
+      "mapping_level": "직접",
+      "mapping_status": "직접 대응 (Trivy 메타 cis-aws-1.2: 4.1, 4.2 / Security Hub 로 v3.0.0 번호 보강). v5.0.0 번호는 AWS 문서 간 불일치(5.3/5.4 vs 5.6)로 원문 확인 전 인용하지 않는다. 2024-09-26 trivy-checks #257 이후 22/3389 포함 포트 범위 또는 프로토콜 -1 만 검사 → 80 포트 전체 개방은 발화하지 않음 (V6 가 봐야 하는 이유)"
+    },
+    "AVD-AWS-0104": {
+      "trivy_id": "AWS-0104",
+      "trivy_title": "A security group rule should not allow unrestricted egress to any IP address.",
+      "trivy_severity": "CRITICAL",
+      "cis_candidates": [],
+      "mapping_level": "없음",
+      "mapping_status": "CIS 항목 없음 (아웃바운드 무제한은 CIS 가 항목화하지 않음; CRITICAL 은 Aqua 자체 기준). 이 파이프라인의 대상 finding 이 아니며 V2 에서 '기존 finding' 으로만 취급된다."
+    },
+    "AVD-AWS-0173": {
+      "trivy_id": "AWS-0173",
+      "trivy_title": "Default security group should restrict all traffic.",
+      "trivy_severity": "LOW",
+      "cis_candidates": [
+        {"benchmark": "CIS AWS Foundations Benchmark v1.4.0", "section": "5.3", "title": "Ensure the default security group of every VPC restricts all traffic", "source": "trivy-meta", "verified": false},
+        {"benchmark": "CIS AWS Foundations Benchmark v3.0.0", "section": "5.4", "title": "Ensure the default security group of every VPC restricts all traffic", "source": "security-hub", "verified": false}
+      ],
+      "mapping_level": "직접",
+      "mapping_status": "참고용 (기본 SG). 우리 시나리오 밖."
+    },
+    "AVD-AWS-0057": {
+      "trivy_id": "AWS-0057",
+      "trivy_title": "IAM policy should avoid use of wildcards and instead apply the principle of least privilege.",
+      "trivy_severity": "HIGH",
+      "aws_security_hub_controls": ["IAM.1 (full '*:*' administrative privileges)"],
+      "cis_candidates": [
+        {"benchmark": "CIS AWS Foundations Benchmark v1.4.0", "section": "1.16", "title": "Ensure IAM policies that allow full \"*:*\" administrative privileges are not attached", "source": "trivy-meta", "verified": false},
+        {"benchmark": "CIS AWS Foundations Benchmark v1.2.0", "section": "1.22", "title": "Ensure IAM policies that allow full \"*:*\" administrative privileges are not created", "source": "security-hub", "verified": false}
+      ],
+      "mapping_level": "부분",
+      "mapping_status": "부분 대응: CIS 는 '*:*' 전체 관리자 권한만, Trivy 는 부분 와일드카드(s3:*, Resource:*)도 탐지 → Trivy 가 더 넓다. 그리고 Trivy 0.74.0 내장 번들에서 이 룰은 deprecated·규칙 본문 없음이라 발생하지 않는다 (D-8) → 우리 IAM 대상 룰은 0345/0342."
+    },
+    "AVD-AWS-0345": {
+      "trivy_id": "AWS-0345",
+      "trivy_title": "Disallow unrestricted S3 IAM Policies (s3:*).",
+      "trivy_severity": "HIGH",
+      "cis_candidates": [],
+      "mapping_level": "없음",
+      "mapping_status": "CIS 항목 없음 (Security Hub IAM.21 도 CIS 대응 없음). 'CIS 위반' 이 아니라 '최소 권한 원칙 위반(Trivy 기준)' 으로 말한다 (docs/cis-mapping.md 5절 3항)."
+    },
+    "AVD-AWS-0342": {
+      "trivy_id": "AWS-0342",
+      "trivy_title": "IAM Pass Role Filtering — iam:PassRole should be restricted.",
+      "trivy_severity": "MEDIUM",
+      "cis_candidates": [],
+      "mapping_level": "없음",
+      "mapping_status": "CIS 항목 없음. Trivy 자체 기준."
+    },
+    "AVD-AWS-0124": {
+      "trivy_id": "AWS-0124",
+      "trivy_title": "Missing description for security group rule.",
+      "trivy_severity": "LOW",
+      "cis_candidates": [],
+      "mapping_level": "없음",
+      "mapping_status": "위생 규칙 — 문서화 권고 (LOW). V2 차단 대상 아님. 패치가 description 을 추가하는 것은 화이트리스트 v0.2 4절에서 허용."
+    }
+  }
+}

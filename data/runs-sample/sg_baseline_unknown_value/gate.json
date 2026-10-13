@@ -1,0 +1,12 @@
+{
+  "action": "BLOCK",
+  "validity": "FAIL",
+  "policy_ok": true,
+  "risk_level": "MEDIUM",
+  "autonomy_cap": "MEDIUM",
+  "llm_proposed_autonomy": "HIGH",
+  "final_autonomy": null,
+  "reasons": [
+    "verification failed: FAIL at V5(new resource aws_eip.admin of type aws_eip is not in allowed_create_resource_typ)"
+  ]
+}

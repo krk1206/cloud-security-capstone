@@ -1,0 +1,4 @@
+{
+  "rationale": "SSH(22) ingress 를 승인 출처(예제 값 203.0.113.0/24)로만 제한. egress 는 그대로 둠.",
+  "provenance": "개발 중 작성한 예제 (Claude Cowork 세션에서 사람 검토용으로 만든 것 — LLM 자동 생성 결과가 아니며 성능 실험 자료로 쓰지 않는다)"
+}

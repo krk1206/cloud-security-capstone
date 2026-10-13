@@ -1,0 +1,217 @@
+{
+  "phase": "pre_deploy",
+  "layers": [
+    {
+      "layer": "V1",
+      "name": "target finding removed",
+      "verdict": "PASS",
+      "summary": "AVD-AWS-0107 no longer reported on aws_security_group.vulnerable_ssh",
+      "details": {
+        "target_key": "AVD-AWS-0107|main.tf|aws_security_group.vulnerable_ssh",
+        "present_before": true,
+        "present_after": false,
+        "checks_executed_after": 71
+      },
+      "executed": true,
+      "tool": "trivy 0.74.0"
+    },
+    {
+      "layer": "V2",
+      "name": "new findings introduced?",
+      "verdict": "PASS",
+      "summary": "no new findings (resolved 1, unchanged 1)",
+      "details": {
+        "before_count": 2,
+        "after_count": 1,
+        "new": [],
+        "resolved": [
+          {
+            "rule_id": "AVD-AWS-0107",
+            "severity": "HIGH",
+            "resource": "aws_security_group.vulnerable_ssh",
+            "filename": "main.tf",
+            "start_line": 11,
+            "end_line": 11,
+            "title": "Security groups should not allow unrestricted ingress to SSH or RDP from any IP address.",
+            "message": "Security group rule allows unrestricted ingress from any IP address.",
+            "resolution": "Set a more restrictive CIDR range",
+            "status": "FAIL",
+            "references": [
+              "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/security-group-rules-reference.html",
+              "https://docs.aws.amazon.com/securityhub/latest/userguide/ec2-controls.html#ec2-13",
+              "https://docs.aws.amazon.com/securityhub/latest/userguide/ec2-controls.html#ec2-14",
+              "https://avd.aquasec.com/misconfig/aws-0107"
+            ]
+          }
+        ],
+        "possibly_moved": [],
+        "checks_executed": {
+          "before": 71,
+          "after": 71
+        },
+        "block_severities": [
+          "CRITICAL",
+          "HIGH"
+        ],
+        "ignored_rules": []
+      },
+      "executed": true,
+      "tool": "trivy 0.74.0"
+    },
+    {
+      "layer": "V3",
+      "name": "terraform validate",
+      "verdict": "PASS",
+      "summary": "valid (syntax + schema/reference consistency)",
+      "details": {
+        "diagnostics": [],
+        "needs_format": false
+      },
+      "executed": true,
+      "tool": "opentofu 1.10.6"
+    },
+    {
+      "layer": "V4",
+      "name": "terraform plan",
+      "verdict": "PASS",
+      "summary": "plan generated (offline mode: no state, every resource appears as create — V5 uses structural diff)",
+      "details": {
+        "offline_mode": true,
+        "plan_stdout_tail": "_blocks = []\n              + prefix_list_ids  = []\n              + protocol         = \"-1\"\n              + security_groups  = []\n              + self             = false\n              + to_port          = 0\n            },\n        ]\n      + id                     = (known after apply)\n      + ingress                = [\n          + {\n              + cidr_blocks      = (known after apply)\n              + description      = \"SSH open to the world (intentional defect)\"\n              + from_port        = 22\n              + ipv6_cidr_blocks = []\n              + prefix_list_ids  = []\n              + protocol         = \"tcp\"\n              + security_groups  = []\n              + self             = false\n              + to_port          = 22\n            },\n        ]\n      + name                   = \"capstone-vuln-ssh\"\n      + name_prefix            = (known after apply)\n      + owner_id               = (known after apply)\n      + revoke_rules_on_delete = false\n      + tags_all               = {\n          + \"ManagedBy\" = \"terraform\"\n          + \"Project\"   = \"capstone-2026\"\n          + \"Purpose\"   = \"security-research\"\n        }\n      + vpc_id                 = \"vpc-041579a444874f812\"\n    }\n\nPlan: 2 to add, 0 to change, 0 to destroy.\n\nChanges to Outputs:\n  + sg_id = (known after apply)\n\n─────────────────────────────────────────────────────────────────────────────\n\nSaved the plan to: plan.bin\n\nTo perform exactly these actions, run the following command to apply:\n    tofu apply \"plan.bin\"\n",
+        "actions": {
+          "aws_eip.admin": [
+            "create"
+          ],
+          "aws_security_group.vulnerable_ssh": [
+            "create"
+          ]
+        }
+      },
+      "executed": true,
+      "tool": "opentofu 1.10.6"
+    },
+    {
+      "layer": "V5",
+      "name": "plan diff within policy",
+      "verdict": "FAIL",
+      "summary": "new resource aws_eip.admin of type aws_eip is not in allowed_create_resource_types",
+      "details": {
+        "removed": [],
+        "added": [
+          {
+            "address": "aws_eip.admin",
+            "type": "aws_eip"
+          }
+        ],
+        "changed": {
+          "aws_security_group.vulnerable_ssh": [
+            "ingress"
+          ]
+        },
+        "type_changed": [],
+        "plan_actions_delete": [],
+        "plan_actions_replace": [],
+        "provider_config_diff": [],
+        "violations": [
+          "new resource aws_eip.admin of type aws_eip is not in allowed_create_resource_types"
+        ],
+        "policy_version": "sg-v1 (2026-09-13)",
+        "touched_resources": 2
+      },
+      "executed": true,
+      "tool": "opentofu 1.10.6"
+    },
+    {
+      "layer": "V6",
+      "name": "intent oracle",
+      "verdict": "UNKNOWN",
+      "summary": "UNKNOWN: standalone:aws_security_group.vulnerable_ssh ssh: UNKNOWN — aws_security_group.vulnerable_ssh#ingress[0]: cidr_blocks unknown | standalone:aws_security_group.vulnerable_ssh required admin-ssh: UNKNOWN — required source not covered by known rules; unknown sources remain: aws_security_group.vulnerable_ssh#ingress[0]: cidr_blocks unknown",
+      "details": {
+        "verdict": "UNKNOWN",
+        "targets": [
+          {
+            "target": "aws_security_group.vulnerable_ssh",
+            "verdict": "UNKNOWN",
+            "scopes": [
+              {
+                "scope_id": "standalone:aws_security_group.vulnerable_ssh",
+                "scope_kind": "standalone",
+                "security_groups": [
+                  "aws_security_group.vulnerable_ssh"
+                ],
+                "verdict": "UNKNOWN",
+                "services": [
+                  {
+                    "service_id": "ingress/tcp/22-22",
+                    "label": "ssh",
+                    "verdict": "UNKNOWN",
+                    "effective_v4": [],
+                    "effective_v6": [],
+                    "effective_sg_refs": [],
+                    "approved_v4": [
+                      "203.0.113.0/24"
+                    ],
+                    "approved_v6": [],
+                    "excess_v4": [],
+                    "excess_v6": [],
+                    "excess_sg_refs": [],
+                    "unknown_reasons": [
+                      "aws_security_group.vulnerable_ssh#ingress[0]: cidr_blocks unknown"
+                    ],
+                    "partial_rules": [],
+                    "contributing_rules": [
+                      "aws_security_group.vulnerable_ssh#ingress[0]"
+                    ],
+                    "covers_entire_internet_v4": false,
+                    "covers_entire_internet_v6": false,
+                    "notes": []
+                  },
+                  {
+                    "service_id": "ingress/tcp/3389-3389",
+                    "label": "rdp",
+                    "verdict": "PASS",
+                    "effective_v4": [],
+                    "effective_v6": [],
+                    "effective_sg_refs": [],
+                    "approved_v4": [],
+                    "approved_v6": [],
+                    "excess_v4": [],
+                    "excess_v6": [],
+                    "excess_sg_refs": [],
+                    "unknown_reasons": [],
+                    "partial_rules": [],
+                    "contributing_rules": [],
+                    "covers_entire_internet_v4": false,
+                    "covers_entire_internet_v6": false,
+                    "notes": []
+                  }
+                ],
+                "required": [
+                  {
+                    "label": "admin-ssh",
+                    "service_id": "ingress/tcp/22-22",
+                    "source_cidr": "203.0.113.0/24",
+                    "verdict": "UNKNOWN",
+                    "reason": "required source not covered by known rules; unknown sources remain: aws_security_group.vulnerable_ssh#ingress[0]: cidr_blocks unknown"
+                  }
+                ],
+                "caveats": [
+                  "no attachment point found in plan; evaluated the security group alone. Other security groups attached to the same ENI at runtime are not visible here (V7 checks that)."
+                ]
+              }
+            ],
+            "reason": ""
+          }
+        ],
+        "world_source": "plan",
+        "summary": "UNKNOWN: standalone:aws_security_group.vulnerable_ssh ssh: UNKNOWN — aws_security_group.vulnerable_ssh#ingress[0]: cidr_blocks unknown | standalone:aws_security_group.vulnerable_ssh required admin-ssh: UNKNOWN — required source not covered by known rules; unknown sources remain: aws_security_group.vulnerable_ssh#ingress[0]: cidr_blocks unknown",
+        "notes": [],
+        "disclaimer": "Proves the effective ALLOW set at security-group level only. Real reachability (NACL, routing, public IP, host firewall, listening service) is not proven here."
+      },
+      "executed": true,
+      "tool": "iacpatch.sg_oracle"
+    }
+  ],
+  "validity": "FAIL",
+  "summary": "FAIL at V5(new resource aws_eip.admin of type aws_eip is not in allowed_create_resource_typ)"
+}

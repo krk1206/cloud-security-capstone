@@ -1,0 +1,37 @@
+{
+  "run_id": "20260915-063845-106eac",
+  "scenario": "ex02-case00-fixed",
+  "state": "REVIEW_REQUIRED",
+  "history": [
+    {
+      "state": "INPUT_READY",
+      "at": "2026-09-15T06:38:45+00:00",
+      "note": "대상 AVD-AWS-0107 @ main.tf:14 aws_security_group.baseline"
+    },
+    {
+      "state": "CANDIDATE_READY",
+      "at": "2026-09-15T06:38:45+00:00",
+      "note": "origin=manual files=['main.tf'] policy=OK"
+    },
+    {
+      "state": "VALIDATION_PENDING",
+      "at": "2026-09-15T06:38:45+00:00",
+      "note": "linked=['V1', 'V2', 'V3', 'V4', 'V5', 'V6'] validity=PASS"
+    },
+    {
+      "state": "REVIEW_REQUIRED",
+      "at": "2026-09-15T06:38:45+00:00",
+      "note": "review_level=LIGHT_REVIEW"
+    }
+  ],
+  "errors": [],
+  "started_at": "2026-09-15T06:38:45+00:00",
+  "verification_status": "COMPLETE",
+  "review_level": "LIGHT_REVIEW",
+  "note": "로컬 리포트 생성 성공은 패치 검증 성공이 아니다. verification_status 와 각 계층 상태를 볼 것",
+  "candidate_sha256": "c0e41893c86d3532c47e3b4bb8b3bda2faff462ddc28b915c289b72dd7044a38",
+  "candidate_origin": "manual",
+  "candidate_generator": "manual:candidate_fixed",
+  "verification_source": "example-fixture (예제 값 — A 가 실제로 실행한 결과가 아님)",
+  "finished_at": "2026-09-15T06:38:45+00:00"
+}

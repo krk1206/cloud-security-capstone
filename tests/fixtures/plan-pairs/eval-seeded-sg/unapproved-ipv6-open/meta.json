@@ -1,0 +1,20 @@
+{
+ "scenario": "eval-seeded-sg/unapproved-ipv6-open",
+ "record": "20260922-033633-f8dd0b",
+ "state": "VALIDATION_FAILED",
+ "review_level": "BLOCKED",
+ "tools": {
+  "trivy": {
+   "binary": "/home/claude/cloud-security-capstone/tools/trivy",
+   "version": "0.74.0",
+   "skip_check_update": true
+  },
+  "terraform": {
+   "binary": "/home/claude/cloud-security-capstone/tools/terraform",
+   "version": "1.10.6",
+   "kind": "terraform",
+   "offline_plan": true
+  }
+ },
+ "note": "data/reviews 기록의 local_verify/ 에서 그대로 복사 (2026-09-28). 판정 코드는 이 plan 쌍을 tools 없이 다시 계산할 수 있다"
+}

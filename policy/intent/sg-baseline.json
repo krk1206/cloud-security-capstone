@@ -1,0 +1,53 @@
+{
+  "intent_version": "1",
+  "intent_id": "sg-baseline",
+  "status": "active",
+  "description": "infrastructure/sg-baseline: SSH(22) 는 승인 출처 10.0.0.0/8 에서만, RDP(3389) 는 승인 출처 없음(규칙이 있으면 안 됨). 승인 출처 10.0.0.0/8 은 2026-09-15 팀 결정값(B 가 위임받아 확정, docs/DECISIONS.md D-2). 실제 조직 IP 가 아니라 평가용 고정값이다. 배포 후 접속 검증(V8) 을 할 때는 접속 테스트를 할 실제 공인 IP /32 로 sg-baseline.sandbox.json 을 따로 만든다.",
+  "target_dir": "infrastructure/sg-baseline",
+  "targets": {
+    "security_groups": [
+      "aws_security_group.vulnerable_ssh"
+    ],
+    "attachment_points": []
+  },
+  "guarded_services": [
+    {
+      "label": "ssh",
+      "direction": "ingress",
+      "protocol": "tcp",
+      "from_port": 22,
+      "to_port": 22,
+      "approved_sources": {
+        "cidrs_v4": [
+          "10.0.0.0/8"
+        ],
+        "cidrs_v6": [],
+        "security_group_refs": [],
+        "prefix_list_refs": []
+      }
+    },
+    {
+      "label": "rdp",
+      "direction": "ingress",
+      "protocol": "tcp",
+      "from_port": 3389,
+      "to_port": 3389,
+      "approved_sources": {
+        "cidrs_v4": [],
+        "cidrs_v6": [],
+        "security_group_refs": [],
+        "prefix_list_refs": []
+      }
+    }
+  ],
+  "required_access": [
+    {
+      "label": "admin-ssh",
+      "direction": "ingress",
+      "protocol": "tcp",
+      "from_port": 22,
+      "to_port": 22,
+      "source_cidr": "10.0.0.0/8"
+    }
+  ]
+}

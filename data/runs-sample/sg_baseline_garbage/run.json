@@ -1,0 +1,97 @@
+{
+  "run_id": "20260913-080040-0a8814",
+  "label": "predeploy:matrix-sg_baseline_garbage",
+  "started_at": "2026-09-13T08:00:40+00:00",
+  "status": "GENERATION_FAILED",
+  "steps": [
+    {
+      "step": "trivy_before",
+      "status": "OK",
+      "note": "{'successes': 69, 'failures': 2, 'checks_executed': 71}",
+      "at": "2026-09-13T08:00:41+00:00"
+    },
+    {
+      "step": "intent",
+      "status": "OK",
+      "note": "sg-baseline-test",
+      "at": "2026-09-13T08:00:41+00:00"
+    },
+    {
+      "step": "plan_baseline",
+      "status": "OK",
+      "note": "",
+      "at": "2026-09-13T08:00:58+00:00"
+    },
+    {
+      "step": "generate[1]",
+      "status": "GENERATION_FAILED",
+      "note": "no JSON object found in response",
+      "at": "2026-09-13T08:00:58+00:00"
+    }
+  ],
+  "secrets_policy": "<redacted>",
+  "env_keys_present": {
+    "LLM_API_KEY": "<redacted>",
+    "ANTHROPIC_API_KEY": "<redacted>",
+    "OPENAI_API_KEY": "<redacted>",
+    "AWS_ACCESS_KEY_ID": true,
+    "AWS_SECRET_ACCESS_KEY": "<redacted>",
+    "AWS_SESSION_TOKEN": "<redacted>",
+    "GITHUB_TOKEN": "<redacted>"
+  },
+  "scenario_id": "matrix-sg_baseline_garbage",
+  "target_dir": "infrastructure/sg-baseline",
+  "intent_path": "tests/fixtures/intents/sg-baseline.test.json",
+  "generator": "llm",
+  "tool_versions": {
+    "trivy": "0.74.0",
+    "terraform": "opentofu 1.10.6",
+    "iacpatch": "0.1.0"
+  },
+  "offline_plan": true,
+  "target_finding": {
+    "rule_id": "AVD-AWS-0107",
+    "severity": "HIGH",
+    "resource": "aws_security_group.vulnerable_ssh",
+    "filename": "main.tf",
+    "start_line": 11,
+    "end_line": 11,
+    "title": "Security groups should not allow unrestricted ingress to SSH or RDP from any IP address.",
+    "message": "Security group rule allows unrestricted ingress from any IP address.",
+    "resolution": "Set a more restrictive CIDR range",
+    "status": "FAIL",
+    "references": [
+      "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/security-group-rules-reference.html",
+      "https://docs.aws.amazon.com/securityhub/latest/userguide/ec2-controls.html#ec2-13",
+      "https://docs.aws.amazon.com/securityhub/latest/userguide/ec2-controls.html#ec2-14",
+      "https://avd.aquasec.com/misconfig/aws-0107"
+    ]
+  },
+  "candidate": {
+    "candidate_id": "cand-f5c80369",
+    "origin": "mock",
+    "generator": "mock:mock:mock-fixture",
+    "status": "GENERATION_FAILED",
+    "files": {},
+    "rationale": "",
+    "proposed_autonomy": null,
+    "assumptions": [],
+    "error": "no JSON object found in response",
+    "prompt_version": "sg_v1",
+    "prompt_sha256": "05ea27e8cbf51dee2463c657815a37040024fa7e6de716fc1b0f371b22bfa86d",
+    "model": "mock-fixture",
+    "raw_response_path": "candidates/01/llm_raw_response.txt",
+    "attempt": 1
+  },
+  "gate": {
+    "action": "REPORT_ONLY",
+    "reason": "GENERATION_FAILED"
+  },
+  "finished_at": "2026-09-13T08:00:58+00:00",
+  "automated_seconds_total": 18.333,
+  "timings_seconds": {
+    "scan_before": 1.36,
+    "plan_baseline": 16.857,
+    "generate": 0.001
+  }
+}

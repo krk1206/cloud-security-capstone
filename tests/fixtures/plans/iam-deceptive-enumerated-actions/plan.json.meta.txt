@@ -1,0 +1,6 @@
+generated: 2026-09-22T01:33:56Z
+terraform: OpenTofu v1.10.6
+source_dir: scenarios/eval/iam-report-worker
+candidate: experiments/candidate-sets/eval-seeded-iam/candidates/deceptive-enumerated-actions.tf
+candidate_sha256: a2620349233efd914d0090b35d15e71fad1fe848e130a11ba653e81ee2ce4627
+mode: offline (상태 없음, 전부 create; provider override 는 결과에 포함되지 않음)

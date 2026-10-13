@@ -1,0 +1,6 @@
+generated: 2026-09-22T01:34:09Z
+terraform: OpenTofu v1.10.6
+source_dir: scenarios/eval/iam-report-worker
+candidate: experiments/candidate-sets/eval-seeded-iam/candidates/deceptive-inline-role-policy.tf
+candidate_sha256: e9acdec9ac329259819e3d558f9eef3831180aba3126b8c90dd48d2e189cf58a
+mode: offline (상태 없음, 전부 create; provider override 는 결과에 포함되지 않음)

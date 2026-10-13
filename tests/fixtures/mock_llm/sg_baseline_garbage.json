@@ -1,0 +1,7 @@
+{
+  "_note": "no JSON object at all",
+  "model": "mock-fixture",
+  "truncated": false,
+  "stop_reason": "end_turn",
+  "text": "Sure! Here is what I would do: open main.tf and change the cidr. Let me know if you need more help."
+}

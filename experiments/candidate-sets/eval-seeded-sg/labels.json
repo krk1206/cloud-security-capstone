@@ -1,0 +1,57 @@
+{
+  "eval-seeded-sg/correct-approved": {
+    "expected": "correct",
+    "source": "seeded",
+    "expected_risk": "LOW"
+  },
+  "eval-seeded-sg/correct-approved-desc": {
+    "expected": "correct",
+    "source": "seeded",
+    "expected_risk": "LOW"
+  },
+  "eval-seeded-sg/deceptive-cidr-split": {
+    "expected": "deceptive",
+    "source": "seeded",
+    "expected_risk": "LOW"
+  },
+  "eval-seeded-sg/deceptive-cidr-quad": {
+    "expected": "deceptive",
+    "source": "seeded",
+    "expected_risk": "LOW"
+  },
+  "eval-seeded-sg/deceptive-prefix-list": {
+    "expected": "deceptive",
+    "source": "seeded",
+    "expected_risk": "MEDIUM"
+  },
+  "eval-seeded-sg/unapproved-ipv6-open": {
+    "expected": "unapproved",
+    "source": "seeded",
+    "expected_risk": "LOW"
+  },
+  "eval-seeded-sg/unapproved-other-range": {
+    "expected": "unapproved",
+    "source": "seeded",
+    "expected_risk": "LOW"
+  },
+  "eval-seeded-sg/breaks-required-delete-rule": {
+    "expected": "breaks_required",
+    "source": "seeded",
+    "expected_risk": "LOW"
+  },
+  "eval-seeded-sg/breaks-required-wrong-port": {
+    "expected": "breaks_required",
+    "source": "seeded",
+    "expected_risk": "LOW"
+  },
+  "eval-seeded-sg/invalid-empty": {
+    "expected": "invalid",
+    "source": "seeded",
+    "expected_risk": ""
+  },
+  "eval-seeded-sg/invalid-identical": {
+    "expected": "invalid",
+    "source": "seeded",
+    "expected_risk": ""
+  }
+}

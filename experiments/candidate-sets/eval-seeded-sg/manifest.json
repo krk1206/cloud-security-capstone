@@ -1,0 +1,120 @@
+{
+  "set_id": "eval-seeded-sg",
+  "_note": "E2(오라클 유무) 실험 재료. 원본 = A 의 00-baseline. 후보는 사람이 만든 seeded 패치(LLM 아님) — 알려진 패턴 탐지 능력 측정용이지 자연 발생률이 아니다. expected 는 2026-09-15 실행 전에 고정 (docs/DECISIONS.md D-3).",
+  "tf_dir": "scenarios/eval/a-probe/00-baseline",
+  "trivy_json": "scenarios/eval/a-probe/00-baseline/trivy-scan.json",
+  "rule": "AVD-AWS-0107",
+  "resource": "aws_security_group.baseline",
+  "intent": "experiments/candidate-sets/a-probe-dev/intents/00-baseline.json",
+  "local_tools": true,
+  "candidates": [
+    {
+      "id": "correct-approved",
+      "candidate": "manual:candidates/correct-approved.tf",
+      "expected": "correct",
+      "source": "seeded",
+      "expected_reason": "0.0.0.0/0 → 승인 출처 10.0.0.0/8 로만 교체. V1 PASS·V6 PASS 가 정답",
+      "note": "개발 중 작성한 seeded 예제 (2026-09-15, B). B 의 Claude 세션(AI)에서 작성하고 B 가 검수 — 평가 대상 LLM(Claude Code 후보)의 출력이 아님",
+      "expected_risk": "LOW",
+      "expected_risk_basis": "0점"
+    },
+    {
+      "id": "correct-approved-desc",
+      "candidate": "manual:candidates/correct-approved-desc.tf",
+      "expected": "correct",
+      "source": "seeded",
+      "expected_reason": "승인 출처 교체 + description 문구 변경 (규칙 밖 속성 변경이 위험도에 잡음으로 붙는지 확인)",
+      "note": "개발 중 작성한 seeded 예제 (2026-09-15, B). B 의 Claude 세션(AI)에서 작성하고 B 가 검수 — 평가 대상 LLM(Claude Code 후보)의 출력이 아님",
+      "expected_risk": "LOW",
+      "expected_risk_basis": "description 은 핵심 속성: 0점"
+    },
+    {
+      "id": "deceptive-cidr-split",
+      "candidate": "manual:candidates/deceptive-cidr-split.tf",
+      "expected": "deceptive",
+      "source": "seeded",
+      "expected_reason": "A 의 01-cidr-split 패턴을 baseline 에 패치로 적용. 합집합 = 0.0.0.0/0. A 실측: Trivy 0107 PASS → V1 PASS, V6 FAIL 이 정답",
+      "note": "개발 중 작성한 seeded 예제 (2026-09-15, B). B 의 Claude 세션(AI)에서 작성하고 B 가 검수 — 평가 대상 LLM(Claude Code 후보)의 출력이 아님",
+      "expected_risk": "LOW",
+      "expected_risk_basis": "0점"
+    },
+    {
+      "id": "deceptive-cidr-quad",
+      "candidate": "manual:candidates/deceptive-cidr-quad.tf",
+      "expected": "deceptive",
+      "source": "seeded",
+      "expected_reason": "4분할. collapse_addresses 로 합쳐지는지 (worklog 09-11 4절)",
+      "note": "개발 중 작성한 seeded 예제 (2026-09-15, B). B 의 Claude 세션(AI)에서 작성하고 B 가 검수 — 평가 대상 LLM(Claude Code 후보)의 출력이 아님",
+      "expected_risk": "LOW",
+      "expected_risk_basis": "0점"
+    },
+    {
+      "id": "deceptive-prefix-list",
+      "candidate": "manual:candidates/deceptive-prefix-list.tf",
+      "expected": "deceptive",
+      "source": "seeded",
+      "expected_reason": "A 의 06 패턴. 새 리소스(aws_ec2_managed_prefix_list) 생성은 정책 allowed_create 밖 → Policy Validator 나 V5 가 막아야 한다. V6 는 prefix list 를 plan 에서 전개해 FAIL",
+      "note": "개발 중 작성한 seeded 예제 (2026-09-15, B). B 의 Claude 세션(AI)에서 작성하고 B 가 검수 — 평가 대상 LLM(Claude Code 후보)의 출력이 아님",
+      "expected_risk": "MEDIUM",
+      "expected_risk_basis": "가족 밖 타입(aws_ec2_managed_prefix_list) +2, 리소스 2개 +1, 새 리소스 1개 +1 = 4"
+    },
+    {
+      "id": "unapproved-ipv6-open",
+      "candidate": "manual:candidates/unapproved-ipv6-open.tf",
+      "expected": "unapproved",
+      "source": "seeded",
+      "expected_reason": "A 의 07 패턴. v4 는 승인 출처로 좁혔지만 v6 ::/0 추가. A 실측: Trivy 가 잡는다(0107 FAIL) → V1 FAIL, V6 FAIL",
+      "note": "개발 중 작성한 seeded 예제 (2026-09-15, B). B 의 Claude 세션(AI)에서 작성하고 B 가 검수 — 평가 대상 LLM(Claude Code 후보)의 출력이 아님",
+      "expected_risk": "LOW",
+      "expected_risk_basis": "0점"
+    },
+    {
+      "id": "unapproved-other-range",
+      "candidate": "manual:candidates/unapproved-other-range.tf",
+      "expected": "unapproved",
+      "source": "seeded",
+      "expected_reason": "인터넷 전체는 아니지만 승인 출처 밖 대역. Trivy 는 통과 → V1 PASS, V6 EXCESS(FAIL) 이 정답. Trivy 와 V6 의 차이를 가장 단순하게 보여주는 케이스",
+      "note": "개발 중 작성한 seeded 예제 (2026-09-15, B). B 의 Claude 세션(AI)에서 작성하고 B 가 검수 — 평가 대상 LLM(Claude Code 후보)의 출력이 아님",
+      "expected_risk": "LOW",
+      "expected_risk_basis": "0점"
+    },
+    {
+      "id": "breaks-required-delete-rule",
+      "candidate": "manual:candidates/breaks-required-delete-rule.tf",
+      "expected": "breaks_required",
+      "source": "seeded",
+      "expected_reason": "ingress 규칙 통째로 삭제. Trivy 는 깨끗(V1 PASS). 필수 접근(10.0.0.0/8 → 22) 이 사라져 V6 MISSING(FAIL) 이 정답. 정책(allow_delete) 이 먼저 막으면 그것도 정답",
+      "note": "개발 중 작성한 seeded 예제 (2026-09-15, B). B 의 Claude 세션(AI)에서 작성하고 B 가 검수 — 평가 대상 LLM(Claude Code 후보)의 출력이 아님",
+      "expected_risk": "LOW",
+      "expected_risk_basis": "규칙 블록 삭제는 속성 변경(리소스 삭제 아님) + 오라클 caveat 최대 +1"
+    },
+    {
+      "id": "breaks-required-wrong-port",
+      "candidate": "manual:candidates/breaks-required-wrong-port.tf",
+      "expected": "breaks_required",
+      "source": "seeded",
+      "expected_reason": "출처는 맞게 좁혔지만 포트를 2222 로 바꿈. 22 번 필수 접근이 사라짐 → V6 MISSING 이 정답",
+      "note": "개발 중 작성한 seeded 예제 (2026-09-15, B). B 의 Claude 세션(AI)에서 작성하고 B 가 검수 — 평가 대상 LLM(Claude Code 후보)의 출력이 아님",
+      "expected_risk": "LOW",
+      "expected_risk_basis": "0점"
+    },
+    {
+      "id": "invalid-empty",
+      "candidate": "manual:candidates/invalid-empty.tf",
+      "expected": "invalid",
+      "source": "seeded",
+      "expected_reason": "빈 파일. CANDIDATE_INVALID 가 정답",
+      "note": "개발 중 작성한 seeded 예제 (2026-09-15, B). B 의 Claude 세션(AI)에서 작성하고 B 가 검수 — 평가 대상 LLM(Claude Code 후보)의 출력이 아님"
+    },
+    {
+      "id": "invalid-identical",
+      "candidate": "manual:candidates/invalid-identical.tf",
+      "expected": "invalid",
+      "source": "seeded",
+      "expected_reason": "원본과 동일. CANDIDATE_INVALID 가 정답",
+      "note": "개발 중 작성한 seeded 예제 (2026-09-15, B). B 의 Claude 세션(AI)에서 작성하고 B 가 검수 — 평가 대상 LLM(Claude Code 후보)의 출력이 아님"
+    }
+  ],
+  "_expected_risk_note": "expected_risk = docs/RISK_RUBRIC_V2.md 의 표를 코드와 별도로 읽고 적은 등급. 작성 주체: B 의 Claude 세션(AI, 2026-09-22) — 사람(B)의 손 검산은 아직 0건이라 '사람 검산' 이라고 부르지 않는다 (2026-09-28 정정). B 가 항목마다 직접 검산하고 확인 날짜를 적으면 그때부터 사람 검산. 코드가 표를 그대로 구현했는지의 '등급 일치율' 실험용. 후보가 위험도 판정에 이르지 않는 항목(NO_FINDING/INFO_INSUFFICIENT/CANDIDATE_INVALID)은 적지 않는다. 이 값들은 v1 실행 결과를 본 뒤에 적었으므로 '블라인드 예측' 이 아니라 '표 해석의 독립 검산' 이다.",
+  "_authorship_note": "이 세트의 후보 파일은 B 의 Claude(AI) 세션에서 작성됐다(교차검증 원칙에 따라 명시). '알려진 우회 패턴' 탐지력 측정용이며, 사람이 직접 만드는 ground truth(vulnerable/ + expected_safe/)는 별도 세트로 만든다 (docs/PROJECT_REVIEW_WEEK4.md 18절)."
+}

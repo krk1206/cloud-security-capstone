@@ -1,0 +1,6 @@
+generated: 2026-09-22T01:32:54Z
+terraform: OpenTofu v1.10.6
+source_dir: scenarios/eval/iam-report-worker
+candidate: (원본)
+candidate_sha256: -
+mode: offline (상태 없음, 전부 create; provider override 는 결과에 포함되지 않음)

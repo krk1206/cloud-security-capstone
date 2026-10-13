@@ -1,0 +1,18 @@
+{
+  "_note": "removes required admin access",
+  "model": "mock-fixture",
+  "truncated": false,
+  "stop_reason": "end_turn",
+  "response": {
+    "status": "PATCH",
+    "rationale": "Removed SSH ingress completely.",
+    "proposed_autonomy": "HIGH",
+    "assumptions": [],
+    "files": [
+      {
+        "path": "main.tf",
+        "content": "resource \"aws_security_group\" \"vulnerable_ssh\" {\n  name        = \"capstone-vuln-ssh\"\n  description = \"Intentionally misconfigured for capstone research\"\n  vpc_id      = var.vpc_id\n\n  egress {\n    description = \"Allow all outbound\"\n    from_port   = 0\n    to_port     = 0\n    protocol    = \"-1\"\n    cidr_blocks = [\"0.0.0.0/0\"]\n  }\n}\n"
+      }
+    ]
+  }
+}

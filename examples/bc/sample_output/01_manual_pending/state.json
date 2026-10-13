@@ -1,0 +1,37 @@
+{
+  "run_id": "20260915-063845-251317",
+  "scenario": "ex01-manual-pending",
+  "state": "REVIEW_REQUIRED",
+  "history": [
+    {
+      "state": "INPUT_READY",
+      "at": "2026-09-15T06:38:45+00:00",
+      "note": "대상 AVD-AWS-0107 @ main.tf:11 aws_security_group.vulnerable_ssh"
+    },
+    {
+      "state": "CANDIDATE_READY",
+      "at": "2026-09-15T06:38:45+00:00",
+      "note": "origin=manual files=['main.tf'] policy=OK"
+    },
+    {
+      "state": "VALIDATION_PENDING",
+      "at": "2026-09-15T06:38:45+00:00",
+      "note": "linked=[] validity=INCOMPLETE"
+    },
+    {
+      "state": "REVIEW_REQUIRED",
+      "at": "2026-09-15T06:38:45+00:00",
+      "note": "review_level=PENDING"
+    }
+  ],
+  "errors": [],
+  "started_at": "2026-09-15T06:38:45+00:00",
+  "verification_status": "PENDING",
+  "review_level": "PENDING",
+  "note": "로컬 리포트 생성 성공은 패치 검증 성공이 아니다. verification_status 와 각 계층 상태를 볼 것",
+  "candidate_sha256": "7252bfb9b4c93b03494f1ac0d6f09d1cb90db27a41aaaf65dd46832b3d8469a5",
+  "candidate_origin": "manual",
+  "candidate_generator": "manual:manual_candidate_ok",
+  "verification_source": "없음",
+  "finished_at": "2026-09-15T06:38:45+00:00"
+}
