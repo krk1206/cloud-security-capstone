@@ -54,6 +54,19 @@ jobs:
           name: trivy-scan-results
           path: scan-results/
           retention-days: 14
+      
+      
+      - name: Build PR comment
+        run: |
+          python3 src/pipeline/trivy_to_comment.py \
+            scan-results/sg-baseline.json infrastructure/sg-baseline > comment.md
+          cat comment.md
+
+      - name: Post PR comment
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr comment ${{ github.event.pull_request.number }} --body-file comment.md
 
       # PR 게이트: 이 PR 에서 바뀐 infrastructure/ 하위 폴더만 검사한다.
       # (main 에 의도적 결함 시나리오가 있는 동안 팀원의 코드 PR 이 기존 결함 때문에 막히지 않게 함)
