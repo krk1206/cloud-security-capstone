@@ -1,0 +1,6 @@
+generated: 2026-09-22T01:34:21Z
+terraform: OpenTofu v1.10.6
+source_dir: scenarios/eval/iam-report-worker
+candidate: experiments/candidate-sets/eval-seeded-iam/candidates/deceptive-notaction.tf
+candidate_sha256: 5156493f701217d781dd86d8659b35a2b98fa7761753cb51ac12c64c98dfaafe
+mode: offline (상태 없음, 전부 create; provider override 는 결과에 포함되지 않음)

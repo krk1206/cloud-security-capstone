@@ -1,0 +1,279 @@
+{
+ "format_version": "1.2",
+ "terraform_version": "1.10.6",
+ "planned_values": {
+  "root_module": {
+   "resources": [
+    {
+     "address": "aws_ec2_managed_prefix_list.world",
+     "mode": "managed",
+     "type": "aws_ec2_managed_prefix_list",
+     "name": "world",
+     "provider_name": "registry.opentofu.org/hashicorp/aws",
+     "schema_version": 0,
+     "values": {
+      "address_family": "IPv4",
+      "entry": [
+       {
+        "cidr": "0.0.0.0/0",
+        "description": "everything"
+       }
+      ],
+      "max_entries": 1,
+      "name": "world-prefix-list",
+      "tags": null
+     },
+     "sensitive_values": {
+      "entry": [
+       {}
+      ],
+      "tags_all": {}
+     }
+    },
+    {
+     "address": "aws_security_group.prefix_list",
+     "mode": "managed",
+     "type": "aws_security_group",
+     "name": "prefix_list",
+     "provider_name": "registry.opentofu.org/hashicorp/aws",
+     "schema_version": 1,
+     "values": {
+      "description": "SSH open via managed prefix list",
+      "ingress": [
+       {
+        "cidr_blocks": [],
+        "description": "SSH",
+        "from_port": 22,
+        "ipv6_cidr_blocks": [],
+        "protocol": "tcp",
+        "security_groups": [],
+        "self": false,
+        "to_port": 22
+       }
+      ],
+      "name": "prefix-list-sg",
+      "revoke_rules_on_delete": false,
+      "tags": null,
+      "timeouts": null
+     },
+     "sensitive_values": {
+      "egress": [],
+      "ingress": [
+       {
+        "cidr_blocks": [],
+        "ipv6_cidr_blocks": [],
+        "prefix_list_ids": [],
+        "security_groups": []
+       }
+      ],
+      "tags_all": {}
+     }
+    }
+   ]
+  }
+ },
+ "resource_changes": [
+  {
+   "address": "aws_ec2_managed_prefix_list.world",
+   "mode": "managed",
+   "type": "aws_ec2_managed_prefix_list",
+   "name": "world",
+   "provider_name": "registry.opentofu.org/hashicorp/aws",
+   "change": {
+    "actions": [
+     "create"
+    ],
+    "before": null,
+    "after": {
+     "address_family": "IPv4",
+     "entry": [
+      {
+       "cidr": "0.0.0.0/0",
+       "description": "everything"
+      }
+     ],
+     "max_entries": 1,
+     "name": "world-prefix-list",
+     "tags": null
+    },
+    "after_unknown": {
+     "arn": true,
+     "entry": [
+      {}
+     ],
+     "id": true,
+     "owner_id": true,
+     "tags_all": true,
+     "version": true
+    },
+    "before_sensitive": false,
+    "after_sensitive": {
+     "entry": [
+      {}
+     ],
+     "tags_all": {}
+    }
+   }
+  },
+  {
+   "address": "aws_security_group.prefix_list",
+   "mode": "managed",
+   "type": "aws_security_group",
+   "name": "prefix_list",
+   "provider_name": "registry.opentofu.org/hashicorp/aws",
+   "change": {
+    "actions": [
+     "create"
+    ],
+    "before": null,
+    "after": {
+     "description": "SSH open via managed prefix list",
+     "ingress": [
+      {
+       "cidr_blocks": [],
+       "description": "SSH",
+       "from_port": 22,
+       "ipv6_cidr_blocks": [],
+       "protocol": "tcp",
+       "security_groups": [],
+       "self": false,
+       "to_port": 22
+      }
+     ],
+     "name": "prefix-list-sg",
+     "revoke_rules_on_delete": false,
+     "tags": null,
+     "timeouts": null
+    },
+    "after_unknown": {
+     "arn": true,
+     "egress": true,
+     "id": true,
+     "ingress": [
+      {
+       "cidr_blocks": [],
+       "ipv6_cidr_blocks": [],
+       "prefix_list_ids": true,
+       "security_groups": []
+      }
+     ],
+     "name_prefix": true,
+     "owner_id": true,
+     "tags_all": true,
+     "vpc_id": true
+    },
+    "before_sensitive": false,
+    "after_sensitive": {
+     "egress": [],
+     "ingress": [
+      {
+       "cidr_blocks": [],
+       "ipv6_cidr_blocks": [],
+       "prefix_list_ids": [],
+       "security_groups": []
+      }
+     ],
+     "tags_all": {}
+    }
+   }
+  }
+ ],
+ "configuration": {
+  "provider_config": {
+   "aws": {
+    "name": "aws",
+    "full_name": "registry.opentofu.org/hashicorp/aws",
+    "expressions": {
+     "access_key": {
+      "constant_value": "offline-plan-fake"
+     },
+     "profile": {
+      "constant_value": null
+     },
+     "region": {
+      "constant_value": "ap-northeast-2"
+     },
+     "secret_key": {
+      "constant_value": "offline-plan-fake"
+     },
+     "skip_credentials_validation": {
+      "constant_value": true
+     },
+     "skip_metadata_api_check": {
+      "constant_value": true
+     },
+     "skip_region_validation": {
+      "constant_value": true
+     },
+     "skip_requesting_account_id": {
+      "constant_value": true
+     }
+    }
+   }
+  },
+  "root_module": {
+   "resources": [
+    {
+     "address": "aws_ec2_managed_prefix_list.world",
+     "mode": "managed",
+     "type": "aws_ec2_managed_prefix_list",
+     "name": "world",
+     "provider_config_key": "aws",
+     "expressions": {
+      "address_family": {
+       "constant_value": "IPv4"
+      },
+      "entry": [
+       {
+        "cidr": {
+         "constant_value": "0.0.0.0/0"
+        },
+        "description": {
+         "constant_value": "everything"
+        }
+       }
+      ],
+      "max_entries": {
+       "constant_value": 1
+      },
+      "name": {
+       "constant_value": "world-prefix-list"
+      }
+     },
+     "schema_version": 0
+    },
+    {
+     "address": "aws_security_group.prefix_list",
+     "mode": "managed",
+     "type": "aws_security_group",
+     "name": "prefix_list",
+     "provider_config_key": "aws",
+     "expressions": {
+      "description": {
+       "constant_value": "SSH open via managed prefix list"
+      },
+      "ingress": {
+       "references": [
+        "aws_ec2_managed_prefix_list.world.id",
+        "aws_ec2_managed_prefix_list.world"
+       ]
+      },
+      "name": {
+       "constant_value": "prefix-list-sg"
+      }
+     },
+     "schema_version": 1
+    }
+   ]
+  }
+ },
+ "relevant_attributes": [
+  {
+   "resource": "aws_ec2_managed_prefix_list.world",
+   "attribute": [
+    "id"
+   ]
+  }
+ ],
+ "errored": false
+}

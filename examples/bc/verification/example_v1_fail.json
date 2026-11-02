@@ -1,0 +1,20 @@
+{
+  "schema": "iacpatch-verification-v1",
+  "source": "example-fixture (예제 값)",
+  "layers": [
+    {
+      "layer": "V1",
+      "verdict": "FAIL",
+      "summary": "AVD-AWS-0107 이 재스캔에서 여전히 보고됨 (예제)",
+      "tool": "trivy 0.74.0",
+      "executed": true
+    },
+    {
+      "layer": "V3",
+      "verdict": "PASS",
+      "summary": "validate 통과 (예제)",
+      "tool": "terraform 1.16.1",
+      "executed": true
+    }
+  ]
+}

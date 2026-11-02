@@ -1,0 +1,424 @@
+{
+  "run_id": "20260913-075707-30298a",
+  "label": "predeploy:matrix-sg_baseline_ipv6_open",
+  "started_at": "2026-09-13T07:57:07+00:00",
+  "status": "DONE",
+  "steps": [
+    {
+      "step": "trivy_before",
+      "status": "OK",
+      "note": "{'successes': 69, 'failures': 2, 'checks_executed': 71}",
+      "at": "2026-09-13T07:57:08+00:00"
+    },
+    {
+      "step": "intent",
+      "status": "OK",
+      "note": "sg-baseline-test",
+      "at": "2026-09-13T07:57:08+00:00"
+    },
+    {
+      "step": "plan_baseline",
+      "status": "OK",
+      "note": "",
+      "at": "2026-09-13T07:57:25+00:00"
+    },
+    {
+      "step": "generate[1]",
+      "status": "PATCH",
+      "note": "Restricted IPv4; kept IPv6 reachable.",
+      "at": "2026-09-13T07:57:25+00:00"
+    },
+    {
+      "step": "policy[1]",
+      "status": "OK",
+      "note": "",
+      "at": "2026-09-13T07:57:25+00:00"
+    },
+    {
+      "step": "verify[1]",
+      "status": "FAIL",
+      "note": "FAIL at V1(AVD-AWS-0107 still reported on aws_security_group.vulnerable_ssh), V6(FAIL: standalone:aws_security_group.vulnerable_ssh ssh: EXCESS beyond approved s)",
+      "at": "2026-09-13T07:57:43+00:00"
+    }
+  ],
+  "secrets_policy": "<redacted>",
+  "env_keys_present": {
+    "LLM_API_KEY": "<redacted>",
+    "ANTHROPIC_API_KEY": "<redacted>",
+    "OPENAI_API_KEY": "<redacted>",
+    "AWS_ACCESS_KEY_ID": true,
+    "AWS_SECRET_ACCESS_KEY": "<redacted>",
+    "AWS_SESSION_TOKEN": "<redacted>",
+    "GITHUB_TOKEN": "<redacted>"
+  },
+  "scenario_id": "matrix-sg_baseline_ipv6_open",
+  "target_dir": "infrastructure/sg-baseline",
+  "intent_path": "tests/fixtures/intents/sg-baseline.test.json",
+  "generator": "llm",
+  "tool_versions": {
+    "trivy": "0.74.0",
+    "terraform": "opentofu 1.10.6",
+    "iacpatch": "0.1.0"
+  },
+  "offline_plan": true,
+  "target_finding": {
+    "rule_id": "AVD-AWS-0107",
+    "severity": "HIGH",
+    "resource": "aws_security_group.vulnerable_ssh",
+    "filename": "main.tf",
+    "start_line": 11,
+    "end_line": 11,
+    "title": "Security groups should not allow unrestricted ingress to SSH or RDP from any IP address.",
+    "message": "Security group rule allows unrestricted ingress from any IP address.",
+    "resolution": "Set a more restrictive CIDR range",
+    "status": "FAIL",
+    "references": [
+      "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/security-group-rules-reference.html",
+      "https://docs.aws.amazon.com/securityhub/latest/userguide/ec2-controls.html#ec2-13",
+      "https://docs.aws.amazon.com/securityhub/latest/userguide/ec2-controls.html#ec2-14",
+      "https://avd.aquasec.com/misconfig/aws-0107"
+    ]
+  },
+  "candidate": {
+    "candidate_id": "cand-e7820de4",
+    "origin": "mock",
+    "generator": "mock:mock:mock-fixture",
+    "status": "PATCH",
+    "files": {
+      "main.tf": "resource \"aws_security_group\" \"vulnerable_ssh\" {\n  name        = \"capstone-vuln-ssh\"\n  description = \"Intentionally misconfigured for capstone research\"\n  vpc_id      = var.vpc_id\n\n  ingress {\n    description = \"SSH open to the world (intentional defect)\"\n    from_port   = 22\n    to_port     = 22\n    protocol    = \"tcp\"\n    cidr_blocks      = [\"203.0.113.0/24\"]\n    ipv6_cidr_blocks = [\"::/0\"]\n  }\n\n  egress {\n    description = \"Allow all outbound\"\n    from_port   = 0\n    to_port     = 0\n    protocol    = \"-1\"\n    cidr_blocks = [\"0.0.0.0/0\"]\n  }\n}\n"
+    },
+    "rationale": "Restricted IPv4; kept IPv6 reachable.",
+    "proposed_autonomy": "HIGH",
+    "assumptions": [],
+    "error": "",
+    "prompt_version": "sg_v1",
+    "prompt_sha256": "6cd200c493656387d797d6798cb56ba7c134dee674ac7ba8187891cb294b707d",
+    "model": "mock-fixture",
+    "raw_response_path": "candidates/01/llm_raw_response.txt",
+    "attempt": 1
+  },
+  "validity": {
+    "phase": "pre_deploy",
+    "layers": [
+      {
+        "layer": "V1",
+        "name": "target finding removed",
+        "verdict": "FAIL",
+        "summary": "AVD-AWS-0107 still reported on aws_security_group.vulnerable_ssh",
+        "details": {
+          "target_key": "AVD-AWS-0107|main.tf|aws_security_group.vulnerable_ssh",
+          "present_before": true,
+          "present_after": true,
+          "checks_executed_after": 71
+        },
+        "executed": true,
+        "tool": "trivy 0.74.0"
+      },
+      {
+        "layer": "V2",
+        "name": "new findings introduced?",
+        "verdict": "PASS",
+        "summary": "no new findings (resolved 0, unchanged 2)",
+        "details": {
+          "before_count": 2,
+          "after_count": 2,
+          "new": [],
+          "resolved": [],
+          "possibly_moved": [],
+          "checks_executed": {
+            "before": 71,
+            "after": 71
+          },
+          "block_severities": [
+            "CRITICAL",
+            "HIGH"
+          ],
+          "ignored_rules": []
+        },
+        "executed": true,
+        "tool": "trivy 0.74.0"
+      },
+      {
+        "layer": "V3",
+        "name": "terraform validate",
+        "verdict": "PASS",
+        "summary": "valid (syntax + schema/reference consistency); fmt would reformat the files (not blocking)",
+        "details": {
+          "diagnostics": [],
+          "needs_format": true
+        },
+        "executed": true,
+        "tool": "opentofu 1.10.6"
+      },
+      {
+        "layer": "V4",
+        "name": "terraform plan",
+        "verdict": "PASS",
+        "summary": "plan generated (offline mode: no state, every resource appears as create — V5 uses structural diff)",
+        "details": {
+          "offline_mode": true,
+          "plan_stdout_tail": " = \"-1\"\n              + security_groups  = []\n              + self             = false\n              + to_port          = 0\n            },\n        ]\n      + id                     = (known after apply)\n      + ingress                = [\n          + {\n              + cidr_blocks      = [\n                  + \"203.0.113.0/24\",\n                ]\n              + description      = \"SSH open to the world (intentional defect)\"\n              + from_port        = 22\n              + ipv6_cidr_blocks = [\n                  + \"::/0\",\n                ]\n              + prefix_list_ids  = []\n              + protocol         = \"tcp\"\n              + security_groups  = []\n              + self             = false\n              + to_port          = 22\n            },\n        ]\n      + name                   = \"capstone-vuln-ssh\"\n      + name_prefix            = (known after apply)\n      + owner_id               = (known after apply)\n      + revoke_rules_on_delete = false\n      + tags_all               = {\n          + \"ManagedBy\" = \"terraform\"\n          + \"Project\"   = \"capstone-2026\"\n          + \"Purpose\"   = \"security-research\"\n        }\n      + vpc_id                 = \"vpc-041579a444874f812\"\n    }\n\nPlan: 1 to add, 0 to change, 0 to destroy.\n\nChanges to Outputs:\n  + sg_id = (known after apply)\n\n─────────────────────────────────────────────────────────────────────────────\n\nSaved the plan to: plan.bin\n\nTo perform exactly these actions, run the following command to apply:\n    tofu apply \"plan.bin\"\n",
+          "actions": {
+            "aws_security_group.vulnerable_ssh": [
+              "create"
+            ]
+          }
+        },
+        "executed": true,
+        "tool": "opentofu 1.10.6"
+      },
+      {
+        "layer": "V5",
+        "name": "plan diff within policy",
+        "verdict": "PASS",
+        "summary": "changes within policy: changed=['aws_security_group.vulnerable_ssh'] added=[] removed=[]",
+        "details": {
+          "removed": [],
+          "added": [],
+          "changed": {
+            "aws_security_group.vulnerable_ssh": [
+              "ingress"
+            ]
+          },
+          "type_changed": [],
+          "plan_actions_delete": [],
+          "plan_actions_replace": [],
+          "provider_config_diff": [],
+          "violations": [],
+          "policy_version": "sg-v1 (2026-09-13)",
+          "touched_resources": 1
+        },
+        "executed": true,
+        "tool": "opentofu 1.10.6"
+      },
+      {
+        "layer": "V6",
+        "name": "intent oracle",
+        "verdict": "FAIL",
+        "summary": "FAIL: standalone:aws_security_group.vulnerable_ssh ssh: EXCESS beyond approved sources: v6 entire internet (::/0) minus approved []",
+        "details": {
+          "verdict": "FAIL",
+          "targets": [
+            {
+              "target": "aws_security_group.vulnerable_ssh",
+              "verdict": "FAIL",
+              "scopes": [
+                {
+                  "scope_id": "standalone:aws_security_group.vulnerable_ssh",
+                  "scope_kind": "standalone",
+                  "security_groups": [
+                    "aws_security_group.vulnerable_ssh"
+                  ],
+                  "verdict": "FAIL",
+                  "services": [
+                    {
+                      "service_id": "ingress/tcp/22-22",
+                      "label": "ssh",
+                      "verdict": "FAIL",
+                      "effective_v4": [
+                        "203.0.113.0/24"
+                      ],
+                      "effective_v6": [
+                        "::/0"
+                      ],
+                      "effective_sg_refs": [],
+                      "approved_v4": [
+                        "203.0.113.0/24"
+                      ],
+                      "approved_v6": [],
+                      "excess_v4": [],
+                      "excess_v6": [
+                        "::/0"
+                      ],
+                      "excess_sg_refs": [],
+                      "unknown_reasons": [],
+                      "partial_rules": [],
+                      "contributing_rules": [
+                        "aws_security_group.vulnerable_ssh#ingress[0]"
+                      ],
+                      "covers_entire_internet_v4": false,
+                      "covers_entire_internet_v6": true,
+                      "notes": [
+                        "effective IPv6 sources cover the entire internet (::/0 after set collapse)"
+                      ]
+                    },
+                    {
+                      "service_id": "ingress/tcp/3389-3389",
+                      "label": "rdp",
+                      "verdict": "PASS",
+                      "effective_v4": [],
+                      "effective_v6": [],
+                      "effective_sg_refs": [],
+                      "approved_v4": [],
+                      "approved_v6": [],
+                      "excess_v4": [],
+                      "excess_v6": [],
+                      "excess_sg_refs": [],
+                      "unknown_reasons": [],
+                      "partial_rules": [],
+                      "contributing_rules": [],
+                      "covers_entire_internet_v4": false,
+                      "covers_entire_internet_v6": false,
+                      "notes": []
+                    }
+                  ],
+                  "required": [
+                    {
+                      "label": "admin-ssh",
+                      "service_id": "ingress/tcp/22-22",
+                      "source_cidr": "203.0.113.0/24",
+                      "verdict": "PASS",
+                      "reason": "required source is fully covered by declared rules"
+                    }
+                  ],
+                  "caveats": [
+                    "no attachment point found in plan; evaluated the security group alone. Other security groups attached to the same ENI at runtime are not visible here (V7 checks that)."
+                  ]
+                }
+              ],
+              "reason": ""
+            }
+          ],
+          "world_source": "plan",
+          "summary": "FAIL: standalone:aws_security_group.vulnerable_ssh ssh: EXCESS beyond approved sources: v6 entire internet (::/0) minus approved []",
+          "notes": [],
+          "disclaimer": "Proves the effective ALLOW set at security-group level only. Real reachability (NACL, routing, public IP, host firewall, listening service) is not proven here."
+        },
+        "executed": true,
+        "tool": "iacpatch.sg_oracle"
+      }
+    ],
+    "validity": "FAIL",
+    "summary": "FAIL at V1(AVD-AWS-0107 still reported on aws_security_group.vulnerable_ssh), V6(FAIL: standalone:aws_security_group.vulnerable_ssh ssh: EXCESS beyond approved s)"
+  },
+  "gate": {
+    "action": "BLOCK",
+    "validity": "FAIL",
+    "policy_ok": true,
+    "risk_level": "LOW",
+    "autonomy_cap": "HIGH",
+    "llm_proposed_autonomy": "HIGH",
+    "final_autonomy": null,
+    "reasons": [
+      "verification failed: FAIL at V1(AVD-AWS-0107 still reported on aws_security_group.vulnerable_ssh), V6(FAIL: standalone:aws_security_group.vulnerable_ssh ssh: EXCESS beyond approved s)"
+    ]
+  },
+  "risk": {
+    "risk_level": "LOW",
+    "autonomy_cap": "HIGH",
+    "score": 0,
+    "factors": [
+      {
+        "factor": "non_network_resource_touched",
+        "value": [],
+        "points": 0,
+        "note": ""
+      },
+      {
+        "factor": "resources_touched",
+        "value": 1,
+        "points": 0,
+        "note": ""
+      },
+      {
+        "factor": "new_resources_created",
+        "value": 0,
+        "points": 0,
+        "note": ""
+      },
+      {
+        "factor": "attachment_points",
+        "value": 0,
+        "points": 0,
+        "note": "no attachment in plan (standalone SG)"
+      },
+      {
+        "factor": "attachment_has_external_or_unknown_sg",
+        "value": false,
+        "points": 0,
+        "note": ""
+      },
+      {
+        "factor": "egress_changed",
+        "value": false,
+        "points": 0,
+        "note": ""
+      },
+      {
+        "factor": "non_rule_attribute_changed",
+        "value": false,
+        "points": 0,
+        "note": ""
+      },
+      {
+        "factor": "oracle_partial_rules_or_caveats",
+        "value": false,
+        "points": 0,
+        "note": ""
+      },
+      {
+        "factor": "patch_lines",
+        "value": 3,
+        "points": 0,
+        "note": ""
+      },
+      {
+        "factor": "files_changed",
+        "value": 1,
+        "points": 0,
+        "note": ""
+      }
+    ],
+    "rubric_version": "risk-v1 (2026-09-13, 4주차 고정 예정 — 이후 결과를 보고 바꾸지 않는다)"
+  },
+  "policy": {
+    "ok": true,
+    "violations": [],
+    "checks": [
+      {
+        "check": "file_count",
+        "ok": true,
+        "note": "1 files (max 2)"
+      },
+      {
+        "check": "has_files",
+        "ok": true,
+        "note": ""
+      },
+      {
+        "check": "forbidden_tokens:main.tf",
+        "ok": true,
+        "note": ""
+      },
+      {
+        "check": "protected_blocks:main.tf",
+        "ok": true,
+        "note": ""
+      },
+      {
+        "check": "diff_nonempty:main.tf",
+        "ok": true,
+        "note": "file content identical to baseline"
+      },
+      {
+        "check": "diff_stats",
+        "ok": true,
+        "note": "+2 -1",
+        "added_lines": 2,
+        "removed_lines": 1,
+        "files": 1
+      }
+    ],
+    "policy_version": "sg-v1 (2026-09-13)"
+  },
+  "final_attempt": 1,
+  "finished_at": "2026-09-13T07:57:43+00:00",
+  "automated_seconds_total": 36.702,
+  "timings_seconds": {
+    "scan_before": 1.249,
+    "plan_baseline": 16.89,
+    "generate": 0.001,
+    "scan_after": 1.347,
+    "plan_candidate": 17.097
+  }
+}

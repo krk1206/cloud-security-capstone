@@ -1,0 +1,70 @@
+{
+  "risk_level": "MEDIUM",
+  "autonomy_cap": "MEDIUM",
+  "score": 4,
+  "factors": [
+    {
+      "factor": "non_network_resource_touched",
+      "value": [
+        "aws_eip"
+      ],
+      "points": 2,
+      "note": ""
+    },
+    {
+      "factor": "resources_touched",
+      "value": 2,
+      "points": 1,
+      "note": ""
+    },
+    {
+      "factor": "new_resources_created",
+      "value": 1,
+      "points": 1,
+      "note": ""
+    },
+    {
+      "factor": "attachment_points",
+      "value": 0,
+      "points": 0,
+      "note": "no attachment in plan (standalone SG)"
+    },
+    {
+      "factor": "attachment_has_external_or_unknown_sg",
+      "value": false,
+      "points": 0,
+      "note": ""
+    },
+    {
+      "factor": "egress_changed",
+      "value": false,
+      "points": 0,
+      "note": ""
+    },
+    {
+      "factor": "non_rule_attribute_changed",
+      "value": false,
+      "points": 0,
+      "note": ""
+    },
+    {
+      "factor": "oracle_partial_rules_or_caveats",
+      "value": false,
+      "points": 0,
+      "note": ""
+    },
+    {
+      "factor": "patch_lines",
+      "value": 6,
+      "points": 0,
+      "note": ""
+    },
+    {
+      "factor": "files_changed",
+      "value": 1,
+      "points": 0,
+      "note": ""
+    }
+  ],
+  "rubric_version": "risk-v1 (2026-09-13, 4주차 고정 예정 — 이후 결과를 보고 바꾸지 않는다)"
+}

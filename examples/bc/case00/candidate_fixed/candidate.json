@@ -1,0 +1,4 @@
+{
+  "rationale": "SSH ingress 를 승인 출처(예제 값 10.0.0.0/8)로 제한",
+  "provenance": "개발 중 작성한 예제 (tests/fixtures/src/00b-baseline-fixed 와 동일 내용) — LLM 출력 아님"
+}

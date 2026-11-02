@@ -1,0 +1,17 @@
+{
+  "kind": "iam",
+  "intent_id": "iam-report-worker",
+  "intent_version": "1",
+  "status": "active",
+  "description": "report-worker 역할은 report-archive 버킷의 객체 읽기(s3:GetObject)와 목록 조회(s3:ListBucket)만 허용한다.",
+  "targets": {"policies": ["aws_iam_policy.worker"], "roles": ["aws_iam_role.worker"]},
+  "approved_permissions": [
+    {"actions": ["s3:GetObject", "s3:ListBucket"], "resources": ["arn:aws:s3:::report-archive", "arn:aws:s3:::report-archive/*"]}
+  ],
+  "required_permissions": [
+    {"label": "read-report-objects", "action": "s3:GetObject", "resource": "arn:aws:s3:::report-archive/*"},
+    {"label": "list-report-bucket", "action": "s3:ListBucket", "resource": "arn:aws:s3:::report-archive"}
+  ],
+  "approved_managed_policy_arns": [],
+  "_decision": "평가용 고정값 (2026-09-22, D-7). 실행 후 바꾸지 않는다."
+}

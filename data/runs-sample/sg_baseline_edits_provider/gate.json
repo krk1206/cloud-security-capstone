@@ -1,0 +1,12 @@
+{
+  "action": "BLOCK",
+  "validity": "INCOMPLETE",
+  "policy_ok": false,
+  "risk_level": null,
+  "autonomy_cap": null,
+  "llm_proposed_autonomy": null,
+  "final_autonomy": null,
+  "reasons": [
+    "policy violation: file_protected:provider.tf: provider/backend/versions files may not be modified by a patch"
+  ]
+}

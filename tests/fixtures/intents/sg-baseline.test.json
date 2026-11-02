@@ -1,0 +1,17 @@
+{
+  "intent_version": "1",
+  "intent_id": "sg-baseline-test",
+  "status": "active",
+  "description": "TEST FIXTURE ONLY. 승인 출처 203.0.113.0/24 는 RFC 5737 문서용 대역(TEST-NET-3)이며 팀의 실제 관리자 IP 가 아니다. 실제 실행에는 policy/intent/sg-baseline.json 을 사람이 작성해야 한다.",
+  "target_dir": "infrastructure/sg-baseline",
+  "targets": { "security_groups": ["aws_security_group.vulnerable_ssh"], "attachment_points": [] },
+  "guarded_services": [
+    { "label": "ssh", "direction": "ingress", "protocol": "tcp", "from_port": 22, "to_port": 22,
+      "approved_sources": { "cidrs_v4": ["203.0.113.0/24"], "cidrs_v6": [], "security_group_refs": [], "prefix_list_refs": [] } },
+    { "label": "rdp", "direction": "ingress", "protocol": "tcp", "from_port": 3389, "to_port": 3389,
+      "approved_sources": { "cidrs_v4": [], "cidrs_v6": [], "security_group_refs": [], "prefix_list_refs": [] } }
+  ],
+  "required_access": [
+    { "label": "admin-ssh", "direction": "ingress", "protocol": "tcp", "from_port": 22, "to_port": 22, "source_cidr": "203.0.113.0/24" }
+  ]
+}

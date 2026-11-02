@@ -1,0 +1,6 @@
+generated: 2026-09-22T01:33:44Z
+terraform: OpenTofu v1.10.6
+source_dir: scenarios/eval/iam-report-worker
+candidate: experiments/candidate-sets/eval-seeded-iam/candidates/deceptive-condition-s3star.tf
+candidate_sha256: b0707587292f6a9dfa5e6052ae4bd5d1631738ef8320096182c89c13b0dd1f78
+mode: offline (상태 없음, 전부 create; provider override 는 결과에 포함되지 않음)

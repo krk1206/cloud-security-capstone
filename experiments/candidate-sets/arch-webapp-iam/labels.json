@@ -1,0 +1,32 @@
+{
+  "arch-webapp-iam/rule-based": {
+    "expected": "correct",
+    "source": "rule_based",
+    "expected_risk": "MEDIUM"
+  },
+  "arch-webapp-iam/correct-least-privilege": {
+    "expected": "correct",
+    "source": "seeded",
+    "expected_risk": "MEDIUM"
+  },
+  "arch-webapp-iam/deceptive-enumerated-actions": {
+    "expected": "deceptive",
+    "source": "seeded",
+    "expected_risk": "MEDIUM"
+  },
+  "arch-webapp-iam/deceptive-resource-star": {
+    "expected": "deceptive",
+    "source": "seeded",
+    "expected_risk": "MEDIUM"
+  },
+  "arch-webapp-iam/breaks-required-wrong-bucket": {
+    "expected": "breaks_required",
+    "source": "seeded",
+    "expected_risk": "MEDIUM"
+  },
+  "arch-webapp-iam/unapproved-trust-policy-open": {
+    "expected": "unapproved",
+    "source": "seeded",
+    "expected_risk": "HIGH"
+  }
+}

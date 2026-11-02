@@ -1,0 +1,12 @@
+{
+  "action": "CREATE_PR_AUTO",
+  "validity": "PASS",
+  "policy_ok": true,
+  "risk_level": "LOW",
+  "autonomy_cap": "HIGH",
+  "llm_proposed_autonomy": null,
+  "final_autonomy": "HIGH",
+  "reasons": [
+    "risk LOW (score 0) → autonomy cap HIGH"
+  ]
+}

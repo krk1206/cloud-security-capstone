@@ -1,0 +1,6 @@
+generated: 2026-09-22T01:35:12Z
+terraform: OpenTofu v1.10.6
+source_dir: scenarios/eval/iam-report-worker
+candidate: experiments/candidate-sets/eval-seeded-iam/candidates/invalid-identical.tf
+candidate_sha256: 449faac02882c4cdba064dfc1aeac20e4d5cfd791545cdf8c1322a7fb3dc5235
+mode: offline (상태 없음, 전부 create; provider override 는 결과에 포함되지 않음)

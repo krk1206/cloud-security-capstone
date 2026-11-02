@@ -1,0 +1,13 @@
+{
+  "action": "REPORT_ONLY",
+  "validity": "PASS",
+  "policy_ok": true,
+  "risk_level": "LOW",
+  "autonomy_cap": "HIGH",
+  "llm_proposed_autonomy": "LOW",
+  "final_autonomy": "LOW",
+  "reasons": [
+    "llm proposed lower autonomy LOW; applied (cap was HIGH)",
+    "risk LOW (score 0) → autonomy cap HIGH"
+  ]
+}

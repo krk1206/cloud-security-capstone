@@ -1,0 +1,65 @@
+{
+  "_comment": [
+    "예시 파일 — 실제 파일은 apply 뒤 `scripts/arch_v8_checks.py --web-ip <output web_public_ip> --app-ip <output app_private_ip>` 로 만든다 (v8-checks.json, git 에 안 올림).",
+    "scripts/arch_v8_checks.py 가 만든 V8 체크 정의. 실행: iacpatch postdeploy --review <id> --intent <intent> --v8-checks 이 파일 --execute",
+    "이 PC 의 공인 IP 는 승인 출처(10.0.0.0/8) 밖이므로 source_class=unapproved 의 closed 검사는 여기서 바로 돌릴 수 있다.",
+    "취약한 원본을 apply 한 상태에서는 ssh-closed 검사가 '열림' 으로 나와 V8 FAIL 이 정상이다(설정 오류가 실제로 뚫린다는 증거). 패치 apply 뒤에는 PASS 여야 한다."
+  ],
+  "intent_id": "arch-webapp-sg",
+  "checks": [
+    {
+      "label": "web-http-open",
+      "service_label": "public-http",
+      "host": "<WEB_PUBLIC_IP>",
+      "port": 80,
+      "expect": "open",
+      "vantage": "local",
+      "source_class": "approved",
+      "timeout_s": 5,
+      "_note": "공개 웹 서버 — 누구에게나 열려 있어야 한다(정상 기능). 부팅 직후 1~2분은 nginx 설치 중이라 닫혀 보일 수 있다"
+    },
+    {
+      "label": "ssh-closed-from-unapproved-pc",
+      "service_label": "ssh",
+      "host": "<WEB_PUBLIC_IP>",
+      "port": 22,
+      "expect": "closed",
+      "vantage": "local",
+      "source_class": "unapproved",
+      "timeout_s": 5,
+      "_note": "이 PC 는 10.0.0.0/8 밖 → 막혀야 한다. 원본(0.0.0.0/0)에서는 열려서 FAIL, 패치 뒤 timeout 으로 PASS"
+    },
+    {
+      "label": "rdp-closed-from-unapproved-pc",
+      "service_label": "rdp",
+      "host": "<WEB_PUBLIC_IP>",
+      "port": 3389,
+      "expect": "closed",
+      "vantage": "local",
+      "source_class": "unapproved",
+      "timeout_s": 5
+    },
+    {
+      "label": "app-8080-closed-from-unapproved-pc",
+      "service_label": "app-8080",
+      "host": "<APP_PRIVATE_IP>",
+      "port": 8080,
+      "expect": "closed",
+      "vantage": "local",
+      "source_class": "unapproved",
+      "timeout_s": 5,
+      "_note": "앱 서버는 사설 IP 뿐이라 인터넷에서 닿지 않는다(timeout=closed). 'SG 가 막았다' 가 아니라 '경로가 없다' 는 뜻 — 기록에 그렇게 적는다"
+    },
+    {
+      "label": "ssh-closed-from-hotspot",
+      "service_label": "ssh",
+      "host": "<WEB_PUBLIC_IP>",
+      "port": 22,
+      "expect": "closed",
+      "vantage": "phone-hotspot",
+      "source_class": "unapproved",
+      "observed": null,
+      "_note": "선택. 휴대폰 핫스팟에 붙여 PowerShell 에서 Test-NetConnection <web_ip> -Port 22 → TcpTestSucceeded False 면 observed 를 \"timeout\" 으로 적는다. 비워 두면 NOT_RUN"
+    }
+  ]
+}

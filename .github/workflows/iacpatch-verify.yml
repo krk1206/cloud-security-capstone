@@ -1,0 +1,167 @@
+name: IaCPatch verify (unit + experiments, offline)
+
+# PR 마다: (1) 단위 테스트 201개(도구 없음 — 여기에 4주차 '라벨 25건 재계산 25/25', '상한 강제 72 조합 위반 0', A 의 V2 ↔ 파이프라인 V2 일치가 들어 있다)
+#          (2) Terraform 1.16.1 + Trivy 0.74.0 을 러너에 설치해 후보 세트 4개(38건)·오라클 실험을 실제로 돌리고 리포트를 만든 뒤
+#              검증 표를 PR 댓글(고정 댓글 1개, 갱신)과 Actions 작업 요약에 붙인다.
+# 하지 않는 것: terraform apply, AWS 접속(자격증명 없음, 오프라인 plan), LLM API 호출, PR 자동 생성/병합 (docs/DECISIONS.md D-5, D-11).
+# 이 워크플로는 '표시' 만 한다. 병합 여부는 사람이 결정한다. A 의 iac-scan.yml(인프라 폴더 게이트)과는 별개로 돈다.
+
+on:
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'policy/**'
+      - 'scenarios/**'
+      - 'experiments/candidate-sets/**'
+      - 'scripts/**'
+      - '.github/workflows/iacpatch-verify.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'policy/**'
+      - 'scenarios/**'
+      - 'experiments/candidate-sets/**'
+      - 'scripts/**'
+  workflow_dispatch:
+    inputs:
+      fuzz:
+        description: '스캐너 사각 탐색(변형 74종, 약 8분)과 오라클 차등 검증까지 돌린다'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: iacpatch-verify-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHONIOENCODING: utf-8
+  TRIVY_SKIP_CHECK_UPDATE: '1'
+  TRIVY_SKIP_VERSION_CHECK: 'true'
+
+jobs:
+  unit:
+    name: Unit tests (no tools, no network)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Unit tests
+        run: |
+          cd tests/unit
+          PYTHONPATH=../../src python -m unittest discover -s . -p "test_*.py"
+      - name: Rubric replay without tools (4주차 완료 기준)
+        run: |
+          PYTHONPATH=src python - <<'EOF'
+          from iacpatch import rubric_demo as rd
+          m = rd.labeled_matrix(); c = rd.cap_enforcement_check()
+          print(f"labels {m['agree']}/{m['judged']} human_verified {m['human_verified']}/{m['total']}; cap violations {len(c['violations'])}/{c['total']}")
+          assert m['agree'] == m['judged'] == 25 and not c['violations']
+          EOF
+
+  experiments:
+    name: Experiments with real tools (offline plan)
+    runs-on: ubuntu-latest
+    needs: unit
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.16.1
+          terraform_wrapper: false
+      - name: Install Trivy 0.74.0
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.74.0
+          trivy --version
+          terraform version
+      - name: Cache Terraform providers
+        uses: actions/cache@v4
+        with:
+          path: tools/plugin-cache
+          key: tf-plugins-${{ runner.os }}-${{ hashFiles('scenarios/**/*.tf', 'infrastructure/**/*.tf') }}
+          restore-keys: tf-plugins-${{ runner.os }}-
+      - name: Self-check
+        run: PYTHONPATH=src python -m iacpatch selfcheck
+      - name: Experiments (candidate sets 4 + oracle experiment)
+        env:
+          TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/tools/plugin-cache
+        run: |
+          mkdir -p tools/plugin-cache
+          export PYTHONPATH=src
+          python experiments/candidate-sets/a-probe-dev/check_a_results.py
+          for s in eval-a-probe-rule eval-seeded-sg eval-iam-rule eval-seeded-iam; do
+            echo "================ $s"
+            python scripts/run_candidate_set.py experiments/candidate-sets/$s/manifest.json --fresh
+          done
+          if python - <<'EOF'
+          import json, sys
+          m = json.load(open("experiments/candidate-sets/eval-claude-code/manifest.json", encoding="utf-8"))
+          sys.exit(0 if m.get("candidates") else 1)
+          EOF
+          then python scripts/run_candidate_set.py experiments/candidate-sets/eval-claude-code/manifest.json --fresh; else echo "eval-claude-code: 후보 0건 (사람이 채운다)"; fi
+          python scripts/oracle_experiment.py
+      - name: Scanner blind-spot search + oracle differential (manual dispatch only)
+        if: github.event_name == 'workflow_dispatch' && inputs.fuzz
+        env:
+          TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/tools/plugin-cache
+        run: |
+          export PYTHONPATH=src
+          python scripts/fuzz_scanner.py --fresh
+          python scripts/oracle_fuzz.py
+      - name: Summaries + report + CI table
+        run: |
+          export PYTHONPATH=src
+          python scripts/summarize_experiments.py
+          python scripts/why_this_gate.py
+          python -c "from iacpatch.report_html import build; from pathlib import Path; print(build(Path('report/index.html')))"
+          python scripts/ci_pr_comment.py --out experiments/CI_SUMMARY.md
+          cat experiments/CI_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload report + records
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: iacpatch-report-${{ github.run_number }}
+          path: |
+            report/index.html
+            experiments/CI_SUMMARY.md
+            experiments/RESULTS_SUMMARY.md
+            experiments/ORACLE_RESULTS.md
+            experiments/WHY_THIS_GATE.md
+            experiments/FUZZ_RESULTS.md
+            experiments/ORACLE_FUZZ.md
+            experiments/candidate-sets/*/results.md
+            data/reviews/**/review.md
+            data/reviews/**/pr_body.md
+            data/reviews/**/state.json
+            data/reviews/**/verification.json
+            data/reviews/**/risk.json
+            data/reviews/**/candidate.diff
+          retention-days: 14
+      - name: PR comment (sticky, updated in place)
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          MARK='<!-- iacpatch-ci-summary -->'
+          ID=$(gh api "repos/${GITHUB_REPOSITORY}/issues/${PR}/comments" --paginate --jq ".[] | select(.body | startswith(\"$MARK\")) | .id" | head -1)
+          if [ -n "$ID" ]; then
+            gh api -X PATCH "repos/${GITHUB_REPOSITORY}/issues/comments/${ID}" -F body=@experiments/CI_SUMMARY.md > /dev/null
+            echo "updated comment $ID"
+          else
+            gh pr comment "$PR" --body-file experiments/CI_SUMMARY.md
+            echo "created comment"
+          fi

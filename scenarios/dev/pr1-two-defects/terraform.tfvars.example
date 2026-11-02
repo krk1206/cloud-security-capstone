@@ -1,0 +1,9 @@
+# 실제 값은 terraform.tfvars 에 작성한다 (커밋하지 않음)
+#
+# 기본 VPC ID 확인:
+#   aws ec2 describe-vpcs --filters "Name=isDefault,Values=true" \
+#     --query "Vpcs[0].VpcId" --output text --profile capstone
+#
+# 아래는 CI 스캔용 더미 값이다. trivy config 는 실제 AWS 에 접속하지 않으므로
+# VPC ID 가 유효하지 않아도 설정 오류 검사는 정상 동작한다.
+vpc_id = "vpc-041579a444874f812"

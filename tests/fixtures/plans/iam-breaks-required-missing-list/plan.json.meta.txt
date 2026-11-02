@@ -1,0 +1,6 @@
+generated: 2026-09-22T01:33:07Z
+terraform: OpenTofu v1.10.6
+source_dir: scenarios/eval/iam-report-worker
+candidate: experiments/candidate-sets/eval-seeded-iam/candidates/breaks-required-missing-list.tf
+candidate_sha256: 28487211477ef197e95fdd0ac0974b7c22c8fd4e6ca88a0169f0163fbfa73886
+mode: offline (상태 없음, 전부 create; provider override 는 결과에 포함되지 않음)

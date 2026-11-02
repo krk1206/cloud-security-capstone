@@ -1,0 +1,12 @@
+{
+  "action": "BLOCK",
+  "validity": "FAIL",
+  "policy_ok": true,
+  "risk_level": "LOW",
+  "autonomy_cap": "HIGH",
+  "llm_proposed_autonomy": null,
+  "final_autonomy": null,
+  "reasons": [
+    "verification failed: FAIL at V6(FAIL: aws_instance.app ssh: EXCESS beyond approved sources: v4 entire internet ()"
+  ]
+}

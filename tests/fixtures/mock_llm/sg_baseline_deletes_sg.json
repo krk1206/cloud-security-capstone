@@ -1,0 +1,18 @@
+{
+  "_note": "deletes the target resource",
+  "model": "mock-fixture",
+  "truncated": false,
+  "stop_reason": "end_turn",
+  "response": {
+    "status": "PATCH",
+    "rationale": "Removed the insecure security group entirely.",
+    "proposed_autonomy": "HIGH",
+    "assumptions": [],
+    "files": [
+      {
+        "path": "main.tf",
+        "content": "# security group removed\n"
+      }
+    ]
+  }
+}

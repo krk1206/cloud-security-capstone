@@ -1,0 +1,22 @@
+{
+  "_note": "touches protected provider.tf",
+  "model": "mock-fixture",
+  "truncated": false,
+  "stop_reason": "end_turn",
+  "response": {
+    "status": "PATCH",
+    "rationale": "also tidy provider",
+    "proposed_autonomy": null,
+    "assumptions": [],
+    "files": [
+      {
+        "path": "main.tf",
+        "content": "resource \"aws_security_group\" \"vulnerable_ssh\" {\n  name        = \"capstone-vuln-ssh\"\n  description = \"Intentionally misconfigured for capstone research\"\n  vpc_id      = var.vpc_id\n\n  ingress {\n    description = \"SSH open to the world (intentional defect)\"\n    from_port   = 22\n    to_port     = 22\n    protocol    = \"tcp\"\n    cidr_blocks = [\"203.0.113.0/24\"]\n  }\n\n  egress {\n    description = \"Allow all outbound\"\n    from_port   = 0\n    to_port     = 0\n    protocol    = \"-1\"\n    cidr_blocks = [\"0.0.0.0/0\"]\n  }\n}\n"
+      },
+      {
+        "path": "provider.tf",
+        "content": "terraform {\n  required_version = \">= 1.5\"\n  required_providers {\n    aws = {\n      source  = \"hashicorp/aws\"\n      version = \"~> 5.0\"\n    }\n  }\n}\n\nprovider \"aws\" {\n  region  = var.region\n  profile = \"attacker\"\n\n  default_tags {\n    tags = {\n      Project   = \"capstone-2026\"\n      ManagedBy = \"terraform\"\n      Purpose   = \"security-research\"\n    }\n  }\n}\n"
+      }
+    ]
+  }
+}

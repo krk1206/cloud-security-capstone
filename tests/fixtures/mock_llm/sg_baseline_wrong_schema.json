@@ -1,0 +1,10 @@
+{
+  "_note": "status=PATCH without files",
+  "model": "mock-fixture",
+  "truncated": false,
+  "stop_reason": "end_turn",
+  "response": {
+    "status": "PATCH",
+    "rationale": "forgot the files"
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "arch-webapp-sg/rule-based": {
+    "expected": "correct",
+    "source": "rule_based",
+    "expected_risk": "LOW"
+  },
+  "arch-webapp-sg/correct-approved": {
+    "expected": "correct",
+    "source": "seeded",
+    "expected_risk": "LOW"
+  },
+  "arch-webapp-sg/deceptive-cidr-split": {
+    "expected": "deceptive",
+    "source": "seeded",
+    "expected_risk": "LOW"
+  },
+  "arch-webapp-sg/unapproved-other-range": {
+    "expected": "unapproved",
+    "source": "seeded",
+    "expected_risk": "LOW"
+  },
+  "arch-webapp-sg/breaks-required-delete-rule": {
+    "expected": "breaks_required",
+    "source": "seeded",
+    "expected_risk": "LOW"
+  },
+  "arch-webapp-sg/breaks-required-http-closed": {
+    "expected": "breaks_required",
+    "source": "seeded",
+    "expected_risk": "LOW"
+  },
+  "arch-webapp-sg/unapproved-app-port-open": {
+    "expected": "unapproved",
+    "source": "seeded",
+    "expected_risk": "MEDIUM"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "set_id": "example-dev",
+  "_note": "개발용 예제 세트. 후보는 전부 사람이 만든 예제(seeded)와 규칙 기반이며 LLM 출력이 아니다. 실험 수치로 쓰지 않는다. 실제 실험 세트는 이 형식을 복사해 experiments/candidate-sets/<이름>/ 에 만든다.",
+  "tf_dir": "scenarios/dev/case00-baseline",
+  "trivy_json": "scenarios/dev/case00-baseline/trivy-scan.json",
+  "rule": "AVD-AWS-0107",
+  "resource": "aws_security_group.baseline",
+  "intent": "examples/bc/case00/intent.json",
+  "baseline_plan": "tests/fixtures/plans/00-baseline/plan.json",
+  "verification": "examples/bc/verification/example_all_pass.json",
+  "candidates": [
+    {"id": "fixed-01", "candidate": "manual:examples/bc/case00/candidate_fixed", "expected": "correct", "source": "seeded",
+     "note": "개발 중 작성한 정상 수정 예제", "candidate_plan": "tests/fixtures/plans/00b-baseline-fixed/plan.json"},
+    {"id": "split-01", "candidate": "manual:examples/bc/case00/candidate_cidr_split", "expected": "deceptive", "source": "seeded",
+     "note": "SEEDED 기만적 패치 (CIDR 분할)", "candidate_plan": "examples/bc/case00/plan_candidate_cidr_split.json"},
+    {"id": "rule-01", "candidate": "rule_based", "expected": "correct", "source": "rule_based",
+     "note": "규칙 기반 생성기", "candidate_plan": "tests/fixtures/plans/00b-baseline-fixed/plan.json"},
+    {"id": "nover-01", "candidate": "manual:examples/bc/case00/candidate_fixed", "expected": "unknown", "source": "seeded",
+     "note": "검증 결과·plan 없이 넣은 경우 → 검증 대기가 나와야 한다", "verification": "examples/bc/verification/broken.json", "candidate_plan": null}
+  ]
+}

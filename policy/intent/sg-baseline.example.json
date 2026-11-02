@@ -1,0 +1,44 @@
+{
+  "intent_version": "1",
+  "intent_id": "sg-baseline",
+  "status": "draft",
+  "description": "infrastructure/sg-baseline: capstone-vuln-ssh 의 SSH(22)는 승인된 관리자 출처에서만 허용. RDP(3389)는 아무 출처도 허용하지 않음. 이 파일을 sg-baseline.json 으로 복사하고 __FILL_ME__ 를 실제 값으로 바꾼 뒤 status 를 active 로 바꿔야 파이프라인이 동작한다. 승인 CIDR 은 팀이 정해야 하며 코드가 추측하지 않는다.",
+  "target_dir": "infrastructure/sg-baseline",
+  "targets": {
+    "security_groups": ["aws_security_group.vulnerable_ssh"],
+    "attachment_points": []
+  },
+  "guarded_services": [
+    {
+      "label": "ssh",
+      "direction": "ingress",
+      "protocol": "tcp",
+      "from_port": 22,
+      "to_port": 22,
+      "approved_sources": {
+        "cidrs_v4": ["__FILL_ME__/32"],
+        "cidrs_v6": [],
+        "security_group_refs": [],
+        "prefix_list_refs": []
+      }
+    },
+    {
+      "label": "rdp",
+      "direction": "ingress",
+      "protocol": "tcp",
+      "from_port": 3389,
+      "to_port": 3389,
+      "approved_sources": { "cidrs_v4": [], "cidrs_v6": [], "security_group_refs": [], "prefix_list_refs": [] }
+    }
+  ],
+  "required_access": [
+    {
+      "label": "admin-ssh",
+      "direction": "ingress",
+      "protocol": "tcp",
+      "from_port": 22,
+      "to_port": 22,
+      "source_cidr": "__FILL_ME__/32"
+    }
+  ]
+}

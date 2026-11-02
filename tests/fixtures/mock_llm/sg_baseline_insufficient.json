@@ -1,0 +1,12 @@
+{
+  "_note": "model declines",
+  "model": "mock-fixture",
+  "truncated": false,
+  "stop_reason": "end_turn",
+  "response": {
+    "status": "INSUFFICIENT_INFO",
+    "rationale": "No approved sources given for ssh.",
+    "proposed_autonomy": null,
+    "assumptions": []
+  }
+}

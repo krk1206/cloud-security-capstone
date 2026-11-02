@@ -1,0 +1,17 @@
+{
+  "set_id": "eval-claude-code",
+  "_note": "E1 의 LLM 축. 후보는 사람이 Claude Code 대화에서 받아 저장한 파일 (prompt.md 의 고정 프롬프트). 항목을 추가할 때 expected 를 먼저 적고, 실행 후에는 바꾸지 않는다 (정정은 expected_history 에).",
+  "_how_to_add": {
+    "id": "cc-00-baseline-r1",
+    "tf_dir": "scenarios/eval/a-probe/00-baseline",
+    "trivy_json": "scenarios/eval/a-probe/00-baseline/trivy-scan.json",
+    "intent": "experiments/candidate-sets/a-probe-dev/intents/00-baseline.json",
+    "candidate": "manual:candidates/cc-00-baseline-r1.tf",
+    "source": "claude-code",
+    "expected": "<파일을 읽고 적는다>",
+    "note": "<날짜, 대화 식별, 모델 표시>"
+  },
+  "rule": "AVD-AWS-0107",
+  "local_tools": true,
+  "candidates": []
+}

@@ -1,0 +1,217 @@
+name: Build IaCPatch.exe (Windows)
+
+# IaCPatch.exe 를 GitHub 의 Windows 러너에서 만든다 — 팀원 PC 에 Python/PyInstaller 가 없어도 된다.
+#   - PR/push: 아티팩트 "IaCPatch-portable" = 저장소 파일 + exe 2종이 든 폴더 (한 번만 풀면 됨). Actions 실행 페이지 → Summary 맨 아래에서 내려받는다 (GitHub 로그인 필요)
+#     IaCPatch.exe = 창 없이 브라우저만 뜨는 판, IaCPatch-console.exe = 검은 창에 로그가 보이는 진단용 판 (기능은 같음)
+#   - 태그 v* push: Release 에 같은 zip 을 첨부한다 (로그인 없이 내려받기 가능)
+# exe 는 실행기다: 더블클릭 → 127.0.0.1 로컬 서버 → 기본 브라우저에 화면. LLM API·AWS·git push·terraform apply 는 부르지 않는다 (D-5, D-11).
+# trivy.exe / terraform.exe 는 exe 에 넣지 않는다 (화면의 '도구 설치/확인' 이 tools\ 에 받는다).
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+    paths:
+      - 'src/**'
+      - 'packaging/**'
+      - '.github/workflows/build-exe.yml'
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'packaging/**'
+      - '.github/workflows/build-exe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write   # 빌드·테스트 결과를 PR 댓글로 (로그인 없이 읽게)
+
+jobs:
+  build:
+    name: PyInstaller onefile (windows-latest)
+    runs-on: windows-latest
+    timeout-minutes: 30
+    env:
+      PYTHONIOENCODING: utf-8
+      PYTHONUTF8: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Unit tests with the runner's Python on Windows (not frozen — separates Windows problems from exe problems)
+        id: pytests
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8; $OutputEncoding = [System.Text.Encoding]::UTF8 } catch { }   # 한글 출력이 로그에 깨지지 않게
+          cd tests\unit
+          $env:PYTHONPATH = "..\..\src"
+          python -m unittest discover -s . -p "test_*.py" 2>&1 | Tee-Object -FilePath ..\..\win-unittest.log
+          if ($LASTEXITCODE -ne 0) { throw "unit tests failed on Windows python ($LASTEXITCODE)" }
+      - name: Build both variants (packaging/build_exe.ps1, same script the team uses)
+        shell: pwsh
+        env:
+          IACPATCH_BUILD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          IACPATCH_BUILD_REF: ${{ github.head_ref || github.ref_name }}
+        run: |
+          # 1) 콘솔판: 검은 창에 로그가 보이는 진단용. PowerShell 이 끝날 때까지 기다리므로 스모크 테스트도 이걸로 한다
+          powershell -NoProfile -ExecutionPolicy Bypass -File packaging\build_exe.ps1 -Console
+          if (-not (Test-Path IaCPatch-console.exe)) { throw "IaCPatch-console.exe not produced" }
+          # 2) 창 없는 판: 팀원이 더블클릭하는 것
+          powershell -NoProfile -ExecutionPolicy Bypass -File packaging\build_exe.ps1
+          if (-not (Test-Path IaCPatch.exe)) { throw "IaCPatch.exe not produced" }
+          Get-Item IaCPatch.exe, IaCPatch-console.exe | Select-Object Name, Length
+      - name: Smoke test (console exe — selfcheck, self re-exec, report-only run; must pass)
+        id: smoke
+        shell: pwsh
+        run: |
+          try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8; $OutputEncoding = [System.Text.Encoding]::UTF8 } catch { }   # 한글 출력이 로그에 깨지지 않게
+          # 각 명령 앞뒤에 표식과 종료 코드를 남긴다 — smoke.log 끝부분만 봐도 어디서 죽었는지 알 수 있게
+          "=== 1) IaCPatch-console.exe --selfcheck (root/frozen/tools/install check)" | Tee-Object -FilePath smoke.log
+          .\IaCPatch-console.exe --selfcheck 2>&1 | Tee-Object -FilePath smoke.log -Append
+          "=== exit $LASTEXITCODE" | Tee-Object -FilePath smoke.log -Append
+          if ($LASTEXITCODE -ne 0) { throw "--selfcheck failed ($LASTEXITCODE)" }
+          "=== 2) IaCPatch-console.exe --exec scripts/pyver.py" | Tee-Object -FilePath smoke.log -Append
+          .\IaCPatch-console.exe --exec scripts/pyver.py 2>&1 | Tee-Object -FilePath smoke.log -Append
+          "=== exit $LASTEXITCODE" | Tee-Object -FilePath smoke.log -Append
+          if ($LASTEXITCODE -ne 0) { throw "--exec failed ($LASTEXITCODE)" }
+          "=== 3) IaCPatch-console.exe --console --report-only --no-open" | Tee-Object -FilePath smoke.log -Append
+          .\IaCPatch-console.exe --console --report-only --no-open 2>&1 | Tee-Object -FilePath smoke.log -Append
+          "=== exit $LASTEXITCODE" | Tee-Object -FilePath smoke.log -Append
+          if ($LASTEXITCODE -ne 0) { throw "report-only run failed ($LASTEXITCODE)" }
+          if (-not (Test-Path report\index.html)) { throw "report not written" }
+          "=== report\index.html written: $((Get-Item report\index.html).Length) bytes" | Tee-Object -FilePath smoke.log -Append
+      - name: Smoke test (windowed exe — PowerShell does not wait for GUI apps, so Start-Process -Wait)
+        id: smoke_windowed
+        shell: pwsh
+        run: |
+          Remove-Item report\index.html -Force
+          $p = Start-Process -FilePath .\IaCPatch.exe -ArgumentList '--console','--report-only','--no-open' -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "windowed exe exit code $($p.ExitCode)" }
+          if (-not (Test-Path report\index.html)) { throw "report not written by windowed exe" }
+          if (Test-Path experiments\exe-console.log) { Get-Content experiments\exe-console.log -Tail 20 }
+      - name: Unit tests inside the frozen exe (informative — does not block the artifact)
+        id: exetests
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8; $OutputEncoding = [System.Text.Encoding]::UTF8 } catch { }   # 한글 출력이 로그에 깨지지 않게
+          .\IaCPatch-console.exe --unittest 2>&1 | Tee-Object -FilePath exe-unittest.log
+          if ($LASTEXITCODE -ne 0) { throw "unit tests inside exe failed ($LASTEXITCODE)" }
+      - name: Report test outcomes to the PR (so results are readable without opening logs)
+        if: always() && github.event_name == 'pull_request'
+        continue-on-error: true
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          PY_OUTCOME: ${{ steps.pytests.outcome }}
+          SMOKE_OUTCOME: ${{ steps.smoke.outcome }}
+          WIN_OUTCOME: ${{ steps.smoke_windowed.outcome }}
+          EXE_OUTCOME: ${{ steps.exetests.outcome }}
+        run: |
+          $tail = { param($f, $n) if (Test-Path $f) { (Get-Content $f -Tail $n) -join "`n" } else { "(no log)" } }
+          $md = @()
+          $md += "<!-- iacpatch-exe-build -->"
+          $md += "## IaCPatch.exe 빌드 (Windows 러너, run $env:GITHUB_RUN_ID)"
+          $md += ""
+          $md += "| 단계 | 결과 |"
+          $md += "|---|---|"
+          $md += "| 러너 Python 으로 단위 테스트 (Windows) | $env:PY_OUTCOME |"
+          $md += "| exe 스모크 (--exec, --console --report-only) | $env:SMOKE_OUTCOME |"
+          $md += "| 창 없는 exe 실행 확인 | $env:WIN_OUTCOME |"
+          $md += "| exe 안에서 단위 테스트 (참고용) | $env:EXE_OUTCOME |"
+          $md += ""
+          $md += "아티팩트 IaCPatch-portable 은 스모크가 통과했을 때만 올라간다. 아래는 각 로그의 끝부분 (전문은 브랜치 ci-logs)."
+          $md += ""
+          $md += "<details><summary>win-unittest.log (끝 60줄)</summary>"; $md += ""; $md += '```'; $md += (& $tail "win-unittest.log" 60); $md += '```'; $md += "</details>"
+          $md += "<details><summary>smoke.log (끝 40줄)</summary>"; $md += ""; $md += '```'; $md += (& $tail "smoke.log" 40); $md += '```'; $md += "</details>"
+          $md += "<details><summary>exe-unittest.log (끝 60줄)</summary>"; $md += ""; $md += '```'; $md += (& $tail "exe-unittest.log" 60); $md += '```'; $md += "</details>"
+          $md -join "`n" | Out-File -FilePath exe-build-report.md -Encoding utf8
+          Get-Content exe-build-report.md | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+          # 같은 표식으로 시작하는 댓글이 있으면 고쳐 쓰고(PATCH), 없으면 새로 단다 (jq 대신 ConvertFrom-Json: pwsh 안에서 따옴표 문제 없음)
+          $mark = '<!-- iacpatch-exe-build -->'
+          $existing = gh api "repos/$env:GITHUB_REPOSITORY/issues/$env:PR/comments?per_page=100" | ConvertFrom-Json | Where-Object { $_.body.StartsWith($mark) } | Select-Object -First 1
+          if ($existing) { gh api -X PATCH "repos/$env:GITHUB_REPOSITORY/issues/comments/$($existing.id)" -F body=@exe-build-report.md | Out-Null; "updated comment $($existing.id)" }
+          else { gh pr comment $env:PR --body-file exe-build-report.md; "created comment" }
+      - name: Publish the same report + full logs to branch ci-logs (readable without login — `git fetch origin ci-logs`)
+        if: always()
+        continue-on-error: true
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Actions 로그·PR 댓글은 GitHub 로그인이 있어야 읽힌다. 브랜치는 git 으로 누구나 읽으므로 로그 전문을 ci-logs 브랜치에 덮어쓴다 (워크플로를 다시 돌리지 않는 브랜치).
+          $d = Join-Path $env:RUNNER_TEMP "ci-logs"
+          New-Item -ItemType Directory -Force $d | Out-Null
+          foreach ($f in @("exe-build-report.md", "win-unittest.log", "smoke.log", "exe-unittest.log")) { if (Test-Path $f) { Copy-Item $f $d } }
+          if (Test-Path experiments\exe-console.log) { Copy-Item experiments\exe-console.log $d }
+          if (-not (Test-Path (Join-Path $d "exe-build-report.md"))) {
+            "<!-- iacpatch-exe-build -->`n## IaCPatch.exe 빌드 (run $env:GITHUB_RUN_ID, sha $env:GITHUB_SHA)`n`n(PR 가 아닌 실행 — 결과 표 없음)" | Out-File (Join-Path $d "exe-build-report.md") -Encoding utf8
+          }
+          "run $env:GITHUB_RUN_ID`nsha $env:GITHUB_SHA`nevent $env:GITHUB_EVENT_NAME`nref $env:GITHUB_REF`n" | Out-File (Join-Path $d "RUN.txt") -Encoding utf8
+          Push-Location $d
+          git init -q -b ci-logs
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "build-exe run $env:GITHUB_RUN_ID for $env:GITHUB_SHA (logs only)"
+          git push -q -f "https://x-access-token:$env:GH_TOKEN@github.com/$env:GITHUB_REPOSITORY.git" HEAD:refs/heads/ci-logs
+          Pop-Location
+          "pushed ci-logs"
+      - name: Assemble portable folder (repo files + both exes, no .git)
+        shell: pwsh
+        run: |
+          # 아티팩트는 '폴더' 로 올린다 (zip 안에 zip 이 또 있으면 팀 PC 에서 exe 만 꺼내 더블클릭하는 사고가 남 — 09-28 실측).
+          # GitHub 가 아티팩트를 zip 으로 싸 주므로 팀원은 한 번만 풀면 policy\, scripts\ 옆에 IaCPatch.exe 가 있는 폴더를 얻는다.
+          $dir = Join-Path $env:RUNNER_TEMP "portable\cloud-security-capstone"
+          New-Item -ItemType Directory -Force $dir | Out-Null
+          git archive --format=zip --prefix=cloud-security-capstone/ -o "$env:RUNNER_TEMP\src.zip" HEAD
+          Expand-Archive "$env:RUNNER_TEMP\src.zip" -DestinationPath (Join-Path $env:RUNNER_TEMP "portable") -Force
+          Copy-Item IaCPatch.exe (Join-Path $dir "IaCPatch.exe")
+          Copy-Item IaCPatch-console.exe (Join-Path $dir "IaCPatch-console.exe")
+          "IaCPatch-portable $($env:GITHUB_SHA.Substring(0,7)) — 이 폴더째로 빈 새 폴더에 두고 IaCPatch.exe 더블클릭. 도구(trivy/terraform)는 화면의 '도구 설치/확인' 버튼." | Out-File (Join-Path $dir "PORTABLE_README.txt") -Encoding utf8
+          "PORTABLE_DIR=$dir" | Out-File -FilePath $env:GITHUB_ENV -Append
+          (Get-ChildItem $dir | Measure-Object).Count
+      - uses: actions/upload-artifact@v4
+        with:
+          name: IaCPatch-portable
+          path: ${{ env.PORTABLE_DIR }}
+          retention-days: 30
+      - name: Publish rolling pre-release dev-latest (branch builds — the app's '새 빌드 받기' button downloads from here, no login)
+        if: github.event_name == 'pull_request' || (github.event_name == 'push' && !startsWith(github.ref, 'refs/tags/'))
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          REF_NAME: ${{ github.head_ref || github.ref_name }}
+        run: |
+          # dev-latest 태그를 이 커밋으로 옮기고(지웠다 만듦) zip + latest.json(sha·sha256) 을 붙인다. 태그는 v* 가 아니라 이 워크플로를 다시 돌리지 않는다.
+          $zip = "IaCPatch-portable.zip"
+          # Compress-Archive(1.2.x) 는 zip 안 경로 구분자를 '\' 로 써서 다른 도구가 잘못 푼다 → python zipfile 로 ('/' 구분자, 루트에 policy/ 가 바로 오게)
+          python -c "import shutil,sys; shutil.make_archive('IaCPatch-portable', 'zip', root_dir=sys.argv[1])" $env:PORTABLE_DIR
+          if (-not (Test-Path $zip)) { throw "zip not created" }
+          $hash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
+          $built = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+          @{ sha = $env:HEAD_SHA; ref = $env:REF_NAME; built_at = $built; zip = $zip; sha256 = $hash; run_id = $env:GITHUB_RUN_ID } | ConvertTo-Json -Compress | Out-File -FilePath latest.json -Encoding ascii
+          Get-Content latest.json
+          gh release delete dev-latest --yes --cleanup-tag 2>$null
+          $notes = "브랜치 $env:REF_NAME 의 최신 빌드 (커밋 $($env:HEAD_SHA.Substring(0,7)), $built). 팀원용: zip 을 빈 새 폴더에 풀고 IaCPatch.exe 더블클릭. 화면의 '새 빌드 받기' 버튼도 여기서 받는다. 검증된 정식 릴리스가 아니다 — 매 push 마다 덮어쓴다."
+          gh release create dev-latest --prerelease --target $env:HEAD_SHA --title "IaCPatch dev-latest ($($env:HEAD_SHA.Substring(0,7)))" --notes $notes $zip latest.json
+          if ($LASTEXITCODE -ne 0) { throw "release create failed ($LASTEXITCODE)" }
+          "https://github.com/$env:GH_REPO/releases/download/dev-latest/$zip"
+      - name: Attach to Release (tags only — downloadable without GitHub login)
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = $env:GITHUB_REF_NAME
+          $zip = "IaCPatch-portable-$tag.zip"
+          Compress-Archive -Path $env:PORTABLE_DIR -DestinationPath $zip -Force
+          gh release view $tag 2>$null
+          if ($LASTEXITCODE -ne 0) { gh release create $tag --title "IaCPatch $tag" --notes "IaCPatch.exe (Windows) + 저장소 파일. zip 을 빈 새 폴더에 풀고 그 안의 IaCPatch.exe 를 더블클릭. 도구는 화면의 버튼으로 받는다." }
+          gh release upload $tag $zip --clobber

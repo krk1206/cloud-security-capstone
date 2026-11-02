@@ -1,0 +1,549 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IaCPatch</title>
+<style>
+:root{
+  --bg:#f6f5f1; --panel:#ffffff; --line:#e3e2dc; --ink:#0b0b0b; --ink2:#52514e; --ink3:#8a8985; --code:#f1f0ea;
+  --hero:#0f2a4a; --hero-sub:#b9cbe3; --accent:#2a78d6; --accent-ink:#ffffff; --s2:#eb6834;
+  --good:#0ca30c; --warn:#fab219; --serious:#ec835a; --crit:#d03b3b; --muted:#a9a8a3;
+  --radius:10px; --gutter:16px;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#141518; --panel:#1d1f24; --line:#2c2f37; --ink:#f2f2f0; --ink2:#c2c2bd; --ink3:#8d8d89; --code:#23262d;
+  --hero:#0b1e36; --hero-sub:#9db4d4; --accent:#5b9cf0; --muted:#5f605e;
+}}
+:root[data-theme="dark"]{
+  --bg:#141518; --panel:#1d1f24; --line:#2c2f37; --ink:#f2f2f0; --ink2:#c2c2bd; --ink3:#8d8d89; --code:#23262d;
+  --hero:#0b1e36; --hero-sub:#9db4d4; --accent:#5b9cf0; --muted:#5f605e;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 "Malgun Gothic","Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif}
+a{color:var(--accent)}
+button{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:8px 14px;border-radius:8px}
+button:hover{background:var(--code)} button:disabled{opacity:.5;cursor:not-allowed}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:700}
+button.primary:hover{filter:brightness(.92)}
+button.danger{border-color:var(--crit);color:var(--crit)}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:7px 10px;max-width:100%}
+textarea{width:100%;min-height:180px;font-family:Consolas,"D2Coding",monospace;font-size:13px}
+code,pre,.mono{font-family:Consolas,"D2Coding","Cascadia Mono",monospace;font-size:13px}
+pre{background:var(--code);border:1px solid var(--line);border-radius:8px;padding:10px 12px;overflow:auto;max-height:420px;white-space:pre-wrap;word-break:break-word}
+.hero{background:var(--hero);color:#fff;padding:18px var(--gutter) 16px}
+.hero .wrap{max-width:1240px;margin:0 auto;display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start;justify-content:space-between}
+.hero .k{font-size:12px;letter-spacing:.12em;color:var(--hero-sub)}
+.hero h1{font-size:20px;margin:2px 0 4px;line-height:1.3}
+.hero p{margin:0;color:var(--hero-sub);font-size:14px;max-width:820px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.chip{border:1px solid var(--hero-sub);border-radius:999px;padding:2px 10px;font-size:12px;color:#fff;white-space:nowrap}
+.chip.ok{border-color:var(--good)} .chip.bad{border-color:var(--crit)} .chip.warn{border-color:var(--warn)}
+.hero button{background:transparent;color:#fff;border-color:var(--hero-sub)}
+.tabs{max-width:1240px;margin:0 auto;padding:0 var(--gutter);display:flex;gap:4px;overflow-x:auto;border-bottom:1px solid var(--line);background:var(--bg);position:sticky;top:0;z-index:5}
+.tabs button{border:0;border-bottom:3px solid transparent;border-radius:0;background:transparent;padding:12px 12px;white-space:nowrap;color:var(--ink2)}
+.tabs button.on{border-bottom-color:var(--accent);color:var(--ink);font-weight:700}
+.tabs .week{font-size:11px;color:var(--ink3);display:block;letter-spacing:.06em}
+main{max-width:1240px;margin:0 auto;padding:14px var(--gutter) 60px}
+section.tab{display:none} section.tab.on{display:block}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;margin:0 0 14px}
+.card h2{font-size:16px;margin:0 0 6px} .card h3{font-size:14px;margin:12px 0 6px;color:var(--ink2)}
+.sub{color:var(--ink2);font-size:13.5px;margin:0 0 8px}
+.small{color:var(--ink3);font-size:12.5px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.tile{background:var(--code);border:1px solid var(--line);border-radius:8px;padding:10px 12px;border-left:4px solid var(--muted)}
+.tile .n{font-size:26px;font-weight:700;line-height:1.1} .tile .l{color:var(--ink2);font-size:13px} .tile .m{color:var(--ink3);font-size:12px}
+.tile.good{border-left-color:var(--good)} .tile.warn{border-left-color:var(--warn)} .tile.crit{border-left-color:var(--crit)} .tile.accent{border-left-color:var(--accent)}
+.tw{overflow-x:auto} table{border-collapse:collapse;width:100%;font-size:13.5px} th,td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
+th{color:var(--ink2);font-weight:600;background:var(--code)} tr:hover td{background:color-mix(in srgb,var(--code) 60%,transparent)}
+.b{display:inline-block;border-radius:6px;padding:1px 7px;font-size:12px;font-weight:700;border:1px solid transparent;white-space:nowrap}
+.b.PASS,.b.LOW,.b.ok,.b.HIGHA{background:#e6f6e6;color:#0a6a0a;border-color:#bfe6bf}
+.b.FAIL,.b.HIGH,.b.BLOCK,.b.bad{background:#fbe5e5;color:#8f1c1c;border-color:#f0bcbc}
+.b.MEDIUM,.b.WARN,.b.UNKNOWN,.b.PENDING,.b.HOLD_FOR_HUMAN,.b.REPORT_ONLY{background:#fff3d6;color:#7a4b00;border-color:#f3d48a}
+.b.NOT_RUN,.b.SKIPPED,.b.none{background:var(--code);color:var(--ink3);border-color:var(--line)}
+.b.LIGHT_REVIEW,.b.CREATE_PR_AUTO{background:#e6f6e6;color:#0a6a0a;border-color:#bfe6bf}
+.b.FULL_REVIEW,.b.CREATE_PR_APPROVAL{background:#e3efff;color:#0d3f7a;border-color:#b9d3f5}
+.b.BLOCKED{background:#fbe5e5;color:#8f1c1c;border-color:#f0bcbc}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .b{filter:brightness(.85) contrast(1.1)} }
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.log{background:#0e1116;color:#d9dde3;border-radius:8px;padding:10px 12px;height:360px;overflow:auto;font-family:Consolas,monospace;font-size:12.5px;white-space:pre-wrap;word-break:break-all}
+.log .hdr{color:#7cb7ff;font-weight:700} .log .pass{color:#6fdc6f} .log .fail{color:#ff7b7b;font-weight:700} .log .unk{color:#f5c542} .log .dim{color:#8a919c}
+.steps{list-style:none;margin:0;padding:0} .steps li{display:flex;gap:8px;padding:4px 0;border-bottom:1px dashed var(--line);font-size:13.5px}
+.steps .ic{width:18px;color:var(--muted)} .steps .ic.run{color:var(--accent)} .steps .ic.done{color:var(--good)} .steps .ic.err{color:var(--crit)} .steps .el{margin-left:auto;color:var(--ink3);font-size:12px}
+.prog{height:8px;background:var(--line);border-radius:4px;overflow:hidden;margin:8px 0} .prog i{display:block;height:100%;background:var(--accent);width:0;transition:width .3s}
+details{margin:4px 0} summary{cursor:pointer;color:var(--accent)}
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px 14px} .form label{display:flex;justify-content:space-between;gap:8px;align-items:center;font-size:13.5px;color:var(--ink2);white-space:nowrap} .form select,.form input[type=text]{flex:1 1 120px;min-width:0}
+.form input[type=number]{width:90px} .form input[type=text]{width:150px}
+.note{border-left:3px solid var(--warn);background:color-mix(in srgb,var(--warn) 12%,var(--panel));padding:8px 12px;border-radius:6px;font-size:13.5px;margin:8px 0}
+.ok-note{border-left-color:var(--good);background:color-mix(in srgb,var(--good) 10%,var(--panel))}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px} .two>*,.grid>*,.card{min-width:0} @media (max-width:860px){.two{grid-template-columns:1fr}}
+iframe{width:100%;height:78vh;border:1px solid var(--line);border-radius:8px;background:#fff}
+.tag{font-size:11px;color:var(--ink3);border:1px solid var(--line);border-radius:4px;padding:0 5px;margin-left:6px}
+.fact{font-size:12.5px;color:var(--ink2)} .fact b{color:var(--ink)}
+.kv{display:grid;grid-template-columns:max-content 1fr;gap:3px 12px;font-size:13.5px} .kv dt{color:var(--ink3)} .kv dd{margin:0}
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="wrap">
+    <div>
+      <div class="k">IACPATCH · 브라우저 화면</div>
+      <h1 id="title">AI가 생성한 테라폼 보안 패치의 실효성 검증 자동화 구현</h1>
+      <p>Trivy 가 통과시킨 패치를 그대로 믿지 않는다 — 검증 계층 + 위험도 기준표가 후보마다 '사람이 어떤 검토를 해야 하나' 를 정한다. 이 화면은 LLM API·AWS·git push·terraform apply 를 절대 부르지 않는다.</p>
+      <div class="chips" id="chips"><span class="chip">불러오는 중…</span></div>
+    </div>
+    <div class="row">
+      <button id="btn-theme" title="밝게/어둡게">테마</button>
+      <button id="btn-quit" class="danger">종료</button>
+    </div>
+  </div>
+</header>
+
+<nav class="tabs" id="tabs">
+  <button data-tab="w4" class="on"><span class="week">4주차</span>위험도 기준표 · 상한 강제</button>
+  <button data-tab="w5"><span class="week">5주차</span>패치 → 검증 → PR</button>
+  <button data-tab="exp"><span class="week">실험</span>전체 실행 (8단계)</button>
+  <button data-tab="rep"><span class="week">결과</span>리포트</button>
+  <button data-tab="tools"><span class="week">설치</span>도구 · 도움말</button>
+</nav>
+
+<main>
+<!-- ===================================================== 4주차 -->
+<section class="tab on" id="tab-w4">
+  <div class="card">
+    <h2>4주차 목표 — "목업 데이터로 High/Medium/Low 가 올바르게 분류되고, 상한 강제가 동작한다"</h2>
+    <p class="sub">위험도는 <b>코드가 정한다</b>(plan 의 사실만 입력). LLM 은 등급을 <b>낮추는 제안</b>만 할 수 있고, 상한을 넘는 제안은 무시하고 기록한다. 아래 세 표가 그 세 문장을 각각 증명한다.</p>
+    <div class="grid" id="w4-tiles"></div>
+  </div>
+
+  <div class="card">
+    <h2>① 위험도 기준표 <span class="tag" id="rubric-ver"></span></h2>
+    <p class="sub">원본은 <code>policy/risk_rubric.json</code> (사람이 고친다). 점수 합계 ≤ <b id="th-low">2</b> → LOW(자율성 상한 HIGH), ≤ <b id="th-med">5</b> → MEDIUM(상한 MEDIUM), 그 위 → HIGH(상한 LOW). 아래 '무조건 HIGH' 조건은 점수와 무관.</p>
+    <div class="two">
+      <div><h3>점수 항목</h3><div class="tw"><table id="rubric-points"><thead><tr><th>항목</th><th>점수</th><th>키</th></tr></thead><tbody></tbody></table></div></div>
+      <div>
+        <h3>무조건 HIGH (hard)</h3><ul id="rubric-hard" class="small"></ul>
+        <h3>최소 MEDIUM (floor)</h3><ul id="rubric-floor" class="small"></ul>
+        <h3>위험도 → 자율성 상한</h3><ul id="rubric-cap" class="small"></ul>
+        <h3>텍스트 근거만으로는 미확정</h3><ul id="rubric-undet" class="small"></ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>② 목업 plan 25건 분류 — 기대 등급 vs 코드 등급 <span class="tag">도구 없이, 커밋된 plan 쌍으로 지금 계산</span></h2>
+    <p class="sub">후보 세트의 라벨 <code>expected_risk</code>(기준표를 코드와 별도로 읽고 적은 값)를 <b>실제 검토 흐름</b>으로 다시 돌려 코드 등급과 비교한다. V1~V4 는 도구가 없으면 NOT_RUN 이고, V5·V6·위험도는 <code>tests/fixtures/plan-pairs</code> 의 plan 쌍으로 계산한다.</p>
+    <div id="labels-note" class="note">라벨의 작성 주체와 사람 검산 수는 표 아래에 그대로 적는다 (검산 안 한 것을 검산했다고 쓰지 않는다).</div>
+    <div class="row" style="margin-bottom:8px"><button id="btn-labels" class="primary">25건 다시 계산</button><span class="small" id="labels-status"></span></div>
+    <div class="tw"><table id="labels-table"><thead><tr><th>후보</th><th>기대</th><th>코드</th><th>일치</th><th>점수</th><th>근거</th><th>V5</th><th>V6</th><th>상태</th><th>계산 근거</th></tr></thead><tbody></tbody></table></div>
+    <details><summary>도구로 실제 돌린 기록(data/reviews)과의 대조</summary><div class="tw"><table id="labels-rec"><thead><tr><th>후보</th><th>기대</th><th>기록의 코드 등급</th><th>일치</th><th>기록</th></tr></thead><tbody></tbody></table></div></details>
+  </div>
+
+  <div class="card">
+    <h2>③ 상한 강제 전수 검사 — 위험도 3 × LLM 제안 4 × 검증 3 × 정책 2 = 72 조합</h2>
+    <p class="sub">불변식: 정책 위반/검증 실패 → 무조건 차단 · 검증 미완 → 보류 · 검증 통과 → 최종 자율성 = min(상한, 제안). <b>위반이 0 건이어야 한다.</b></p>
+    <div class="row" style="margin-bottom:8px"><button id="btn-cap" class="primary">전수 검사 실행</button><span id="cap-status" class="small"></span></div>
+    <ul id="cap-inv" class="small"></ul>
+    <details><summary>72 조합 표</summary><div class="tw"><table id="cap-table"><thead><tr><th>위험도</th><th>상한</th><th>LLM 제안</th><th>검증</th><th>정책</th><th>최종 자율성</th><th>동작</th><th>비고</th></tr></thead><tbody></tbody></table></div></details>
+  </div>
+
+  <div class="two">
+    <div class="card">
+      <h2>④ 기준표 계산기 (목업 입력)</h2>
+      <p class="sub">체크·숫자를 바꾸면 <b>진짜 score_risk()</b> 가 점수와 등급을 낸다. "이 조합이면 왜 MEDIUM 이지?" 를 요인별 점수로 본다.</p>
+      <div class="form" id="calc-form"></div>
+      <div class="row" style="margin-top:8px"><button id="btn-calc" class="primary">계산</button></div>
+      <div id="calc-out" style="margin-top:10px"></div>
+    </div>
+    <div class="card">
+      <h2>⑤ 게이트 데모 — LLM 제안이 상한을 넘으면?</h2>
+      <p class="sub">코드가 정한 위험도와 LLM 제안을 넣으면 게이트가 최종 자율성과 동작을 정한다. 이유 문장은 코드가 낸 것 그대로.</p>
+      <div class="form">
+        <label>코드가 정한 위험도 <select id="g-risk"><option>LOW</option><option>MEDIUM</option><option>HIGH</option></select></label>
+        <label>LLM 제안 자율성 <select id="g-prop"><option value="">없음</option><option>HIGH</option><option>MEDIUM</option><option>LOW</option></select></label>
+        <label>검증 결과 <select id="g-val"><option>PASS</option><option>FAIL</option><option>INCOMPLETE</option></select></label>
+        <label>정책 통과 <input type="checkbox" id="g-pol" checked></label>
+      </div>
+      <div class="row" style="margin-top:8px"><button id="btn-gate" class="primary">판정</button></div>
+      <div id="gate-out" style="margin-top:10px"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================== 5주차 -->
+<section class="tab" id="tab-w5">
+  <div class="card">
+    <h2>5주차 목표 — 시나리오 → 패치 후보 → 검증(V1~V6) → 위험도 → 검토 수준 → PR 미리보기</h2>
+    <p class="sub">한 후보를 골라 실제 검토 흐름을 돌린다. trivy/terraform 이 <code>tools\</code> 에 있으면 V1~V4 도 실행하고, 없으면 그 계층은 <b>NOT_RUN</b> 으로 남는다(가짜 PASS 없음). AWS·LLM 은 부르지 않는다. PR 은 <b>미리보기</b>까지만(브랜치·제목·명령) — push 는 사람이 한다.</p>
+    <div class="form">
+      <label>후보 세트 <select id="c-set"></select></label>
+      <label>후보 <select id="c-cand"></select></label>
+      <label>방식 <select id="c-mode"><option value="manifest">세트의 후보 파일</option><option value="rule_based">규칙 기반 생성기로 지금 생성</option><option value="paste">붙여넣기 (Claude Code 출력 등)</option></select></label>
+    </div>
+    <div id="c-candinfo" class="small" style="margin:6px 0"></div>
+    <div id="c-paste-box" style="display:none"><p class="small">대상 finding 이 가리키는 .tf 파일의 <b>전체 내용</b>을 붙여넣는다 (원본에서 고친 버전). 출처는 기록에 '붙여넣기' 로 남는다 — LLM 출력이면 그렇게 적어라.</p><textarea id="c-paste" placeholder='resource "aws_security_group" ... (파일 전체)'></textarea></div>
+    <div class="row" style="margin-top:8px"><button id="btn-cand" class="primary">▶ 검토 실행</button><span id="c-status" class="small"></span></div>
+    <div class="prog"><i id="c-prog"></i></div>
+    <div class="log" id="c-log" style="height:200px"></div>
+  </div>
+  <div class="card" id="c-result" style="display:none">
+    <h2>결과 <span id="c-result-id" class="tag"></span></h2>
+    <div class="grid" id="c-tiles"></div>
+    <h3>검증 표</h3>
+    <div class="tw"><table id="c-layers"><thead><tr><th>계층</th><th>질문</th><th>판정</th><th>요약</th></tr></thead><tbody></tbody></table></div>
+    <h3>위험도 요인</h3><div id="c-risk"></div>
+    <h3>검토 수준 판단 이유</h3><ul id="c-reasons" class="small"></ul>
+    <details open><summary>패치 diff</summary><pre id="c-diff"></pre></details>
+    <details><summary>정책 검사(Policy Validator)</summary><div class="tw"><table id="c-policy"><thead><tr><th>검사</th><th>결과</th><th>비고</th></tr></thead><tbody></tbody></table></div></details>
+    <details><summary>review.md</summary><pre id="c-review"></pre></details>
+    <h3>PR 미리보기</h3>
+    <div class="row"><button id="btn-pr" class="primary">PR 미리보기 만들기</button><span class="small">브랜치·제목·명령만 만든다. push/PR 생성은 하지 않는다.</span></div>
+    <pre id="c-pr" style="display:none"></pre>
+    <details id="c-prbody-d" style="display:none"><summary>pr_body.md</summary><pre id="c-prbody"></pre></details>
+  </div>
+  <div class="card">
+    <h2>최근 기록 (data/reviews)</h2>
+    <div class="row" style="margin-bottom:6px"><button id="btn-records">새로고침</button></div>
+    <div class="tw"><table id="rec-table"><thead><tr><th>시각</th><th>시나리오</th><th>상태</th><th>검토 수준</th><th>검증</th><th>출처</th><th></th></tr></thead><tbody></tbody></table></div>
+  </div>
+</section>
+
+<!-- ===================================================== 실험 -->
+<section class="tab" id="tab-exp">
+  <div class="two">
+    <div class="card">
+      <h2>단계</h2>
+      <p class="sub">처음 한 번은 전부 돈다. 이후엔 원본·후보·정책·코드·도구가 바뀐 후보만 다시 돈다.</p>
+      <ul class="steps" id="steps"></ul>
+      <div class="row" style="margin-top:10px">
+        <button id="btn-run" class="primary">▶ 전체 실행</button>
+        <button id="btn-rep">리포트만 다시 생성</button>
+        <label class="small"><input type="checkbox" id="fresh"> 전부 다시 돌리기 (이전 기록 재사용 안 함)</label>
+      </div>
+      <div class="prog"><i id="e-prog"></i></div>
+      <div id="e-status" class="small">대기</div>
+      <h3>결과 (리포트와 같은 숫자)</h3>
+      <div class="grid" id="e-tiles"></div>
+    </div>
+    <div class="card"><h2>로그 <span class="small">experiments\run_experiments.log</span></h2><div class="log" id="e-log"></div></div>
+  </div>
+</section>
+
+<!-- ===================================================== 리포트 -->
+<section class="tab" id="tab-rep">
+  <div class="card">
+    <div class="row"><h2 style="margin:0">리포트 (report/index.html)</h2><a href="/report/" target="_blank">새 탭에서 열기</a><button id="btn-rep2">다시 생성</button><span id="rep-status" class="small"></span></div>
+  </div>
+  <iframe id="rep-frame" src="about:blank" title="리포트"></iframe>
+</section>
+
+<!-- ===================================================== 도구 -->
+<section class="tab" id="tab-tools">
+  <div class="two">
+    <div class="card">
+      <h2>도구 상태</h2>
+      <dl class="kv" id="tools-kv"></dl>
+      <div class="row" style="margin-top:8px"><button id="btn-tools" class="primary">도구 설치/확인 (trivy · terraform → tools\)</button></div>
+      <div class="log" id="t-log" style="height:200px;margin-top:8px"></div>
+      <h3>설치 검사</h3><ul id="selfcheck" class="small"></ul>
+      <h3>새 빌드 받기</h3>
+      <p class="small">지금 빌드: <code id="u-cur">?</code> · <span id="u-status" class="small">아직 확인 안 함</span></p>
+      <p class="small">GitHub Release <code>dev-latest</code>(브랜치 빌드마다 갱신, 로그인 불필요)에서 zip 을 받아 <b>옆 폴더</b>에 풀고 tools\·data\ 를 복사한 뒤 새 exe 를 띄운다. 이 폴더는 건드리지 않는다. 받은 zip 은 sha256 을 대조한다.</p>
+      <div class="row"><button id="btn-ucheck">업데이트 확인</button><button id="btn-uinstall" class="primary" disabled>새 빌드 받아서 실행</button></div>
+      <div class="log" id="u-log" style="height:140px;margin-top:8px"></div>
+    </div>
+    <div class="card">
+      <h2>이 프로그램이 하는 것 / 안 하는 것</h2>
+      <ul class="small">
+        <li><b>한다</b>: Trivy 스캔(로컬), terraform fmt/validate/plan(오프라인, 자격증명 없음), 검증 V1~V6, 위험도 기준표, 검토 수준, PR 본문 미리보기, 실험 8단계, HTML 리포트.</li>
+        <li><b>안 한다</b>: LLM API 호출, Claude Code 자동 호출, AWS 접속/변경, terraform apply, git push, PR 생성. (docs/DECISIONS.md D-5, D-11)</li>
+        <li>후보 출처는 기록에 그대로 남는다: 규칙 기반 / 사람이 만든 seeded / 붙여넣기. "LLM 이 만들었다" 고 표시되는 것은 <code>eval-claude-code</code> 세트에 사람이 넣은 Claude Code 출력뿐이다.</li>
+        <li>exe 는 실행기일 뿐이다 — 저장소 폴더(policy/, scenarios/, experiments/, tools/)가 옆에 있어야 한다. zip 은 <b>빈 새 폴더</b>에 푼다.</li>
+      </ul>
+      <h3>더 읽기</h3>
+      <ul class="small"><li>docs/RISK_RUBRIC_V2.md — 기준표 v2 (사람용)</li><li>docs/WHY_8_LAYERS.md — 8계층 근거</li><li>docs/WHITELIST_VS_POLICY.md — 화이트리스트 v0.2 대조표</li><li>docs/SOLO_RUNBOOK.md — 혼자 돌리기</li></ul>
+    </div>
+  </div>
+</section>
+</main>
+
+<script>
+(function(){
+'use strict';
+const $ = (s, el=document) => el.querySelector(s);
+const $$ = (s, el=document) => Array.from(el.querySelectorAll(s));
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const b = v => `<span class="b ${esc(v)}">${esc(v ?? '-')}</span>`;
+const badgeAuto = v => v ? `<span class="b ${v==='HIGH'?'HIGHA':v==='MEDIUM'?'MEDIUM':'FAIL'}">${esc(v)}</span>` : '<span class="b none">없음</span>';
+async function api(path, body){
+  const r = await fetch(path, body ? {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)} : {});
+  const j = await r.json().catch(()=>({error:'응답 파싱 실패'}));
+  if(!r.ok && !j.error) j.error = 'HTTP ' + r.status;
+  return j;
+}
+// ---------------- theme / tabs
+const root = document.documentElement;
+try{ const t = localStorage.getItem('iacpatch-theme'); if(t) root.setAttribute('data-theme', t); }catch(e){}
+$('#btn-theme').onclick = () => { const cur = root.getAttribute('data-theme'); const next = cur==='dark' ? 'light' : 'dark'; root.setAttribute('data-theme', next); try{localStorage.setItem('iacpatch-theme', next);}catch(e){} };
+$$('#tabs button').forEach(btn => btn.onclick = () => {
+  $$('#tabs button').forEach(x=>x.classList.toggle('on', x===btn));
+  $$('section.tab').forEach(s=>s.classList.toggle('on', s.id === 'tab-'+btn.dataset.tab));
+  try{ localStorage.setItem('iacpatch-tab', btn.dataset.tab); }catch(e){}
+  if(btn.dataset.tab==='rep') loadReport();
+});
+try{ const t = localStorage.getItem('iacpatch-tab'); if(t){ const bt = $(`#tabs button[data-tab="${t}"]`); if(bt) bt.click(); } }catch(e){}
+$('#btn-quit').onclick = async () => { if(!confirm('서버를 끄고 이 창을 닫을까?')) return; await api('/api/quit', {}); document.body.innerHTML = '<main><div class="card"><h2>서버를 껐다.</h2><p>이 탭은 닫아도 된다. 다시 열려면 IaCPatch.exe 를 다시 실행.</p></div></main>'; };
+setInterval(()=>fetch('/api/heartbeat',{method:'POST'}).catch(()=>{}), 15000);
+fetch('/api/heartbeat',{method:'POST'}).catch(()=>{});
+
+// ---------------- state / chips
+let STATE = null;
+function chips(st){
+  const c = [];
+  const tool = (k,v) => c.push(`<span class="chip ${v.ok?'ok':'bad'}">${k} ${esc(v.ok ? v.version.replace('Version: ','') : '없음 → 도구 탭')}</span>`);
+  Object.entries(st.tools||{}).forEach(([k,v])=>tool(k,v));
+  c.push(`<span class="chip ${st.selfcheck.length?'bad':'ok'}">설치 검사 ${st.selfcheck.length?('실패 '+st.selfcheck.length+'건'):'OK'} · python ${esc(st.python)}</span>`);
+  c.push(`<span class="chip">${esc(st.host)} · ${esc(st.os)}${st.frozen?' · exe':''}${(st.build&&st.build.sha)?' · 빌드 '+esc(st.build.sha.slice(0,7)):''}</span>`);
+  c.push(`<span class="chip" title="${esc(st.root)}">저장소 ${esc(st.root.length>48?'…'+st.root.slice(-46):st.root)}</span>`);
+  $('#chips').innerHTML = c.join('');
+}
+function tilesFromSummary(S, el){
+  if(!S || S.error){ el.innerHTML = `<div class="tile"><div class="n">–</div><div class="l">아직 실행 전</div><div class="m">${esc(S&&S.error||'전체 실행 후 채워진다')}</div></div>`; return; }
+  const blind = (S.blind_sg?S.blind_sg[0]:0) + (S.blind_iam?S.blind_iam[0]:0);
+  const fz = S.fuzz || {};
+  el.innerHTML = [
+    ['crit', blind, '스캐너 통과 ∧ 오라클 FAIL', '실제 plan, SG+IAM'],
+    ['good', `${S.label_agree}/${S.label_total}`, '기대 라벨 일치', '후보 세트 4개'],
+    [S.not_run_total?'warn':'good', S.not_run_total, '미검증 계층', S.not_run_total?'도구 없이 돈 기록':'전부 실행됨'],
+    [S.n_llm?'good':'warn', S.n_llm, 'LLM 후보'+(S.n_llm?'':' (미측정)'), 'Claude Code 출력'],
+    ['accent', fz.trivy_blind!=null?`${fz.oracle_caught}/${fz.trivy_blind}`:'–', '스캐너 사각 중 오라클 탐지', fz.trivy_blind!=null?`변형 ${fz.should}종 중 Trivy 사각 ${fz.trivy_blind} · 오라클도 놓침 ${fz.oracle_miss}`:'변형 자동 생성 (아직 실행 전)'],
+    [S.aws_runs?'good':'warn', S.aws_runs||0, 'AWS 배포 후 검증(V7/V8)', '0 이면 아직'],
+  ].map(([k,n,l,m])=>`<div class="tile ${k}"><div class="n">${esc(n)}</div><div class="l">${esc(l)}</div><div class="m">${esc(m)}</div></div>`).join('');
+}
+async function refreshState(){
+  const st = await api('/api/state');
+  if(st.error){ $('#chips').innerHTML = `<span class="chip bad">${esc(st.error)}</span>`; return; }
+  STATE = st; chips(st);
+  if(st.title) $('#title').textContent = st.title;
+  $('#selfcheck').innerHTML = st.selfcheck.length ? st.selfcheck.map(p=>`<li style="color:var(--crit)">${esc(p)}</li>`).join('') + `<li>${esc(st.stale_hint)}</li>` : '<li>문제 없음</li>';
+  $('#tools-kv').innerHTML = Object.entries(st.tools).map(([k,v])=>`<dt>${esc(k)}</dt><dd>${v.ok?b('ok'):b('bad')} ${esc(v.version)} <span class="small mono">${esc(v.bin)}</span></dd>`).join('') + `<dt>python</dt><dd>${esc(st.python)}${st.frozen?' (exe 내장)':''}</dd><dt>빌드</dt><dd class="mono">${(st.build&&st.build.sha)?esc(st.build.sha.slice(0,7))+(st.build.built_at?' · '+esc(st.build.built_at):''):'(정보 없음 — 소스 실행 또는 옛 빌드)'}</dd><dt>저장소</dt><dd class="mono">${esc(st.root)}</dd>`;
+  if (st.build && st.build.sha) $('#u-cur').textContent = st.build.sha.slice(0,7) + (st.build.built_at ? ' · ' + st.build.built_at : '');
+  buildSteps(st.steps);
+  tilesFromSummary(st.summary, $('#e-tiles'));
+  $('#btn-rep').disabled = $('#btn-rep2').disabled = false;
+  return st;
+}
+
+// ---------------- job polling (shared by exp / candidate / tools)
+let logSince = 0, activeLog = null, pollTimer = null, stepT0 = {};
+function classify(line){
+  if(line.startsWith('================')) return 'hdr';
+  if(/FAIL|종료 코드|오류|Traceback/.test(line)) return 'fail';
+  if(/재사용/.test(line)) return 'dim';
+  if(/UNKNOWN|NOT_RUN/.test(line)) return 'unk';
+  if(/PASS| OK|완료|일치/.test(line)) return 'pass';
+  if(/^[|#\-]/.test(line)) return 'dim';
+  return '';
+}
+function appendLog(el, lines){
+  const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 30;
+  for(const line of lines){ const d = document.createElement('div'); const c = classify(line); if(c) d.className = c; d.textContent = line; el.appendChild(d); if(line.startsWith('================ ')) markStep(line.slice(17).trim()); }
+  if(atBottom) el.scrollTop = el.scrollHeight;
+}
+function buildSteps(steps){
+  const ul = $('#steps'); ul.innerHTML = '';
+  (steps||[]).concat(['리포트 생성 (report/index.html)']).forEach(t => { const li = document.createElement('li'); li.dataset.title = t; li.innerHTML = `<span class="ic">○</span><span>${esc(t.length>60?t.slice(0,58)+'…':t)}</span><span class="el"></span>`; ul.appendChild(li); });
+}
+function markStep(title){
+  const now = Date.now();
+  $$('#steps li').forEach(li => { const ic = $('.ic', li); if(ic.classList.contains('run')){ ic.classList.remove('run'); ic.classList.add('done'); ic.textContent='●'; $('.el', li).textContent = Math.round((now-(stepT0[li.dataset.title]||now))/1000)+'s'; } });
+  const li = $$('#steps li').find(li => li.dataset.title === title || (title.startsWith('리포트') && li.dataset.title.startsWith('리포트')));
+  if(li){ const ic = $('.ic', li); ic.classList.add('run'); ic.textContent = '◔'; stepT0[li.dataset.title] = now; if(/건너뜀/.test(title)){ ic.classList.remove('run'); ic.textContent='–'; $('.el', li).textContent='건너뜀'; } }
+}
+function finishSteps(ok){ $$('#steps li .ic.run').forEach(ic => { ic.classList.remove('run'); ic.classList.add(ok?'done':'err'); ic.textContent = ok?'●':'✖'; }); }
+async function poll(){
+  const j = await api('/api/log?since=' + logSince);
+  if(j.error){ setTimeout(poll, 1500); return; }
+  if(activeLog && j.log.length){ appendLog(activeLog, j.log); logSince = j.log_total; }
+  const [i,n] = j.progress; const pct = n ? Math.round(100*i/n) : 0;
+  $('#e-prog').style.width = pct+'%'; $('#c-prog').style.width = pct+'%';
+  if(j.running){ pollTimer = setTimeout(poll, 700); return; }
+  onJobDone(j);
+}
+let jobDoneCb = null;
+function startJob(logEl, cb){ activeLog = logEl; logEl.innerHTML = ''; logSince = 0; jobDoneCb = cb; setButtons(false); clearTimeout(pollTimer); pollTimer = setTimeout(poll, 300); }
+function setButtons(on){ ['#btn-run','#btn-rep','#btn-rep2','#btn-cand','#btn-tools'].forEach(s=>{ const el=$(s); if(el) el.disabled = !on; }); }
+function onJobDone(j){ setButtons(true); if(jobDoneCb) jobDoneCb(j); jobDoneCb = null; refreshState(); }
+
+// ---------------- 실험 탭
+$('#btn-run').onclick = async () => {
+  $$('#steps li .ic').forEach(ic=>{ic.className='ic'; ic.textContent='○';}); $$('#steps li .el').forEach(e=>e.textContent='');
+  const r = await api('/api/job/run_all', {fresh: $('#fresh').checked, report_only: false});
+  if(!r.started){ $('#e-status').textContent = r.error || '이미 다른 작업이 돌고 있다'; return; }
+  $('#e-status').textContent = '실행 중… 처음 한 번은 후보 38개를 전부 돈다 (PC 마다 5~15분). 이후엔 바뀐 후보만.';
+  startJob($('#e-log'), j => { finishSteps(!j.error); $('#e-status').textContent = j.error ? ('실패: '+j.error) : ('완료 — 리포트: ' + (j.result||'')); if(!j.error){ loadReport(); } });
+};
+const reportOnly = async (statusEl) => {
+  const r = await api('/api/job/run_all', {fresh:false, report_only:true});
+  if(!r.started){ statusEl.textContent = r.error || '이미 다른 작업이 돌고 있다'; return; }
+  statusEl.textContent = '리포트 생성 중…';
+  startJob($('#e-log'), j => { finishSteps(!j.error); statusEl.textContent = j.error ? ('실패: '+j.error) : '완료'; if(!j.error) loadReport(); });
+};
+$('#btn-rep').onclick = () => reportOnly($('#e-status'));
+$('#btn-rep2').onclick = () => reportOnly($('#rep-status'));
+function loadReport(){ const f = $('#rep-frame'); f.src = '/report/?t=' + Date.now(); }
+
+// ---------------- 도구 탭
+$('#btn-tools').onclick = async () => { const r = await api('/api/job/setup_tools', {}); if(!r.started){ alert(r.error||'이미 다른 작업이 돌고 있다'); return; } startJob($('#t-log'), ()=>{}); };
+$('#btn-ucheck').onclick = async () => {
+  $('#u-status').textContent = '확인 중…'; $('#btn-uinstall').disabled = true;
+  const r = await api('/api/update/check');
+  $('#u-cur').textContent = (r.current && r.current.sha) ? r.current.sha.slice(0,7) + (r.current.built_at ? ' · ' + r.current.built_at : '') : '(빌드 정보 없음)';
+  if (r.error) { $('#u-status').textContent = r.error; return; }
+  const l = r.latest || {};
+  $('#u-status').textContent = r.newer ? `새 빌드 있음: ${(l.sha||'').slice(0,7)} (${l.built_at||'?'})` : `최신이다 (${(l.sha||'').slice(0,7)})`;
+  $('#btn-uinstall').disabled = !r.newer;
+};
+$('#btn-uinstall').onclick = async () => { const r = await api('/api/job/update', {}); if(!r.started){ alert(r.error||'이미 다른 작업이 돌고 있다'); return; } startJob($('#u-log'), ()=>{ $('#u-status').textContent = '끝. 새 탭이 열렸으면 이 창은 닫아도 된다.'; }); };
+
+// ---------------- 4주차
+function renderRubric(rv){
+  $('#rubric-ver').textContent = rv.version;
+  $('#th-low').textContent = rv.thresholds.low_max; $('#th-med').textContent = rv.thresholds.medium_max;
+  $('#rubric-points tbody').innerHTML = rv.points.map(p=>`<tr><td>${esc(p.label)}</td><td><b>+${esc(p.points)}</b></td><td class="mono small">${esc(p.key)}</td></tr>`).join('');
+  $('#rubric-hard').innerHTML = rv.hard_high.map(h=>`<li>${h.on?'✔':'✖'} ${esc(h.label)} <span class="mono">${esc(h.key)}</span>${h.on?'':' <span class="small">(v2 에서 해제 — IAM 은 floor 로)</span>'}</li>`).join('');
+  $('#rubric-floor').innerHTML = rv.medium_floor.map(h=>`<li>${h.on?'✔':'✖'} ${esc(h.label)} <span class="mono">${esc(h.key)}</span></li>`).join('');
+  $('#rubric-cap').innerHTML = Object.entries(rv.autonomy_cap).map(([k,v])=>`<li>위험도 ${b(k)} → 자율성 상한 ${badgeAuto(v)}</li>`).join('');
+  $('#rubric-undet').innerHTML = rv.text_basis_undetermined.map(t=>`<li>${esc(t)}</li>`).join('');
+}
+function renderLabels(j){
+  const R = j.replay, K = j.records;
+  $('#labels-status').textContent = `실제 흐름 재계산: 일치 ${R.agree}/${R.judged} (라벨 ${R.total}건) · 분포 LOW ${R.distribution.LOW} / MEDIUM ${R.distribution.MEDIUM} / HIGH ${R.distribution.HIGH}`;
+  $('#labels-note').innerHTML = `<b>정직 표기</b> — ${esc(R.note)} 사람 검산: <b>${R.human_verified}/${R.total}</b>${R.human_verified?'' : ' (아직 0 — B 가 항목마다 직접 검산하고 manifest 에 expected_risk_verified_by 를 적어야 한다)'}.`;
+  $('#labels-table tbody').innerHTML = R.rows.map(r => r.error ? `<tr><td>${esc(r.scenario)}</td><td colspan="9" style="color:var(--crit)">${esc(r.error)}</td></tr>` :
+    `<tr><td class="mono small">${esc(r.scenario)}</td><td>${b(r.expected)}</td><td>${b(r.actual)}</td><td>${r.agree?'✔':'<b style="color:var(--crit)">✖</b>'}</td><td>${esc(r.score)}</td>
+     <td class="small">${esc(r.basis)}<br><span class="fact">${(r.factors||[]).map(f=>`${f.points?'<b>+'+f.points+'</b> ':''}${esc(f.label)}${f.note?' <span class="tag">'+esc(f.note)+'</span>':''}`).join(' · ')||'0점 항목만'}</span></td>
+     <td>${b(r.v5)}</td><td>${b(r.v6)}</td><td>${b(r.state)}</td><td class="small">${esc(r.basis_kind)}</td></tr>`).join('');
+  $('#labels-rec tbody').innerHTML = K.rows.map(r=>`<tr><td class="mono small">${esc(r.scenario)}</td><td>${b(r.expected)}</td><td>${r.actual?b(r.actual):'<span class="b none">미실행</span>'}</td><td>${r.agree==null?'–':(r.agree?'✔':'✖')}</td><td class="mono small">${esc(r.record||'-')}</td></tr>`).join('');
+  $('#w4-tiles').innerHTML = [
+    ['good', `${R.agree}/${R.judged}`, '기대 등급 = 코드 등급', '25건 실제 흐름 재계산'],
+    [R.human_verified?'good':'warn', `${R.human_verified}/${R.total}`, '사람 손 검산', R.human_verified?'':'아직 0 — B 의 숙제'],
+    ['accent', `${R.distribution.LOW}·${R.distribution.MEDIUM}·${R.distribution.HIGH}`, 'LOW · MEDIUM · HIGH 분포', '세 등급 모두 나옴'],
+    ['good', CAPRES ? `${CAPRES.violations.length}` : '–', '상한 강제 위반', CAPRES ? `${CAPRES.total} 조합 전수` : '③ 을 실행'],
+  ].map(([k,n,l,m])=>`<div class="tile ${k}"><div class="n">${esc(n)}</div><div class="l">${esc(l)}</div><div class="m">${esc(m)}</div></div>`).join('');
+}
+let CAPRES = null;
+async function loadLabels(refresh){
+  $('#labels-status').textContent = '계산 중…';
+  const j = await api('/api/week4/labels' + (refresh?'?refresh=1':''));
+  if(j.error){ $('#labels-status').textContent = '오류: ' + j.error; return; }
+  renderLabels(j);
+}
+$('#btn-labels').onclick = () => loadLabels(true);
+async function runCap(){
+  $('#cap-status').textContent = '검사 중…';
+  const j = await api('/api/week4/capcheck');
+  if(j.error){ $('#cap-status').textContent = '오류: ' + j.error; return; }
+  CAPRES = j;
+  $('#cap-status').innerHTML = `${j.total} 조합 · 위반 <b style="color:${j.violations.length?'var(--crit)':'var(--good)'}">${j.violations.length}</b> 건`;
+  $('#cap-inv').innerHTML = j.invariants.map(t=>`<li>✔ ${esc(t)}</li>`).join('') + j.violations.map(v=>`<li style="color:var(--crit)">✖ ${esc(v)}</li>`).join('');
+  $('#cap-table tbody').innerHTML = j.rows.map(r=>`<tr><td>${b(r.risk_level)}</td><td>${badgeAuto(r.cap)}</td><td>${badgeAuto(r.proposal)}</td><td>${b(r.validity)}</td><td>${r.policy_ok?'통과':'<b>위반</b>'}</td><td>${badgeAuto(r.final)}</td><td>${b(r.action)}</td><td class="small">${r.forced_down?'<b>강제 하향</b> ':''}${esc(r.reasons.join(' / '))}</td></tr>`).join('');
+  const lb = await api('/api/week4/labels'); if(!lb.error) renderLabels(lb);
+}
+$('#btn-cap').onclick = runCap;
+const CALC_FIELDS = [
+  ['target_kind','대상 유형','select',['SG','IAM']], ['changed_attrs','바뀐 속성 (쉼표)','text','ingress'], ['resources_touched','바뀐 리소스 수','int',1], ['new_resources','새로 만든 리소스 수','int',0],
+  ['deleted','리소스 삭제 있음','bool',false], ['replaced','리소스 교체(destroy+create)','bool',false], ['trust_policy','신뢰 정책 변경 (IAM)','bool',false], ['provider_changed','provider 설정 변경','bool',false],
+  ['attachment_points','바뀐 SG 가 붙은 부착 지점 수','int',0], ['external_sg','부착 지점에 plan 밖 SG','bool',false], ['outside_family','대상 가족 밖 리소스 타입 변경','bool',false], ['oracle_partial','오라클 일부 규칙 미확정','bool',false],
+  ['lines','diff 줄 수','int',2], ['files','바뀐 파일 수','int',1]];
+$('#calc-form').innerHTML = CALC_FIELDS.map(([k,l,t,d]) => `<label>${esc(l)} ${t==='select'?`<select data-k="${k}">${d.map(o=>`<option>${o}</option>`).join('')}</select>`: t==='bool'?`<input type="checkbox" data-k="${k}">`: t==='int'?`<input type="number" data-k="${k}" value="${d}" min="0">`:`<input type="text" data-k="${k}" value="${esc(d)}">`}</label>`).join('');
+$('#btn-calc').onclick = async () => {
+  const inp = {}; $$('#calc-form [data-k]').forEach(el => { inp[el.dataset.k] = el.type==='checkbox' ? el.checked : el.type==='number' ? Number(el.value) : el.value; });
+  const j = await api('/api/week4/calc', inp);
+  if(j.error){ $('#calc-out').innerHTML = `<div class="note">${esc(j.error)}</div>`; return; }
+  $('#calc-out').innerHTML = `<div class="row"><span>위험도 ${b(j.level)}</span><span>자율성 상한 ${badgeAuto(j.cap)}</span><span>점수 <b>${j.score}</b> (LOW ≤ ${j.thresholds.low_max}, MEDIUM ≤ ${j.thresholds.medium_max})</span></div>
+    <div class="tw"><table><thead><tr><th>요인</th><th>값</th><th>점수</th><th>비고</th></tr></thead><tbody>${j.factors.map(f=>`<tr${f.points||/hard|floor/.test(f.note)?' style="font-weight:600"':''}><td>${esc(f.label)}</td><td class="mono small">${esc(JSON.stringify(f.value))}</td><td>${f.points?'+'+f.points:'0'}</td><td class="small">${esc(f.note)}</td></tr>`).join('')}</tbody></table></div>`;
+};
+$('#btn-gate').onclick = async () => {
+  const j = await api('/api/week4/gate', {risk_level: $('#g-risk').value, proposal: $('#g-prop').value || null, validity: $('#g-val').value, policy_ok: $('#g-pol').checked});
+  if(j.error){ $('#gate-out').innerHTML = `<div class="note">${esc(j.error)}</div>`; return; }
+  $('#gate-out').innerHTML = `<div class="row"><span>상한 ${badgeAuto(j.cap)}</span><span>제안 ${badgeAuto(j.proposal)}</span><span>→ 최종 ${badgeAuto(j.final)}</span><span>${b(j.action)}</span>${j.forced_down?'<b style="color:var(--crit)">강제 하향됨</b>':''}</div>
+    <p class="sub" style="margin-top:6px">${esc(j.action_ko)}</p><ul class="small">${j.reasons.map(r=>`<li class="mono">${esc(r)}</li>`).join('')}</ul>`;
+};
+
+// ---------------- 5주차
+let SETS = [];
+function fillCands(){
+  const s = SETS.find(x=>x.set_id===$('#c-set').value); const sel = $('#c-cand'); sel.innerHTML = '';
+  (s?s.candidates:[]).forEach(c => { const o = document.createElement('option'); o.value = c.id; o.textContent = `${c.id} — 기대 ${c.expected||'?'}${c.expected_risk?' / 위험도 '+c.expected_risk:''} (${c.source||'?'})`; sel.appendChild(o); });
+  candInfo();
+}
+function candInfo(){
+  const s = SETS.find(x=>x.set_id===$('#c-set').value); const c = s && s.candidates.find(x=>x.id===$('#c-cand').value);
+  $('#c-candinfo').innerHTML = c ? `원본 <span class="mono">${esc(c.tf_dir)}</span> · 룰 ${esc(c.rule)} · intent <span class="mono">${esc(c.intent||'-')}</span> · 후보 <span class="mono">${esc(c.candidate)}</span><br>${esc(c.note)}` : (s?`세트 원본 <span class="mono">${esc(s.tf_dir)}</span>`:'');
+}
+async function loadSets(){
+  const j = await api('/api/week5/sets'); if(j.error) return;
+  SETS = j.sets.filter(s => s.candidates.length || s.tf_dir);
+  const sel = $('#c-set'); sel.innerHTML = '';
+  SETS.forEach(s => { const o = document.createElement('option'); o.value = s.set_id; o.textContent = `${s.set_id} (${s.candidates.length})`; sel.appendChild(o); });
+  const pref = SETS.find(s=>s.set_id==='eval-seeded-sg'); if(pref) sel.value = pref.set_id;
+  fillCands();
+}
+$('#c-set').onchange = fillCands; $('#c-cand').onchange = candInfo;
+$('#c-mode').onchange = () => { $('#c-paste-box').style.display = $('#c-mode').value==='paste' ? '' : 'none'; };
+$('#btn-cand').onclick = async () => {
+  const mode = $('#c-mode').value; const body = {set_id: $('#c-set').value, candidate_id: $('#c-cand').value};
+  if(mode==='paste'){ body.paste = $('#c-paste').value; if(!body.paste.trim()){ $('#c-status').textContent = '붙여넣을 내용이 비어 있다'; return; } }
+  if(mode==='rule_based') body.generator = 'rule_based';
+  const r = await api('/api/job/candidate', body);
+  if(!r.started){ $('#c-status').textContent = r.error || '이미 다른 작업이 돌고 있다'; return; }
+  $('#c-status').textContent = '검토 흐름 실행 중… (도구가 있으면 6~30초, 처음엔 provider 설치로 더 걸림)'; $('#c-result').style.display = 'none';
+  startJob($('#c-log'), async j => { if(j.error){ $('#c-status').textContent = '실패: ' + j.error; return; } const res = j.result || {}; $('#c-status').textContent = `${res.state} / 검토 수준 ${res.level||'-'} / 위험도 ${res.risk||'-'}`; if(res.record_id) showRecord(res.record_id); loadRecords(); });
+};
+async function showRecord(id){
+  const d = await api('/api/week5/record?id=' + encodeURIComponent(id));
+  if(d.error){ $('#c-status').textContent = d.error; return; }
+  $('#c-result').style.display = ''; $('#c-result-id').textContent = id; $('#c-result').dataset.id = id;
+  const st = d.state || {}; const risk = (d.risk||{}).decision || {}; const ver = d.verification || {};
+  $('#c-tiles').innerHTML = [
+    [/REVIEW_REQUIRED/.test(st.state)?'good':/FAILED|BLOCKED|INVALID/.test(st.state)?'crit':'warn', st.state, '상태', st.history?st.history.slice(-1)[0].note:''],
+    [/LIGHT|FULL/.test(st.review_level)?'good':/BLOCKED|REPORT/.test(st.review_level)?'crit':'warn', st.review_level||'-', '검토 수준', st.verification_status||''],
+    [risk.risk_level==='LOW'?'good':risk.risk_level==='MEDIUM'?'warn':'crit', risk.risk_level||'-', `위험도 (점수 ${risk.score??'-'})`, risk.autonomy_cap?'자율성 상한 '+risk.autonomy_cap:''],
+    ['accent', (ver.layers||[]).filter(l=>l.verdict==='PASS').length + '/' + (ver.layers||[]).length, '통과 계층', (ver.layers||[]).filter(l=>l.verdict==='NOT_RUN').length + ' NOT_RUN'],
+  ].map(([k,n,l,m])=>`<div class="tile ${k}"><div class="n" style="font-size:20px">${esc(n)}</div><div class="l">${esc(l)}</div><div class="m">${esc(m)}</div></div>`).join('');
+  $('#c-layers tbody').innerHTML = (ver.layers||[]).map(l=>`<tr><td><b>${esc(l.layer)}</b></td><td class="small">${esc(l.name)}</td><td>${b(l.verdict)}</td><td class="small">${esc(l.summary)}</td></tr>`).join('') || '<tr><td colspan="4" class="small">검증 표 없음 (정책 차단 등)</td></tr>';
+  const facts = (risk.factors||[]);
+  $('#c-risk').innerHTML = facts.length ? `<div class="fact">${facts.filter(f=>f.points||/hard|floor|undetermined/.test(f.note||'')).map(f=>`<b>${f.points?'+'+f.points:'·'}</b> ${esc(f.factor)}${f.note?' — '+esc(f.note):''}`).join('<br>')||'0점 항목만'}</div>` : '<span class="small">위험도 판정 없음</span>';
+  const reasons = (st.history||[]).map(h=>`${h.state}: ${h.note||''}`);
+  $('#c-reasons').innerHTML = reasons.map(r=>`<li>${esc(r)}</li>`).join('');
+  $('#c-diff').textContent = d.candidate_diff || '(diff 없음)';
+  $('#c-policy tbody').innerHTML = ((d.policy||{}).checks||[]).map(c=>`<tr><td class="mono small">${esc(c.check)}</td><td>${c.ok?b('PASS'):b('FAIL')}</td><td class="small">${esc(c.note||'')}</td></tr>`).join('');
+  $('#c-review').textContent = d.review_md || '';
+  $('#c-pr').style.display = 'none'; $('#c-prbody-d').style.display = 'none';
+  $('#c-result').scrollIntoView({behavior:'smooth', block:'start'});
+}
+$('#btn-pr').onclick = async () => {
+  const id = $('#c-result').dataset.id; if(!id) return;
+  const j = await api('/api/week5/pr_preview', {record_id: id});
+  $('#c-pr').style.display = ''; $('#c-pr').textContent = (j.error ? '오류: '+j.error+'\n' : '') + (j.output||'') + (j.commands ? '\n--- pr_commands.sh ---\n' + j.commands : '') + (j.note ? '\n'+j.note : '');
+  if(j.pr_body){ $('#c-prbody-d').style.display = ''; $('#c-prbody').textContent = j.pr_body; }
+};
+async function loadRecords(){
+  const j = await api('/api/week5/records'); if(j.error) return;
+  $('#rec-table tbody').innerHTML = j.records.map(r=>`<tr><td class="mono small">${esc((r.started||'').slice(0,19))}</td><td class="mono small">${esc(r.scenario)}</td><td>${b(r.state)}</td><td>${b(r.level||'none')}</td><td>${b(r.verification||'none')}</td><td class="small">${esc(r.origin||'')}</td><td><button data-id="${esc(r.id)}">열기</button></td></tr>`).join('') || '<tr><td colspan="7" class="small">기록 없음 — 위에서 후보를 하나 돌려 봐라</td></tr>';
+  $$('#rec-table button').forEach(btn => btn.onclick = () => showRecord(btn.dataset.id));
+}
+$('#btn-records').onclick = loadRecords;
+
+// ---------------- boot
+(async function boot(){
+  await refreshState();
+  const rv = await api('/api/week4/rubric'); if(!rv.error) renderRubric(rv);
+  loadLabels(false); loadSets(); loadRecords();
+  if(STATE && STATE.job && STATE.job.running){ activeLog = $('#e-log'); setButtons(false); pollTimer = setTimeout(poll, 300); }
+})();
+})();
+</script>
+</body>
+</html>

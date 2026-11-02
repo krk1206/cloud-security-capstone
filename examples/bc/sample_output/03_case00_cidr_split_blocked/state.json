@@ -1,0 +1,37 @@
+{
+  "run_id": "20260915-063845-a3ab97",
+  "scenario": "ex03-case00-cidr-split",
+  "state": "VALIDATION_FAILED",
+  "history": [
+    {
+      "state": "INPUT_READY",
+      "at": "2026-09-15T06:38:45+00:00",
+      "note": "대상 AVD-AWS-0107 @ main.tf:14 aws_security_group.baseline"
+    },
+    {
+      "state": "CANDIDATE_READY",
+      "at": "2026-09-15T06:38:45+00:00",
+      "note": "origin=manual files=['main.tf'] policy=OK"
+    },
+    {
+      "state": "VALIDATION_PENDING",
+      "at": "2026-09-15T06:38:45+00:00",
+      "note": "linked=['V1', 'V2', 'V3', 'V4', 'V5', 'V6'] validity=FAIL"
+    },
+    {
+      "state": "VALIDATION_FAILED",
+      "at": "2026-09-15T06:38:45+00:00",
+      "note": "review_level=BLOCKED"
+    }
+  ],
+  "errors": [],
+  "started_at": "2026-09-15T06:38:45+00:00",
+  "verification_status": "FAILED",
+  "review_level": "BLOCKED",
+  "note": "로컬 리포트 생성 성공은 패치 검증 성공이 아니다. verification_status 와 각 계층 상태를 볼 것",
+  "candidate_sha256": "183a302feed41065ddb93aad17be0713774a55bba35d8c31afd13dbe164fb0fc",
+  "candidate_origin": "manual",
+  "candidate_generator": "manual:candidate_cidr_split",
+  "verification_source": "example-fixture (예제 값 — A 가 실제로 실행한 결과가 아님)",
+  "finished_at": "2026-09-15T06:38:45+00:00"
+}

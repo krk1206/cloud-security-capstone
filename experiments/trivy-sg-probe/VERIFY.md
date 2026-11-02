@@ -62,6 +62,6 @@ python3 -c "import ipaddress as i; print(list(i.collapse_addresses([i.ip_network
 
 ### 미확정 사항
 
-- terraform validate 는 문법만 검증한다. 배포 후 실제 포트 개방 여부는 미확인.
+- terraform validate 는 문법·스키마·참조 정합성까지만 검사한다(배포 상태는 보지 않음). 배포 후 실제 포트 개방 여부는 미확인.
 - 06 은 prefix list 참조가 실제 SG 에 반영되는지 sandbox apply + describe-security-groups 로 확인 필요.
 - LLM 이 이 패턴을 실제로 생성하는지는 측정하지 않았다. 본 실험은 탐지기 능력 측정이며, 자연 발생률 측정이 아니다.
