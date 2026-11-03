@@ -25,6 +25,10 @@ class PolicyValidatorTests(unittest.TestCase):
     def test_ok(self):
         r = validate_candidate(cand({"main.tf": BASE_MAIN.replace("0.0.0.0/0\"]\n  }\n\n  egress", "10.0.0.0/8\"]\n  }\n\n  egress")}), BASELINE, POLICY, "infrastructure/sg-baseline")
         self.assertTrue(r.ok, r.violations)
+        # 통과한 '바뀐 내용 있음' 검사에는 'identical' 메모를 남기지 않는다 (2026-10-23 policy.json 에서 헷갈리게 적혀 있던 것)
+        dn = next(c for c in r.checks if c["check"] == "diff_nonempty:main.tf")
+        self.assertTrue(dn["ok"])
+        self.assertEqual(dn["note"], "")
 
     def test_path_traversal_and_protected(self):
         r = validate_candidate(cand({"../../policy/patch_policy.json": "{}"}), BASELINE, POLICY, "infrastructure/sg-baseline")
@@ -53,6 +57,7 @@ class PolicyValidatorTests(unittest.TestCase):
     def test_identical_content_and_too_many_files(self):
         r = validate_candidate(cand({"main.tf": BASE_MAIN}), BASELINE, POLICY)
         self.assertFalse(r.ok)
+        self.assertIn("diff_nonempty:main.tf: file content identical to baseline", r.violations)
         many = {f"f{i}.tf": "x" for i in range(5)}
         self.assertFalse(validate_candidate(cand(many), {**BASELINE, **many}, POLICY).ok)
 

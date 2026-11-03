@@ -114,6 +114,13 @@ def run_predeploy(settings: Settings, target_dir: str, intent_path: str, scenari
     var_file = settings.tf_var_file or None
 
     try:
+        # 0) 원본 실행 전 안전 점검 (D-23 v2) — 원본도 신뢰하지 않는다. 위반이 있으면 Trivy · Terraform 을 실행하지 않는다
+        from .policy.exec_guard import check_files
+        og = check_files(read_tf_files(src_dir, policy.get("editable_file_globs")))
+        if og:
+            rec.step("original_guard", "BLOCKED", "; ".join(og[:3]))
+            rec.finish("INPUT_ERROR", note="원본 코드에 실행 전 안전 점검 위반", violations=og)
+            return PipelineResult(rec.run_id, rec.dir, "INPUT_ERROR", note="원본 코드에 실행 전 안전 점검 위반 — 도구 실행 안 함: " + "; ".join(og[:3]))
         # 1) 원본 스캔
         rec.start_timer("scan_before")
         before = trivy.scan_dir(src_dir, rec.dir / "trivy_before.json", tf_vars=(str(src_dir / var_file) if var_file else None))

@@ -6,8 +6,10 @@
   3. 금지 토큰이 **새로 도입**됐는지 (provisioner, local-exec, backend, null_resource ...)
   4. terraform / provider 최상위 블록이 변경됐는지 (블록 단위 텍스트 비교)
   5. diff 통계 (Risk Rubric 입력)
+  6. 실행 전 안전 점검 (exec_guard, 2026-10-31 D-23) — 정책 파일과 무관한 코드 고정 규칙. 아래 '실행 전 안전 점검' 참고
 
 이 검사는 구문 수준 가드다. Terraform 의미 수준 검사는 V5(plan diff) 가 맡는다.
+이 검사는 Trivy·Terraform 을 돌리기 전에 실행된다 (review/flow.py) — 여기서 막히면 도구를 실행하지 않는다.
 """
 from __future__ import annotations
 
@@ -131,12 +133,15 @@ def validate_candidate(candidate: PatchCandidate, baseline_files: Dict[str, str]
         cblocks = {h: _norm(b) for h, b in extract_top_level_blocks(content) if h.split()[0] in forbidden_blocks}
         check(f"protected_blocks:{rel}", bblocks == cblocks,
               "" if bblocks == cblocks else f"terraform/provider blocks changed: {sorted(set(bblocks) ^ set(cblocks)) or 'body changed'}")
+        for note in exec_guard(base, content):
+            check(f"exec_guard:{rel}", False, note)
         diff = list(difflib.unified_diff(base.splitlines(), content.splitlines(), lineterm="", n=0))
         added = sum(1 for l in diff if l.startswith("+") and not l.startswith("+++"))
         removed = sum(1 for l in diff if l.startswith("-") and not l.startswith("---"))
         total_added += added
         total_removed += removed
-        check(f"diff_nonempty:{rel}", (added + removed) > 0, "file content identical to baseline")
+        # 메모는 실패할 때만 적는다 (통과인데 "identical" 이라고 적혀 있으면 기록을 읽는 사람이 헷갈림 — 2026-10-23 기록에서 발견)
+        check(f"diff_nonempty:{rel}", (added + removed) > 0, "" if (added + removed) > 0 else "file content identical to baseline")
 
     checks.append({"check": "diff_stats", "ok": True, "note": f"+{total_added} -{total_removed}",
                    "added_lines": total_added, "removed_lines": total_removed, "files": len(candidate.files)})
@@ -147,7 +152,16 @@ def validate_candidate(candidate: PatchCandidate, baseline_files: Dict[str, str]
     return PolicyResult(not violations, violations, checks, version)
 
 
-_RES_HEADER_RE = re.compile(r'^resource\s+"([^"]+)"\s+"([^"]+)"')
+# ----------------------------------------------------------------------------- 실행 전 안전 점검 (exec_guard)
+# 규칙은 policy/exec_guard.py (허용 목록 방식, D-23 · 2026-10-31 v2). 정책 파일(policy/*.json, 사람이 바꾼다)과 별개인 코드 고정 규칙이다.
+def exec_guard(base: str, content: str) -> List[str]:
+    """원본(base)보다 늘어난 허용 목록 밖 구문 → 위반 문장 목록 (화면용 한국어). 빈 목록이면 통과."""
+    from .exec_guard import check
+    return check(content, base)
+
+
+# 이름에 따옴표가 없어도(resource aws_instance x {) 같은 블록이다 — HCL 은 둘 다 받는다 (2026-10-31 확인)
+_RES_HEADER_RE = re.compile(r'^resource\s+"?([A-Za-z_][A-Za-z0-9_-]*)"?\s+"?([A-Za-z_][A-Za-z0-9_-]*)"?')
 
 
 def _resource_blocks(text: str) -> Dict[str, Tuple[str, str]]:

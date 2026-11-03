@@ -171,7 +171,7 @@ def parse_intent(data: Dict[str, Any], path: str = "") -> IntentSpec:
         r_targets = [str(t) for t in (r.get("targets") or [])]
         for t in r_targets:
             if t not in [str(x) for x in sgs]:
-                raise IntentError(f"{where}: targets 의 {t!r} 가 targets.security_groups 에 없다")
+                raise IntentError(f"{where}: targets 의 {t!r} 가 targets.security_groups 에 없음")
         required.append(RequiredAccess(svc, str(n), str(r.get("label", "")), r_targets))
     return IntentSpec(
         intent_id=intent_id,

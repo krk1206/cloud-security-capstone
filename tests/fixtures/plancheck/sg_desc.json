@@ -1,0 +1,181 @@
+{
+ "format_version": "1.2",
+ "terraform_version": "1.10.6",
+ "resource_changes": [
+  {
+   "address": "aws_security_group.bastion",
+   "mode": "managed",
+   "type": "aws_security_group",
+   "name": "bastion",
+   "provider_name": "registry.opentofu.org/hashicorp/aws",
+   "change": {
+    "actions": [
+     "delete",
+     "create"
+    ],
+    "before": {
+     "arn": "arn:aws:ec2:ap-northeast-2:111122223333:security-group/sg-0aaa1111bbbb2222c",
+     "description": "Bastion host: SSH for administrators",
+     "egress": [
+      {
+       "cidr_blocks": [
+        "0.0.0.0/0"
+       ],
+       "description": "All outbound",
+       "from_port": 0,
+       "ipv6_cidr_blocks": [],
+       "prefix_list_ids": [],
+       "protocol": "-1",
+       "security_groups": [],
+       "self": false,
+       "to_port": 0
+      }
+     ],
+     "id": "sg-0aaa1111bbbb2222c",
+     "ingress": [
+      {
+       "cidr_blocks": [
+        "0.0.0.0/0"
+       ],
+       "description": "SSH for administrators",
+       "from_port": 22,
+       "ipv6_cidr_blocks": [],
+       "prefix_list_ids": [],
+       "protocol": "tcp",
+       "security_groups": [],
+       "self": false,
+       "to_port": 22
+      }
+     ],
+     "name": "tb-bastion-sg",
+     "name_prefix": "",
+     "owner_id": "111122223333",
+     "revoke_rules_on_delete": false,
+     "tags": {},
+     "tags_all": {},
+     "timeouts": null,
+     "vpc_id": "vpc-0123456789abcdef0"
+    },
+    "after": {
+     "description": "Bastion host: SSH from the admin allowlist only",
+     "egress": [
+      {
+       "cidr_blocks": [
+        "0.0.0.0/0"
+       ],
+       "description": "All outbound",
+       "from_port": 0,
+       "ipv6_cidr_blocks": [],
+       "prefix_list_ids": [],
+       "protocol": "-1",
+       "security_groups": [],
+       "self": false,
+       "to_port": 0
+      }
+     ],
+     "ingress": [
+      {
+       "cidr_blocks": [
+        "0.0.0.0/0"
+       ],
+       "description": "SSH for administrators",
+       "from_port": 22,
+       "ipv6_cidr_blocks": [],
+       "prefix_list_ids": [],
+       "protocol": "tcp",
+       "security_groups": [],
+       "self": false,
+       "to_port": 22
+      }
+     ],
+     "name": "tb-bastion-sg",
+     "revoke_rules_on_delete": false,
+     "tags": null,
+     "timeouts": null,
+     "vpc_id": "vpc-0123456789abcdef0"
+    },
+    "after_unknown": {
+     "arn": true,
+     "egress": [
+      {
+       "cidr_blocks": [
+        false
+       ],
+       "ipv6_cidr_blocks": [],
+       "prefix_list_ids": [],
+       "security_groups": []
+      }
+     ],
+     "id": true,
+     "ingress": [
+      {
+       "cidr_blocks": [
+        false
+       ],
+       "ipv6_cidr_blocks": [],
+       "prefix_list_ids": [],
+       "security_groups": []
+      }
+     ],
+     "name_prefix": true,
+     "owner_id": true,
+     "tags_all": true
+    },
+    "before_sensitive": {
+     "egress": [
+      {
+       "cidr_blocks": [
+        false
+       ],
+       "ipv6_cidr_blocks": [],
+       "prefix_list_ids": [],
+       "security_groups": []
+      }
+     ],
+     "ingress": [
+      {
+       "cidr_blocks": [
+        false
+       ],
+       "ipv6_cidr_blocks": [],
+       "prefix_list_ids": [],
+       "security_groups": []
+      }
+     ],
+     "tags": {},
+     "tags_all": {}
+    },
+    "after_sensitive": {
+     "egress": [
+      {
+       "cidr_blocks": [
+        false
+       ],
+       "ipv6_cidr_blocks": [],
+       "prefix_list_ids": [],
+       "security_groups": []
+      }
+     ],
+     "ingress": [
+      {
+       "cidr_blocks": [
+        false
+       ],
+       "ipv6_cidr_blocks": [],
+       "prefix_list_ids": [],
+       "security_groups": []
+      }
+     ],
+     "tags_all": {}
+    },
+    "replace_paths": [
+     [
+      "description"
+     ]
+    ]
+   },
+   "action_reason": "replace_because_cannot_update"
+  }
+ ],
+ "_comment": "OpenTofu 1.10.6 + AWS provider 5.100.0 로 만든 실제 plan (show -json) — 샌드박스, 2026-10-25. 상태 파일에 보안 그룹 1개(원본 Bastion)를 넣고 -refresh=false 로 계산. 계정 번호는 가짜(111122223333). 변경: sg_desc"
+}

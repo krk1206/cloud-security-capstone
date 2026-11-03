@@ -52,7 +52,7 @@ class ReviewFlowTests(unittest.TestCase):
         self.assertEqual(st["verification_status"], "PENDING")
         self.assertEqual(st["candidate_origin"], "mock")
         review = (d / "review.md").read_text(encoding="utf-8")
-        self.assertIn("검증 대기", review)
+        self.assertIn("미검증", review)
         self.assertIn("모델이 분석한 결과가 아니다", review)
         self.assertNotIn("AI 분석", review)
         self.assertIn("mock fixture", review)
@@ -104,7 +104,7 @@ class ReviewFlowTests(unittest.TestCase):
         main.write_text(main.read_text(encoding="utf-8").replace('cidr_blocks = ["0.0.0.0/0"]\n  }\n\n  egress', 'cidr_blocks = ["10.0.0.0/8"]\n  }\n\n  egress', 1), encoding="utf-8")
         res = run_review(self.settings, self._opt("mock:sg_baseline_ok", tf_dir=str(tfcopy)))
         self.assertEqual(res.state, ReviewState.INPUT_ERROR)
-        self.assertIn("일치하지 않는다", res.message)
+        self.assertIn("불일치", res.message)
 
     # 5) 수정 후보 누락·빈 파일·원본과 동일·읽기 불가·형식 오류
     def test_candidate_missing_empty_identical_unreadable(self):
@@ -147,7 +147,7 @@ class ReviewFlowTests(unittest.TestCase):
         self.assertEqual(L["V2"], Verdict.NOT_RUN)
         self.assertEqual(res.level, ReviewLevel.PENDING)
         review = (res.run_dir / "review.md").read_text(encoding="utf-8")
-        self.assertIn("검증 대기: V2, V4, V5, V6", review)
+        self.assertIn("미검증: V2, V4, V5, V6", review)
         self.assertIn("example", review)   # 결과 출처 표시
 
     # 7) 검증 실패 결과가 들어온 경우

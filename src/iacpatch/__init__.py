@@ -14,4 +14,4 @@
 외부 의존성 없음 (Python 표준 라이브러리만 사용).
 """
 
-__version__ = "0.1.0"
+__version__ = "0.7.0"   # = version.PROGRAM_VERSION (7차 화면, 2026-11-02)

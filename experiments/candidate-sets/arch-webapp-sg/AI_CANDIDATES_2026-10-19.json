@@ -1,0 +1,53 @@
+{
+  "made_at": "2026-10-19 15:10~15:20 KST",
+  "how": "Claude Cowork 주 세션이 하위 에이전트(새 컨텍스트, 검증 기준·요구사항 파일·오라클 정보 없음) 6개를 띄워 각각 한 번씩 요청. 요청문 = scripts/cc_prompt.py arch-sg / arch-iam 출력 그대로 + 맨 앞에 '도구(파일 읽기·명령 실행·검색)를 쓰지 말고, 아래 요청 문장에만 답해. 답은 요청대로 코드 블록 하나만 출력해.' 한 줄. 응답 코드 블록을 손대지 않고 저장.",
+  "prompt_sha256": {
+    "sg": "ce4e393f9e57a8eb0d876d9cacd328cbcf494e87aadd3650a51597a1eec1457a",
+    "iam": "d31fdcb69bf86f90444fe955aa5a4c2d5bdfd69155b88f6d06009196c46cdfb2"
+  },
+  "purpose": "예비 시연 (평가 세트 eval-claude-code 아님 — 정식 평가는 팀이 프롬프트를 확정한 뒤 11월 비교 실험)",
+  "candidates": [
+    {
+      "set": "arch-webapp-sg",
+      "id": "ai-claude-r1",
+      "agent": "a12b2cca777f8b9d3",
+      "file": "experiments/candidate-sets/arch-webapp-sg/candidates/ai-claude-r1.tf",
+      "sha256": "ff791dcaea3807b1150e3d701698269c638dada4e922656eaee6cdf19f677cf8"
+    },
+    {
+      "set": "arch-webapp-sg",
+      "id": "ai-claude-r2",
+      "agent": "ac06c781fdcf4825e",
+      "file": "experiments/candidate-sets/arch-webapp-sg/candidates/ai-claude-r2.tf",
+      "sha256": "48b9d9c663655a193d1ee2cd9380c273de90fbf9b07a9083a2d1ad01f375f38d"
+    },
+    {
+      "set": "arch-webapp-sg",
+      "id": "ai-claude-r3",
+      "agent": "a091ec9f2eecd96f6",
+      "file": "experiments/candidate-sets/arch-webapp-sg/candidates/ai-claude-r3.tf",
+      "sha256": "48b9d9c663655a193d1ee2cd9380c273de90fbf9b07a9083a2d1ad01f375f38d"
+    },
+    {
+      "set": "arch-webapp-iam",
+      "id": "ai-claude-r1",
+      "agent": "aabd4fd6bd0ba12ce",
+      "file": "experiments/candidate-sets/arch-webapp-iam/candidates/ai-claude-r1.tf",
+      "sha256": "93b5a3c3cb7b0ac0f199524a8d008c77350022ed1f873f40e0da4f80f07da975"
+    },
+    {
+      "set": "arch-webapp-iam",
+      "id": "ai-claude-r2",
+      "agent": "a3f44c799ba6dd3e2",
+      "file": "experiments/candidate-sets/arch-webapp-iam/candidates/ai-claude-r2.tf",
+      "sha256": "93b5a3c3cb7b0ac0f199524a8d008c77350022ed1f873f40e0da4f80f07da975"
+    },
+    {
+      "set": "arch-webapp-iam",
+      "id": "ai-claude-r3",
+      "agent": "a9b167a7a9c6bcd78",
+      "file": "experiments/candidate-sets/arch-webapp-iam/candidates/ai-claude-r3.tf",
+      "sha256": "6927d4b76f81d98bf23c1672c8417de385d9c2e59b691419777289ac32f37a17"
+    }
+  ]
+}

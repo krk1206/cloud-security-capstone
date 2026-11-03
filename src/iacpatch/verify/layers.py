@@ -98,6 +98,24 @@ def v2_finding_diff(before: TrivyScan, after: TrivyScan, block_severities: Itera
 # ---------------------------------------------------------------------------
 # V3 / V4  (terraform 어댑터 결과를 LayerResult 로)
 # ---------------------------------------------------------------------------
+# validate 가 실패해도 '후보 코드' 가 아니라 도구 쪽이 원인인 경우 (provider 실행 파일을 못 띄움 등).
+# 이때는 FAIL(후보가 틀림)이 아니라 ERROR(판정 못 함)다. 2026-10-23 팀 노트북 실측: IaCPatch 창 두 개가 동시에 검사를 돌려
+# provider 실행 파일이 깨져 'failed to instantiate provider ... is not a valid Win32 application' 이 났는데 V3 실패로 잘못 기록됨.
+TOOL_ERROR_MARKS = ("failed to load plugin schemas", "failed to instantiate provider", "could not load the schema for provider",
+                    "error while loading schemas for plugin components", "failed to obtain provider schema", "plugin did not respond")
+
+
+def _validate_tool_error(v: StepOutput) -> bool:
+    diags = [d for d in ((v.data or {}).get("diagnostics") or []) if isinstance(d, dict) and d.get("severity") == "error"]
+    if not diags:
+        return False
+    for d in diags:
+        text = f"{d.get('summary', '')} {d.get('detail', '')}".lower()
+        if d.get("range") or not any(m in text for m in TOOL_ERROR_MARKS):
+            return False          # 파일 위치가 있는 진단 = 코드 문제
+    return True
+
+
 def v3_validate(steps: Dict[str, StepOutput], tool: str) -> LayerResult:
     init = steps.get("init")
     if init is None or (init.result is None and not init.ok):
@@ -110,6 +128,10 @@ def v3_validate(steps: Dict[str, StepOutput], tool: str) -> LayerResult:
     fmt = steps.get("fmt")
     details = {"diagnostics": (v.data or {}).get("diagnostics", []), "needs_format": bool(fmt and fmt.data.get("needs_format"))}
     if not v.ok:
+        if _validate_tool_error(v):
+            return LayerResult("V3", "terraform validate", Verdict.ERROR,
+                               "tool error — Terraform could not start the provider (not a problem in the candidate code; run again): " + (v.error or "")[:400],
+                               dict(details, tool_error=True), True, tool)
         return LayerResult("V3", "terraform validate", Verdict.FAIL, v.error[:500] or "invalid", details, True, tool)
     summary = "valid (syntax + schema/reference consistency)"
     if details["needs_format"]:

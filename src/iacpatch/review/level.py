@@ -27,8 +27,8 @@ def decide_review_level(validity: ValidityReport, policy: Optional[PolicyResult]
         reasons.append("검증 실패: " + validity.summary)
         return ReviewLevel.BLOCKED, reasons
     if validity.validity == Validity.INCOMPLETE:
-        reasons.append("검증 대기: " + validity.summary)
-        reasons.append("검증 결과가 전부 있기 전에는 검토 수준을 정하지 않는다 (위험도는 참고용으로만 표시)")
+        reasons.append("미검증: " + validity.summary)
+        reasons.append("모든 검증 결과 확보 전에는 검토 수준을 정하지 않음 (위험도는 참고용으로만 표시)")
         return ReviewLevel.PENDING, reasons
     if risk is None:
         reasons.append("위험도 판정 없음 → 리포트만")

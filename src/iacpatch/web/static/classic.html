@@ -1,0 +1,572 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IaCPatch</title>
+<style>
+:root{
+  --bg:#f6f7f5; --panel:#ffffff; --line:#e4e6e1; --line2:#cfd3cb; --ink:#141613; --ink2:#4a4f48; --ink3:#7d837b; --code:#f0f2ee;
+  --accent:#1f5eff; --accent-ink:#fff; --accent-soft:#e8efff;
+  --good:#15803d; --good-soft:#e7f6ec; --bad:#c2271d; --bad-soft:#fdebe9; --warn:#b26a00; --warn-soft:#fff4de; --muted:#6b7280; --muted-soft:#eef0ed;
+  --r:12px; --gutter:20px;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#121412; --panel:#1b1e1b; --line:#2b302b; --line2:#3a403a; --ink:#f1f3ef; --ink2:#c3c8c0; --ink3:#8d948b; --code:#232724;
+  --accent:#6b93ff; --accent-soft:#1d2a4a; --good-soft:#163523; --bad-soft:#3f1c19; --warn-soft:#3d2d0f; --muted-soft:#2a2e2a; --good:#5bd38a; --bad:#ff8a7a; --warn:#f0b35a;
+}}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 "Malgun Gothic","Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif}
+a{color:var(--accent)}
+button{font:inherit;cursor:pointer;border:1px solid var(--line2);background:var(--panel);color:var(--ink);padding:8px 14px;border-radius:9px}
+button:hover{background:var(--code)} button:disabled{opacity:.45;cursor:not-allowed}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:700}
+button.primary:hover{filter:brightness(.93)}
+button.good{border-color:var(--good);color:var(--good);font-weight:700} button.bad{border-color:var(--bad);color:var(--bad)} button.quiet{border-color:transparent;color:var(--ink2)}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line2);border-radius:9px;padding:8px 10px;max-width:100%}
+textarea{width:100%;min-height:160px;font-family:Consolas,"D2Coding","Cascadia Mono",monospace;font-size:13px}
+code,pre,.mono{font-family:Consolas,"D2Coding","Cascadia Mono",monospace;font-size:13px}
+pre{background:var(--code);border:1px solid var(--line);border-radius:9px;padding:10px 12px;overflow:auto;max-height:380px;white-space:pre-wrap;word-break:break-word;margin:6px 0}
+.top{background:var(--panel);border-bottom:1px solid var(--line)}
+.top .wrap{max-width:1180px;margin:0 auto;padding:12px var(--gutter);display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.brand{font-weight:800;font-size:19px;letter-spacing:.01em} .brand small{display:block;font-weight:500;font-size:12.5px;color:var(--ink3);letter-spacing:0}
+.top .sp{flex:1}
+.pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line2);border-radius:999px;padding:3px 11px;font-size:12.5px;color:var(--ink2);white-space:nowrap}
+.pill.ok{border-color:var(--good);color:var(--good)} .pill.bad{border-color:var(--bad);color:var(--bad)} .pill.warn{border-color:var(--warn);color:var(--warn)}
+.steps{max-width:1180px;margin:0 auto;padding:10px var(--gutter) 0;display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+.step{border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:8px 10px;cursor:pointer;display:flex;gap:9px;align-items:center;min-width:0}
+.step .n{width:24px;height:24px;border-radius:50%;background:var(--muted-soft);color:var(--ink2);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12.5px;flex:0 0 24px}
+.step .t{font-size:13.5px;line-height:1.25;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.step.on{border-color:var(--accent);background:var(--accent-soft)} .step.on .n{background:var(--accent);color:#fff} .step.on .t{color:var(--ink);font-weight:700}
+.step.done .n{background:var(--good);color:#fff}
+@media (max-width:900px){.steps{grid-template-columns:repeat(3,1fr)}}
+main{max-width:1180px;margin:0 auto;padding:14px var(--gutter) 70px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;margin:0 0 14px}
+.card h2{font-size:17px;margin:0 0 6px} .card h3{font-size:14px;margin:14px 0 6px;color:var(--ink2)}
+.lead{font-size:15px;color:var(--ink2);margin:0 0 10px}
+.small{color:var(--ink3);font-size:12.5px} .sub{color:var(--ink2);font-size:13.5px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.right{margin-left:auto}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px} .grid2>*{min-width:0} @media (max-width:860px){.grid2{grid-template-columns:1fr}}
+.tw{overflow-x:auto} table{border-collapse:collapse;width:100%;font-size:13.5px} th,td{border-bottom:1px solid var(--line);padding:8px 9px;text-align:left;vertical-align:top}
+th{color:var(--ink3);font-weight:600;font-size:12.5px;letter-spacing:.02em}
+.tag{display:inline-block;border-radius:6px;padding:1px 8px;font-size:12px;font-weight:700;border:1px solid transparent;white-space:nowrap;vertical-align:middle}
+.tag.good{background:var(--good-soft);color:var(--good)} .tag.bad{background:var(--bad-soft);color:var(--bad)} .tag.warn{background:var(--warn-soft);color:var(--warn)} .tag.muted{background:var(--muted-soft);color:var(--ink2)} .tag.limit{background:var(--accent-soft);color:var(--accent)} .tag.keep{background:var(--good-soft);color:var(--good)}
+.tag.outline{background:transparent;border-color:var(--line2);color:var(--ink2);font-weight:600}
+.banner{border-radius:var(--r);padding:16px 18px;margin:0 0 14px;border:1px solid var(--line)}
+.banner.good{background:var(--good-soft);border-color:color-mix(in srgb,var(--good) 40%,transparent)} .banner.bad{background:var(--bad-soft);border-color:color-mix(in srgb,var(--bad) 40%,transparent)} .banner.warn{background:var(--warn-soft);border-color:color-mix(in srgb,var(--warn) 45%,transparent)} .banner.muted{background:var(--muted-soft)}
+.banner .h{font-size:20px;font-weight:800;margin:0 0 4px} .banner .r{font-size:14.5px;color:var(--ink2)} .banner ul{margin:8px 0 0 18px;padding:0;font-size:13.5px}
+.req{display:grid;grid-template-columns:86px 1fr;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)} .req:last-child{border-bottom:0}
+.req .st{font-weight:800;font-size:14px} .req .st.PASS{color:var(--good)} .req .st.FAIL{color:var(--bad)} .req .st.UNKNOWN{color:var(--warn)}
+.req .tx{font-size:14.5px} .req .why{color:var(--ink2);font-size:13.5px;margin-top:3px} .req .ev{color:var(--ink3);font-size:12.5px;margin-top:2px}
+.kv{display:grid;grid-template-columns:max-content 1fr;gap:4px 14px;font-size:13.5px} .kv dt{color:var(--ink3)} .kv dd{margin:0}
+details{margin:6px 0} summary{cursor:pointer;color:var(--accent);font-size:13.5px}
+.log{background:#0f1311;color:#d9dfda;border-radius:9px;padding:10px 12px;height:220px;overflow:auto;font-family:Consolas,monospace;font-size:12.5px;white-space:pre-wrap;word-break:break-all}
+.log .fail{color:#ff8a7a} .log .pass{color:#7fe09b} .log .unk{color:#f0c66a} .log .hdr{color:#8fb3ff;font-weight:700}
+.prog{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin:8px 0} .prog i{display:block;height:100%;background:var(--accent);width:0;transition:width .3s}
+.check{display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-bottom:1px dashed var(--line);font-size:14px} .check input{margin-top:4px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.ctx{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin:0 0 12px;font-size:13.5px}
+.ctx b{font-size:14px}
+.empty{color:var(--ink3);padding:16px;text-align:center;border:1px dashed var(--line2);border-radius:10px}
+.diffrow{display:grid;grid-template-columns:1fr 24px 1fr;gap:6px;align-items:center;font-family:Consolas,monospace;font-size:12.5px;margin:3px 0}
+.diffrow .b{background:var(--bad-soft);padding:3px 7px;border-radius:5px;word-break:break-all} .diffrow .a{background:var(--good-soft);padding:3px 7px;border-radius:5px;word-break:break-all} .diffrow .ar{text-align:center;color:var(--ink3)}
+.nav{display:flex;justify-content:space-between;gap:8px;margin-top:6px}
+svg text{font-family:"Malgun Gothic","Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--ink2);margin-top:4px}
+.legend i{display:inline-block;width:22px;border-top:2px solid var(--ink2);vertical-align:middle;margin-right:5px} .legend i.dash{border-top-style:dashed} .legend i.red{border-color:var(--bad)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin:0 0 14px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;min-width:0}
+.kpi .v{font-size:30px;font-weight:800;line-height:1.1;font-variant-numeric:tabular-nums} .kpi .l{font-size:13.5px;color:var(--ink);margin-top:4px;font-weight:600} .kpi .s{font-size:12px;color:var(--ink3);margin-top:2px}
+.kpi.bad .v{color:var(--bad)} .kpi.good .v{color:var(--good)}
+.checks6{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin:0 0 14px} .checks6 .c{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;min-width:0} .checks6 .c .k{font-size:12.5px;color:var(--ink3);font-weight:600} .checks6 .c .cell{font-size:15px;margin-top:4px} .checks6 .c.FAIL{border-color:var(--bad);background:var(--bad-soft)} .checks6 .c.UNKNOWN{border-color:var(--warn)}
+@media (max-width:900px){.checks6{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.cell{display:inline-flex;align-items:center;gap:3px;font-weight:700;font-size:12.5px;white-space:nowrap} .cell.PASS{color:var(--good)} .cell.FAIL{color:var(--bad)} .cell.UNKNOWN{color:var(--warn)} .cell.NA{color:var(--ink3);font-weight:500}
+table.mx td,table.mx th{text-align:center;padding:7px 6px;vertical-align:middle} table.mx button{padding:3px 10px;border-color:var(--line2);white-space:nowrap} table.mx th{white-space:nowrap} table.mx td:first-child,table.mx th:first-child,table.mx td:nth-child(2),table.mx th:nth-child(2){text-align:left}
+.hidden{display:none !important}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="brand">IaCPatch<small>Terraform 수정 후보 검증 · 승인</small></div>
+    <div class="sp"></div>
+    <span class="pill" id="pill-tools">도구 확인 중…</span>
+    <span class="pill" id="pill-job" style="display:none">작업 중…</span>
+    <button class="quiet" data-go="summary">결과 요약</button>
+    <button class="quiet" data-go="settings">설정</button>
+    <a class="quiet" href="/" style="text-decoration:none;padding:6px 12px;border:1px solid var(--line2);border-radius:8px;color:inherit">← 새 화면</a>
+  </div>
+</header>
+
+<nav class="steps" id="steps">
+  <div class="step" data-step="1"><span class="n">1</span><span class="t">요구사항</span></div>
+  <div class="step" data-step="2"><span class="n">2</span><span class="t">현재 설정</span></div>
+  <div class="step" data-step="3"><span class="n">3</span><span class="t">수정 후보</span></div>
+  <div class="step" data-step="4"><span class="n">4</span><span class="t">배포 전 검증</span></div>
+  <div class="step" data-step="5"><span class="n">5</span><span class="t">사람의 판단</span></div>
+  <div class="step" data-step="6"><span class="n">6</span><span class="t">적용 후 확인</span></div>
+</nav>
+
+<main>
+  <div id="ctx" class="ctx hidden"></div>
+  <section id="view"></section>
+</main>
+
+<script>
+(function(){
+'use strict';
+const $ = (s, el=document) => el.querySelector(s);
+const $$ = (s, el=document) => Array.from(el.querySelectorAll(s));
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function api(path, body){
+  const r = await fetch(path, body ? {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)} : {});
+  const j = await r.json().catch(()=>({error:'응답을 읽을 수 없음'}));
+  if(!r.ok && !j.error) j.error = 'HTTP ' + r.status;
+  return j;
+}
+const S = {app:null, caseId:'webapp-2tier', case:null, current:null, cands:null, recordId:null, record:null, step:1, settings:false, setId:null, records:null};
+const toneOf = v => v==='PASS'?'good':v==='FAIL'?'bad':v==='UNKNOWN'?'warn':'muted';
+const tag = (text, tone) => `<span class="tag ${tone||'muted'}">${esc(text)}</span>`;
+const fmtTime = s => s ? String(s).replace('T',' ').slice(0,16) : '';
+const toolLine = t => t ? Object.entries(t).map(([k,v])=>`${k} ${v && v.version ? v.version : (typeof v==='string'? v : '없음')}`).join(' · ') : '';
+
+// ---------------- 상단
+setInterval(()=>fetch('/api/heartbeat',{method:'POST'}).catch(()=>{}), 15000);
+fetch('/api/heartbeat',{method:'POST'}).catch(()=>{});
+async function loadApp(){
+  S.app = await api('/api/app');
+  const p = $('#pill-tools');
+  if(S.app.error){ p.textContent = '서버 오류'; p.className='pill bad'; return; }
+  const t = S.app.tools || {};
+  const ok = S.app.tools_ok;
+  p.className = 'pill ' + (ok ? 'ok' : 'warn');
+  p.textContent = ok ? `이 PC에서 실행 가능 · ${Object.entries(t).map(([k,v])=>k+' '+String(v.version||'').replace('Version: ','')).join(' · ')}`
+                     : '이 PC에 Trivy·Terraform 없음 — 저장된 실행 기록만 표시';
+}
+$$('[data-go]').forEach(b => b.onclick = () => go(b.dataset.go));
+$$('#steps .step').forEach(el => el.onclick = () => go(Number(el.dataset.step)));
+function go(where){
+  S.settings = where==='settings'; S.summary = where==='summary';
+  if(!S.settings && !S.summary) S.step = where;
+  location.hash = S.settings ? 'settings' : S.summary ? 'summary' : ('step-' + S.step);
+  render();
+}
+function markSteps(){
+  const page = S.settings || S.summary;
+  $$('#steps .step').forEach(el => { const n = Number(el.dataset.step); el.classList.toggle('on', !page && n===S.step); el.classList.toggle('done', !page && n < S.step); });
+}
+function ctxBar(){
+  const c = $('#ctx');
+  if(S.settings || S.summary || !S.case){ c.classList.add('hidden'); return; }
+  const parts = [`<b title="${esc(S.case.tf_dir)}">${esc(S.case.name)}</b>`];
+  if(S.record){ const r = S.record; parts.push(tag(r.set ? r.set.label : '', 'outline'), `<span>후보 <b>${esc(r.candidate_id||'')}</b></span>`, tag(r.candidate.origin.label,'outline'), tag(r.classification.label, r.classification.tone), `<span class="small">실행 ${esc(fmtTime(r.state.finished_at||r.state.started_at))}</span>`); }
+  c.innerHTML = parts.join(' ');
+  c.classList.remove('hidden');
+}
+
+// ---------------- 작업(검토 실행) 폴링
+let pollTimer = null, logSince = 0, logEl = null, jobDone = null;
+function startJob(el, cb){ logEl = el; if(el) el.innerHTML=''; logSince = 0; jobDone = cb; $('#pill-job').style.display=''; clearTimeout(pollTimer); pollTimer = setTimeout(poll, 300); }
+async function poll(){
+  const j = await api('/api/log?since=' + logSince);
+  if(j.error){ pollTimer = setTimeout(poll, 1500); return; }
+  if(logEl && j.log.length){ for(const line of j.log){ const d = document.createElement('div'); d.textContent = line; if(/FAIL|오류|Traceback/.test(line)) d.className='fail'; else if(/UNKNOWN|NOT_RUN/.test(line)) d.className='unk'; else if(/PASS|완료/.test(line)) d.className='pass'; else if(line.startsWith('====')) d.className='hdr'; logEl.appendChild(d);} logEl.scrollTop = logEl.scrollHeight; logSince = j.log_total; }
+  const [i,n] = j.progress; const pr = $('#jobprog'); if(pr) pr.style.width = (n? Math.round(100*i/n):0) + '%';
+  $('#pill-job').textContent = '작업 중… ' + (n ? `${i}/${n}` : '');
+  if(j.running){ pollTimer = setTimeout(poll, 700); return; }
+  $('#pill-job').style.display='none';
+  const cb = jobDone; jobDone = null; if(cb) cb(j);
+}
+
+// ---------------- 자료 로드
+async function ensureCase(){ if(!S.case){ S.case = await api('/api/case?id=' + S.caseId); } return S.case; }
+async function loadCurrent(force){ if(force || !S.current){ S.current = await api('/api/case/current?id=' + S.caseId); } return S.current; }
+async function loadCands(force){ if(force || !S.cands){ S.cands = await api('/api/case/candidates?id=' + S.caseId); } return S.cands; }
+async function loadRecord(id, force){ if(id && (force || S.recordId !== id || !S.record)){ S.recordId = id; S.record = await api('/api/record?id=' + encodeURIComponent(id)); try{localStorage.setItem('iacpatch-record', id);}catch(e){} } return S.record; }
+
+// ---------------- 아키텍처 그림
+function archSvg(arch, opt){
+  opt = opt || {};
+  const inst = (arch && arch.instances) || [];
+  const subs = (arch && arch.subnets) || [];
+  const pub = subs.find(s=>s.public) , prv = subs.find(s=>!s.public);
+  const web = inst.find(i=> pub && i.subnet===pub.address) || inst[0];
+  const app = inst.find(i=> prv && i.subnet===prv.address) || inst[1];
+  const bucket = (arch && arch.buckets||[])[0]; const role = (arch && arch.roles||[])[0];
+  const ink = 'var(--ink)', ink2='var(--ink2)', line='var(--line2)', bad='var(--bad)', good='var(--good)';
+  const sshBad = !!opt.sshOpen;
+  const node = (x,y,w,h,label,sub,fill) => `<g><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="10" fill="${fill||'var(--panel)'}" stroke="${line}"/><text x="${x+w/2}" y="${y+h/2-(sub?4:0)}" text-anchor="middle" dominant-baseline="middle" font-size="13.5" font-weight="700" fill="${ink}">${esc(label)}</text>${sub?`<text x="${x+w/2}" y="${y+h/2+13}" text-anchor="middle" dominant-baseline="middle" font-size="11.5" fill="${ink2}">${esc(sub)}</text>`:''}</g>`;
+  const arrow = (x1,y1,x2,y2,label,kind,dy,t) => { const col = kind==='bad'?bad:kind==='dash'?ink2:good; const dash = kind==='dash'?' stroke-dasharray="6 5"':''; const mk = kind==='bad'?'url(#ab)':kind==='dash'?'url(#ad)':'url(#ag)'; t = (t==null?0.5:t); const mx=x1+(x2-x1)*t, my=y1+(y2-y1)*t + (dy==null?-8:dy); return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${col}" stroke-width="2"${dash} marker-end="${mk}"/><text x="${mx}" y="${my}" text-anchor="middle" font-size="12" fill="${col}" font-weight="600" paint-order="stroke" stroke="var(--panel)" stroke-width="4" stroke-linejoin="round">${esc(label)}</text>`; };
+  return `<svg viewBox="0 0 920 300" width="100%" style="max-width:920px;display:block" role="img" aria-label="시연 환경 구성">
+  <defs><marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="${good}"/></marker><marker id="ab" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="${bad}"/></marker><marker id="ad" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="${ink2}"/></marker></defs>
+  <rect x="250" y="14" width="420" height="272" rx="14" fill="none" stroke="${line}" stroke-dasharray="4 4"/><text x="262" y="34" font-size="12" fill="${ink2}">VPC</text>
+  <rect x="266" y="46" width="180" height="222" rx="12" fill="var(--accent-soft)" stroke="none"/><text x="278" y="66" font-size="12" fill="${ink2}">공개 서브넷</text>
+  <rect x="474" y="46" width="180" height="222" rx="12" fill="var(--muted-soft)" stroke="none"/><text x="486" y="66" font-size="12" fill="${ink2}">비공개 서브넷</text>
+  ${node(296,110,120,64,'웹 서버', web? web.name+' · HTTP 80':'HTTP 80')}
+  ${node(504,110,120,64,'앱 서버', app? app.name+' · 8080':'8080')}
+  ${node(300,208,112,44,'웹 서버 역할', role? '자산 버킷 읽기':'', 'var(--panel)')}
+  ${node(730,110,150,64,'자산 버킷', bucket? bucket.name.replace(/^iacpatch-/,'') : 'S3')}
+  ${node(40,70,150,50,'일반 사용자','인터넷 어디서나')}
+  ${node(40,150,150,50,'운영자','지정 대역 (10.0.0.0/8)')}
+  ${sshBad? node(40,230,150,50,'인터넷 전체','승인 밖 출처') : ''}
+  ${arrow(190,88,296,124,'HTTP (허용)','good', -14)}
+  ${arrow(190,178,296,146,'SSH (지정 대역만)','dash', 18, 0.42)}
+  ${sshBad? arrow(190,255,296,166,'SSH 열림 — 위반','bad', 16, 0.45) : ''}
+  ${arrow(416,142,504,142,'앱 호출 (설계상)','dash', -10)}
+  <path d="M356 252 V286 H805 V174" fill="none" stroke="${ink2}" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#ad)"/><text x="590" y="280" text-anchor="middle" font-size="12" fill="${ink2}" font-weight="600">자산 읽기 (설계상)</text>
+  </svg>
+  <div class="legend"><span><i></i>실측으로 확인된 접근</span><span><i class="dash"></i>설계상 허용 (통신 미측정)</span>${sshBad?'<span><i class="red"></i>요구사항 위반</span>':''}</div>`;
+}
+
+// ---------------- 화면 1 요구사항
+async function viewStep1(){
+  const c = await ensureCase();
+  if(c.error) return `<div class="card"><h2>사례를 불러올 수 없음</h2><p>${esc(c.error)}</p></div>`;
+  const reqRows = (c.requirements||[]).map(r => `<tr><td>${tag(r.kind==='limit'?'제한':'유지', r.kind)}</td><td>${esc(r.text)}</td><td class="small">${esc(r.set_label)}</td></tr>`).join('');
+  const f = c.findings || {};
+  const inScope = (f.in_scope||[]).map(x => `<tr><td>${tag(x.severity, x.severity==='CRITICAL'||x.severity==='HIGH'?'bad':'warn')}</td><td>${esc(x.title||x.rule_id)}</td><td class="mono small">${esc(x.resource)}</td><td class="small">${esc(x.set_label)}</td></tr>`).join('');
+  const outScope = (f.out_of_scope||[]).map(x => `<tr><td>${tag(x.severity, 'muted')}</td><td>${esc(x.title||x.rule_id)}</td><td class="mono small">${esc(x.resource)}</td><td class="small">${esc(x.why)}</td></tr>`).join('');
+  const blocked = !c.requirements_ok;
+  return `
+  <div class="card">
+    <h2>${esc(c.name)}</h2>
+    <p class="lead">${esc(c.summary)}</p>
+    ${archSvg(c.architecture)}
+  </div>
+  ${blocked ? `<div class="banner bad"><div class="h">검토 시작 불가 — 요구사항이 없거나 비어 있음</div><div class="r">${esc(c.requirements_problem)} · 요구사항이 없으면 기본값으로 '안전'하다고 처리하지 않는다. 요구사항을 적은 뒤 다시 시작.</div></div>` : ''}
+  <div class="card">
+    <h2>요구사항 <span class="small">— 사람이 실행 전에 적어 둔 것. 프로그램은 이 밖의 것을 추론하지 않는다</span></h2>
+    <div class="tw"><table><thead><tr><th style="width:70px">종류</th><th>요구사항</th><th style="width:200px">영역</th></tr></thead><tbody>${reqRows}</tbody></table></div>
+    <p class="small" style="margin-top:8px">제한 = 허용된 출처 밖에서 들어오면 위반 · 유지 = 수정 뒤에도 반드시 남아 있어야 함.</p><details><summary class="small">요구사항 원문 파일</summary><p class="small">${(c.sets||[]).map(s=>`<code>${esc(s.intent_path||'')}</code>`).join('<br>')}</p></details>
+  </div>
+  <div class="card">
+    <h2>점검 도구(Trivy)가 찾은 것 ${f.ok?`<span class="small">— ${f.total}건 중 요구사항이 있는 ${(f.in_scope||[]).length}건만 이번 검토 대상</span>`:''}</h2>
+    ${f.ok ? `<div class="tw"><table><thead><tr><th style="width:90px">심각도</th><th>내용</th><th>리소스</th><th>요구사항</th></tr></thead><tbody>${inScope||'<tr><td colspan="4" class="small">없음</td></tr>'}</tbody></table></div>
+    <details><summary>판단하지 않는 ${(f.out_of_scope||[]).length}건 — 요구사항이 정의되지 않은 설정</summary><div class="tw"><table><thead><tr><th style="width:90px">심각도</th><th>내용</th><th>리소스</th><th>이유</th></tr></thead><tbody>${outScope}</tbody></table></div></details>
+    <p class="small">요구사항이 없는 항목은 '안전'으로도 '위험'으로도 판정하지 않는다. 점검 시각 ${esc(fmtTime(f.scan_created_at))}${f.trivy_version?' · Trivy '+esc(f.trivy_version):''}</p>` : `<p class="sub">${esc(f.error||'점검 결과 없음')}</p>`}
+  </div>
+  <div class="nav"><span></span><button class="primary" ${blocked?'disabled':''} data-next="2">다음 — 현재 설정 →</button></div>`;
+}
+
+// ---------------- 화면 2 현재 설정
+async function viewStep2(){
+  await ensureCase();
+  const cur = await loadCurrent();
+  if(cur.error) return `<div class="card"><p>${esc(cur.error)}</p></div>`;
+  if(!cur.ok) return `<div class="banner warn"><div class="h">판단 불가 — 원본 설정을 아직 계산하지 못함</div><div class="r">${esc(cur.reason)}</div></div><div class="nav"><button data-next="1">← 요구사항</button><button class="primary" data-next="3">수정 후보로 →</button></div>`;
+  const anySshViol = (cur.sets||[]).some(s => (s.rows||[]).some(r => r.verdict==='FAIL' && /SSH/.test(r.text) && r.kind==='limit'));
+  const totalV = cur.sets.reduce((a,s)=>a+(s.n_violated||0),0), totalU = cur.sets.reduce((a,s)=>a+(s.n_unknown||0),0);
+  const head = totalV ? `<div class="banner bad"><div class="h">현재 설정은 요구사항 ${totalV}개를 어긴다${totalU?` · 판단 불가 ${totalU}개`:''}</div><div class="r">원본 Terraform 의 실행 계획(plan)에 요구사항을 대입한 결과. ${esc(cur.computed)} · 근거: ${esc(cur.plan_source)}</div></div>`
+                      : `<div class="banner ${totalU?'warn':'good'}"><div class="h">${totalU?`판단 불가 ${totalU}개`:'현재 설정은 모든 요구사항을 충족한다'}</div><div class="r">${esc(cur.computed)} · 근거: ${esc(cur.plan_source)}</div></div>`;
+  const sets = cur.sets.map(s => {
+    if(!s.ok) return `<div class="card"><h2>${esc(s.label)}</h2><p class="sub">${esc(s.reason)}</p></div>`;
+    const rows = s.rows.map(r => `<div class="req"><div class="st ${esc(r.verdict)}">${esc(r.status_ko)}</div><div><div class="tx">${tag(r.kind==='limit'?'제한':'유지', r.kind)} ${esc(r.text)}</div>
+      ${r.verdict!=='PASS' ? `<div class="why">${(r.reasons||[]).map(esc).join('<br>')}</div>` : (r.where&&r.where.length?`<div class="ev">확인 대상: ${r.where.map(esc).join(', ')}</div>`:'')}
+      ${r.verdict==='FAIL' && r.where && r.where.length ? `<div class="ev">영향 받는 대상: ${r.where.map(esc).join(', ')}${r.evidence&&r.evidence.length?' · 근거 규칙: '+r.evidence.map(esc).join(', '):''}</div>`:''}
+      ${r.verdict==='FAIL' && r.effective && r.effective.length ? `<div class="ev">지금 허용된 출처: ${r.effective.map(esc).join(', ')}${r.approved&&r.approved.length?' · 승인된 출처: '+r.approved.map(esc).join(', '):''}</div>`:''}
+    </div></div>`).join('');
+    return `<div class="card"><h2>${esc(s.label)} <span class="small">— 위반 ${s.n_violated} · 판단 불가 ${s.n_unknown} · 충족 ${s.rows.length - s.n_violated - s.n_unknown}</span></h2>${rows}${s.disclaimer?`<p class="small" style="margin-top:8px">판정 범위: ${esc(s.disclaimer)}</p>`:''}</div>`;
+  }).join('');
+  return head + `<div class="card">${archSvg(S.case.architecture, {sshOpen: anySshViol})}</div>` + sets + `<div class="nav"><button data-next="1">← 요구사항</button><button class="primary" data-next="3">다음 — 수정 후보 →</button></div>`;
+}
+
+// ---------------- 화면 3 후보 비교
+async function viewStep3(){
+  await ensureCase();
+  const cd = await loadCands();
+  if(cd.error) return `<div class="card"><p>${esc(cd.error)}</p></div>`;
+  if(!S.setId) S.setId = (cd.sets[0]||{}).set_id;
+  const tabs = cd.sets.map(s => `<button class="${s.set_id===S.setId?'primary':''}" data-set="${esc(s.set_id)}">${esc(s.label)}</button>`).join('');
+  const set = cd.sets.find(s=>s.set_id===S.setId) || cd.sets[0];
+  const canRun = S.app && S.app.tools_ok;
+  const rows = (set.candidates||[]).map(c => {
+    const l = c.latest;
+    const cls = l ? tag(l.classification.label, l.classification.tone) : '<span class="small">검토 전</span>';
+    const lvl = l ? tag(l.level_ko||l.state_ko, l.level==='LIGHT_REVIEW'||l.level==='FULL_REVIEW'?'good':l.level==='BLOCKED'?'bad':'warn') : '';
+    const when = l ? `<span class="small">${esc(fmtTime(l.finished_at||l.started_at))}<br>${esc(l.tools?Object.values(l.tools).join(' · '):'')}</span>` : '';
+    const dec = l && l.decision_ko ? `<div>${tag(l.decision_ko,'outline')}</div>` : '';
+    const btns = `<div class="row">${l?`<button data-open="${esc(l.id)}">결과 보기</button>`:''}<button ${canRun?'':'disabled title="이 PC에 도구가 없어 실행할 수 없음"'} data-run="${esc(c.id)}">${l?'다시 검토':'검토 실행'}</button></div>`;
+    return `<tr><td><b>${esc(c.id)}</b></td><td>${tag(c.origin.label,'outline')}<div class="small">${esc(c.origin.desc)}</div></td><td>${cls}${dec}</td><td>${lvl}</td><td>${when}</td><td>${btns}</td></tr>`;
+  }).join('');
+  return `
+  <div class="card">
+    <div class="row"><h2 style="margin:0">수정 후보</h2><span class="small">같은 지적(${esc(set.rule||'')} · ${esc(set.resource||'')})을 고치는 후보들. 출처가 달라도 같은 검증을 거친다.</span></div>
+    <div class="row" style="margin:10px 0">${tabs}<span class="right"></span>
+      <button ${canRun?'':'disabled title="이 PC에 도구가 없어 실행할 수 없음"'} id="btn-all">이 영역 후보 전부 검토</button>
+      <button id="btn-paste-toggle">후보 붙여넣기</button></div>
+    <div id="paste-box" class="hidden"><p class="sub">대상 파일(<code>${esc((set.resource||'').split('.')[0]==='aws_security_group'?'security_groups.tf':'iam.tf')}</code>)의 <b>전체 내용</b>을 고친 버전을 붙여 넣는다. AI 가 만든 것이면 그대로 붙여 넣으면 되고, 출처는 '붙여넣기' 로 기록된다.</p><textarea id="paste"></textarea><div class="row" style="margin-top:6px"><button class="primary" ${canRun?'':'disabled'} id="btn-paste-run">붙여넣은 후보 검토</button></div></div>
+    <div class="tw"><table><thead><tr><th>후보</th><th>출처</th><th>분류</th><th>검증 결과</th><th>실행</th><th></th></tr></thead><tbody>${rows||'<tr><td colspan="6" class="small">후보 없음</td></tr>'}</tbody></table></div>
+    ${canRun?'':'<p class="small" style="margin-top:8px">이 PC 에는 Trivy·Terraform 이 없어 새로 검토할 수 없다. 표의 결과는 도구가 있는 PC 에서 실행해 저장된 기록이다 (실행 시각·도구 버전은 각 행에).</p>'}
+    <div id="jobbox" class="hidden"><div class="prog"><i id="jobprog"></i></div><div class="small" id="jobstatus"></div><details><summary class="small">실행 로그 (상세 — 실패 원인을 볼 때만 연다)</summary><div class="log" id="joblog"></div></details></div>
+  </div>
+  <div class="card"><h3 style="margin-top:0">분류 기준</h3><div class="sub">정상 = 요구사항 전부 충족 · 과도한 허용 남음 = 승인 밖 출처·권한이 남아 있음 · 필요한 기능 막음 = 유지해야 할 접근·권한이 사라짐 · 판단 불가 = 결과가 없거나 미확정 값 · 차단(허용 범위 밖) = 허용된 파일·리소스 종류를 벗어난 변경. 분류는 검증 결과에서 나오며 후보 출처와 무관하다.</div></div>
+  <div class="nav"><button data-next="2">← 현재 설정</button><button class="primary" data-next="4" ${S.recordId?'':'disabled title="먼저 후보 하나의 결과를 연다"'}>다음 — 배포 전 검증 →</button></div>`;
+}
+function bindStep3(){
+  $$('[data-set]').forEach(b => b.onclick = () => { S.setId = b.dataset.set; render(); });
+  $$('[data-open]').forEach(b => b.onclick = async () => { await loadRecord(b.dataset.open, true); go(4); });
+  $$('[data-run]').forEach(b => b.onclick = () => runReview({set_id: S.setId, candidate_id: b.dataset.run}));
+  const pt = $('#btn-paste-toggle'); if(pt) pt.onclick = () => $('#paste-box').classList.toggle('hidden');
+  const pr = $('#btn-paste-run'); if(pr) pr.onclick = () => { const t = $('#paste').value; if(!t.trim()){ alert('붙여넣을 내용이 비어 있다'); return; } runReview({set_id: S.setId, paste: t}); };
+  const all = $('#btn-all'); if(all) all.onclick = () => runReviewAll();
+}
+async function runReview(body){
+  const cd = S.cands; const set = cd.sets.find(s=>s.set_id===body.set_id);
+  const c = set && set.candidates.find(x=>x.id===body.candidate_id);
+  if(c && c.candidate_ref==='rule_based') body.generator = 'rule_based';
+  body.case_id = S.caseId;
+  const r = await api('/api/review', body);
+  if(!r.started){ $('#jobstatus').textContent = r.error || '이미 다른 작업이 돌고 있다'; $('#jobbox').classList.remove('hidden'); return; }
+  $('#jobbox').classList.remove('hidden'); $('#jobstatus').textContent = '검토 실행 중 — Trivy 재점검 → Terraform 검사·plan → 요구사항 대입 → 위험도 (6~30초, 처음은 더 걸림)';
+  startJob($('#joblog'), async j => { if(j.error){ $('#jobstatus').textContent = '실패: ' + j.error; return; } const res = j.result||{}; $('#jobstatus').textContent = '끝 — 결과를 연다'; await loadCands(true); if(res.record_id){ await loadRecord(res.record_id, true); go(4); } else render(); });
+}
+async function runReviewAll(){
+  const r = await api('/api/review_all', {case_id: S.caseId, set_id: S.setId});
+  if(!r.started){ $('#jobstatus').textContent = r.error || '이미 다른 작업이 돌고 있다'; $('#jobbox').classList.remove('hidden'); return; }
+  $('#jobbox').classList.remove('hidden'); $('#jobstatus').textContent = '후보를 차례로 검토하는 중…';
+  startJob($('#joblog'), async j => { $('#jobstatus').textContent = j.error ? '실패: '+j.error : '끝'; await loadCands(true); render(); });
+}
+
+// ---------------- 화면 4 검증 결과
+function recordPicker(){
+  const recs = [];
+  (S.cands&&S.cands.sets||[]).forEach(s => s.candidates.forEach(c => { if(c.latest) recs.push({id:c.latest.id, label:`${s.label} · ${c.id} · ${fmtTime(c.latest.finished_at||c.latest.started_at)}`}); }));
+  if(!recs.length) return '';
+  return `<div class="row" style="margin-bottom:10px"><span class="small">보는 기록</span><select id="recpick">${recs.map(r=>`<option value="${esc(r.id)}" ${r.id===S.recordId?'selected':''}>${esc(r.label)}</option>`).join('')}</select></div>`;
+}
+function pickDefaultRecord(){
+  if(S.recordId) return;
+  try{ const last = localStorage.getItem('iacpatch-record'); if(last) S.recordId = last; }catch(e){}
+  if(!S.recordId){ const first = (S.cands.sets||[]).flatMap(s=>s.candidates).find(c=>c.latest); if(first) S.recordId = first.latest.id; }
+}
+async function viewStep4(){
+  await ensureCase(); await loadCands(); pickDefaultRecord();
+  if(!S.recordId) return `<div class="empty">아직 검토한 후보가 없다. 3단계에서 후보를 검토하면 여기에 결과가 나온다.</div><div class="nav"><button data-next="3">← 수정 후보</button><span></span></div>`;
+  const r = await loadRecord(S.recordId);
+  if(r.error) return `<div class="card"><p>${esc(r.error)}</p></div>`;
+  const cc = r.conclusion;
+  const reqs = r.requirements.map(q => `<tr><td>${tag(q.kind==='limit'?'제한':'유지', q.kind)} ${esc(q.text)}</td>
+     <td>${q.before? `<b style="color:var(--${toneOf(q.before.verdict)})">${esc(q.before.status_ko)}</b>`:'<span class="small">-</span>'}</td>
+     <td><b style="color:var(--${toneOf(q.after.verdict)})">${esc(q.after.status_ko)}</b>${q.after.reasons&&q.after.reasons.length?`<div class="small">${q.after.reasons.map(esc).join('<br>')}</div>`:''}${q.after.verdict==='FAIL'&&q.after.excess&&q.after.excess.length?`<div class="small">승인 밖: ${q.after.excess.map(esc).join(', ')}</div>`:''}</td></tr>`).join('');
+  const layers = r.layers.map(l => `<tr><td><b>${esc(l.layer)}</b> <span class="small">${esc(l.phase)}</span></td><td>${esc(l.question)}</td><td>${tag(l.verdict_ko, l.verdict==='PASS'||l.verdict==='WARN'?'good':l.verdict==='FAIL'?'bad':(l.layer==='V7'||l.layer==='V8')&&l.verdict==='NOT_RUN'?'muted':'warn')}</td><td class="small">${esc(l.summary)}</td><td class="small">${esc(l.tool)}</td></tr>`).join('');
+  const risk = r.risk;
+  const rf = (risk.factors||[]).map(f => `<tr><td>${esc(f.name)}</td><td class="mono small">${esc(JSON.stringify(f.value))}</td><td>${f.points?'+'+f.points:'0'}</td><td class="small">${esc(f.note||'')}</td></tr>`).join('') || '<tr><td colspan="4" class="small">점수가 붙은 항목 없음</td></tr>';
+  const pol = r.policy;
+  const pc = (pol.checks||[]).filter(c=>c.check!=='diff_stats').map(c => `<tr><td class="mono small">${esc(c.check)}</td><td>${tag(c.ok?'통과':'위반', c.ok?'good':'bad')}</td><td class="small">${esc(c.note||'')}</td></tr>`).join('');
+  const diff = (r.diff_summary||[]).map(d => `<div class="diffrow"><div class="b">${esc(d.before||'(없음)')}</div><div class="ar">→</div><div class="a">${esc(d.after||'(삭제)')}</div></div>`).join('');
+  return `
+  ${recordPicker()}
+  <div class="banner ${cc.tone}"><div class="h">${esc(cc.headline)}</div><div class="r">${esc(cc.reason)}</div>${cc.next&&cc.next.length?`<ul>${cc.next.map(n=>`<li>${esc(n)}</li>`).join('')}</ul>`:''}</div>
+  <div class="checks6">${CHECKS.map(([k,l],i)=>{ const L=(r.layers||[]).find(x=>x.layer===k); const v=L?L.verdict:null; const kk=(v==='PASS'||v==='WARN')?'PASS':v==='FAIL'?'FAIL':(v==='UNKNOWN'||v==='ERROR'||v==='INCOMPLETE')?'UNKNOWN':'NA'; return `<div class="c ${kk}"><div class="k">${i+1} ${esc(l)}</div>${cellOf(v)}</div>`; }).join('')}</div>
+  <div class="card">
+    <h2>요구사항별 결과 <span class="small">— 수정 전(현재 설정) → 수정 후(이 후보)</span></h2>
+    <div class="tw"><table><thead><tr><th>요구사항</th><th style="width:110px">수정 전</th><th style="width:40%">수정 후</th></tr></thead><tbody>${reqs||'<tr><td colspan="3" class="small">요구사항 평가 없음</td></tr>'}</tbody></table></div>
+  </div>
+  <div class="grid2">
+    <div class="card"><h2>무엇이 바뀌나</h2>${diff||'<span class="small">변경 없음</span>'}<p class="small" style="margin-top:8px">출처: ${tag(r.candidate.origin.label,'outline')} ${esc(r.candidate.origin.desc)}${r.candidate.rationale?` · 수정 이유(작성자 기재): ${esc(r.candidate.rationale)}`:''}</p><details><summary>전체 diff</summary><pre>${esc(r.diff||'')}</pre></details></div>
+    <div class="card"><h2>위험도 <span class="small">— 틀렸을 때의 영향 범위. 통과 여부와 별개</span></h2><div class="row"><b style="font-size:18px">${esc(risk.level_ko||'-')}</b><span class="small">점수 ${esc(risk.score??'-')} · 낮음 ≤2 · 중간 ≤5 · 그 위 높음</span></div><div class="tw"><table><thead><tr><th>항목</th><th>값</th><th>점수</th><th></th></tr></thead><tbody>${rf}</tbody></table></div><p class="small">위험도는 plan 과 diff 의 사실로만 계산한다. 낮음 → 경량 검토, 중간 → 정식 검토, 높음 → 리포트만.</p></div>
+  </div>
+  <details class="card" style="padding:12px 18px"><summary><b>검증 8단계 상세</b> — 배포 전 6개 + 배포 후 2개</summary>
+    <div class="tw"><table><thead><tr><th>단계</th><th>확인하는 것</th><th>결과</th><th>요약</th><th>도구</th></tr></thead><tbody>${layers}</tbody></table></div>
+    <p class="small">종합: ${esc(r.validity_summary||'')}</p>
+    ${r.verification_notes&&r.verification_notes.length?`<details><summary>실행 메모</summary><ul class="small">${r.verification_notes.map(n=>`<li>${esc(n)}</li>`).join('')}</ul></details>`:''}
+  </details>
+  <details class="card" style="padding:12px 18px"><summary><b>허용 범위 검사</b> — ${pol.ok?'통과':'위반 '+(pol.violations||[]).length+'건'} (정책 ${esc(pol.version||'')})</summary><div class="tw"><table><thead><tr><th>검사</th><th>결과</th><th></th></tr></thead><tbody>${pc}</tbody></table></div></details>
+  <details class="card" style="padding:12px 18px"><summary><b>실행 정보</b></summary><dl class="kv"><dt>기록</dt><dd class="mono">${esc(r.id)}</dd><dt>실행</dt><dd>${esc(fmtTime(r.state.started_at))} ~ ${esc(fmtTime(r.state.finished_at))}</dd><dt>도구</dt><dd>${esc(r.verification_source||'')}</dd><dt>상태 코드</dt><dd class="mono">${esc(r.state.code)} / ${esc(r.state.level||'-')} / ${esc(r.state.verification_status||'')}</dd><dt>대상</dt><dd class="mono small">${r.finding?esc(r.finding.rule_id+' @ '+r.finding.filename+':'+r.finding.start_line+' '+r.finding.resource):''}</dd></dl></details>
+  <div class="nav"><button data-next="3">← 수정 후보</button><button class="primary" data-next="5">다음 — 사람의 판단 →</button></div>`;
+}
+function bindStep4(){ const p = $('#recpick'); if(p) p.onchange = async () => { await loadRecord(p.value, true); render(); }; }
+
+// ---------------- 화면 5 사람의 판단
+async function viewStep5(){
+  await ensureCase(); await loadCands(); pickDefaultRecord();
+  if(!S.recordId) return `<div class="empty">먼저 3단계에서 후보를 검토한다.</div>`;
+  const r = await loadRecord(S.recordId);
+  const cc = r.conclusion;
+  const can = cc.can_approve;
+  const dec = r.decision;
+  const checks = r.human_checks.map((h,i)=>`<label class="check"><input type="checkbox" data-chk="${i}"> <span>${esc(h)}</span></label>`).join('');
+  const notDeployed = dec && dec.decision!=='APPROVED' ? ' · 배포되지 않음 — 지금 설정이 그대로 남는다' : '';
+  const decided = dec ? `<div class="banner ${dec.decision==='APPROVED'?'good':dec.decision==='DISCARDED'?'muted':'warn'}"><div class="h">${esc(r.decision_ko||dec.decision)}</div><div class="r">${esc(fmtTime(dec.at))}${dec.by?' · '+esc(dec.by):''}${dec.reason?' · 사유: '+esc(dec.reason):''}${notDeployed}</div></div>` : '';
+  const pr = r.pr_draft;
+  const prBox = pr ? `<div class="card"><h2>PR 초안 <span class="small">— 만들어진 것: 브랜치 이름·제목·본문·명령. push·PR 열기·병합은 GitHub 권한이 있는 사람이 한다</span></h2>
+      <dl class="kv"><dt>브랜치</dt><dd class="mono">${esc(pr.branch||'')}</dd><dt>대상 브랜치</dt><dd class="mono">${esc(pr.base||'')}</dd><dt>제목</dt><dd>${esc(pr.title||'')}</dd><dt>바뀌는 파일</dt><dd class="mono">${esc((pr.files||[]).join(', '))}</dd></dl>
+      <details><summary>PR 본문</summary><pre>${esc(pr.body||'')}</pre></details><details><summary>실행 명령 전체</summary><pre>${esc(pr.commands||'')}</pre></details></div>` : '';
+  const hist = (dec&&dec.history||[]).length>1 ? `<details><summary>결정 이력</summary><ul class="small">${dec.history.map(h=>`<li>${esc(fmtTime(h.at))} ${esc(h.decision)} ${esc(h.reason||'')}</li>`).join('')}</ul></details>` : '';
+  return `
+  ${decided}
+  <div class="banner ${cc.tone}" style="padding:12px 18px"><div class="r"><b>${esc(cc.headline)}</b> — ${esc(cc.reason)}</div></div>
+  <div class="grid2">
+    <div class="card"><h2>승인자가 확인할 것</h2>${checks}<p class="small" style="margin-top:8px">체크는 이 화면에서만 쓰는 메모다. 결정은 아래 버튼으로 기록된다.</p></div>
+    <div class="card"><h2>결정</h2>
+      <div class="row"><input id="dec-by" placeholder="결정한 사람 (이름)" style="flex:1 1 160px"><input id="dec-base" value="main" title="PR 대상 브랜치" style="width:110px"></div>
+      <textarea id="dec-reason" style="min-height:70px;margin-top:8px" placeholder="사유 (수정 요청·폐기 때는 꼭 적는다)"></textarea>
+      <div class="row" style="margin-top:10px">
+        <button class="good" id="d-ok" ${can?'':'disabled'} title="${can?'':esc(cc.approve_blocked_reason||'통과한 후보만 승인할 수 있다')}">승인 → PR 초안</button>
+        <button id="d-chg">수정 요청</button><button id="d-regen">후보 재생성</button><button class="bad" id="d-drop">폐기</button>
+      </div>
+      ${!can ? `<p class="small" style="margin-top:8px;color:var(--bad)">승인 불가: ${esc(cc.approve_blocked_reason||'검증을 통과한 후보만 승인할 수 있다. 사람의 승인으로 검증 실패를 덮을 수 없다.')}</p>` : '<p class="small" style="margin-top:8px">승인은 PR 초안을 만드는 것까지다. 병합과 terraform apply 는 사람이 밖에서 한다.</p>'}
+      <details open style="margin-top:10px"><summary>버튼을 누르면 어떻게 되나</summary>
+        <div class="kv" style="margin-top:6px">
+          <dt>${tag('승인','good')}</dt><dd>PR 초안이 만들어진다. 사람이 PR 을 열어 terraform plan 을 확인하고, 맞으면 병합·apply 한다. plan 을 보고 apply 를 하지 않기로 하면 아무것도 바뀌지 않는다 → 여기서 결정을 '수정 요청'으로 다시 기록한다.</dd>
+          <dt>${tag('수정 요청','outline')}</dt><dd>배포되지 않는다. 지금 설정이 그대로 남는다. 고친 후보는 처음(검증 1~6)부터 다시 거친다.</dd>
+          <dt>${tag('후보 재생성','outline')}</dt><dd>배포되지 않는다. 새 후보(규칙 기반 또는 AI)를 받아 같은 검증을 다시 거친다.</dd>
+          <dt>${tag('폐기','bad')}</dt><dd>배포되지 않는다. 기록은 지우지 않고 사유와 함께 남는다.</dd>
+        </div></details>
+      <div id="dec-msg" class="small"></div>${hist}
+    </div>
+  </div>
+  ${prBox}
+  <div class="nav"><button data-next="4">← 배포 전 검증</button><button class="primary" data-next="6">다음 — 적용 후 확인 →</button></div>`;
+}
+function bindStep5(){
+  const send = async (decision) => {
+    const reason = $('#dec-reason').value.trim(), by = $('#dec-by').value.trim();
+    if((decision==='CHANGES_REQUESTED'||decision==='DISCARDED') && !reason){ $('#dec-msg').textContent = '사유를 적어야 한다'; return; }
+    const r = await api('/api/decision', {record_id: S.recordId, decision, reason, by, base_branch: $('#dec-base').value.trim()||'main'});
+    if(r.error){ $('#dec-msg').textContent = '거부됨: ' + r.error; return; }
+    await loadRecord(S.recordId, true); await loadCands(true); render();
+  };
+  const b = (id, d) => { const el = $(id); if(el) el.onclick = () => send(d); };
+  b('#d-ok','APPROVED'); b('#d-chg','CHANGES_REQUESTED'); b('#d-regen','REGENERATE'); b('#d-drop','DISCARDED');
+}
+
+// ---------------- 화면 6 적용 후
+async function viewStep6(){
+  await ensureCase(); await loadCands(); pickDefaultRecord();
+  if(!S.recordId) return `<div class="empty">먼저 3단계에서 후보를 검토한다.</div>`;
+  const r = await loadRecord(S.recordId);
+  const dec = r.decision; const post = r.post_deploy||{};
+  let tone='muted', head='미적용 — 배포 후 측정 기록 없음', why='이 후보는 아직 실제 환경에 적용되지 않았거나, 적용 뒤 측정을 하지 않았다.';
+  if(post.status==='VERIFIED'){ tone='good'; head='적용 후 확인 통과'; why = '실제 AWS 설정을 같은 기준으로 다시 계산했고(V7), 허용·금지 통신도 시험했다(V8).'; }
+  else if(post.status==='DEPLOY_FAILED'){ tone='bad'; head='적용 후 확인 실패'; why = '실제 설정 또는 통신이 요구사항과 다르다. 사람이 이전 설정으로 되돌린다.'; }
+  else if(post.status==='UNVERIFIED'){ tone='warn'; head='미확인 — 측정이 끝나지 않음'; why = '배포 후 측정 중 결과가 없거나 판단 불가인 항목이 있다. 통과가 아니다.'; }
+  else if(!dec || dec.decision!=='APPROVED'){ head='적용 대상 아님'; why = '승인되지 않은 후보는 배포되지 않는다 — 지금 설정이 그대로 남는다. ' + (dec? '현재 결정: '+(r.decision_ko||dec.decision) : '아직 결정 없음.'); }
+  const pl = post.layers ? Object.entries(post.layers).map(([k,v])=>`<tr><td><b>${esc(k)}</b></td><td>${esc(k==='V7'?'실제 AWS 설정이 요구사항대로인가 (배포 전과 같은 계산)':'허용 통신은 되고 금지 통신은 막히나')}</td><td>${tag(v, v==='PASS'?'good':v==='FAIL'?'bad':'warn')}</td></tr>`).join('') : '';
+  return `
+  <div class="banner ${tone}"><div class="h">${esc(head)}</div><div class="r">${esc(why)}</div></div>
+  <div class="grid2">
+    <div class="card"><h2>배포 후 측정</h2>${pl?`<div class="tw"><table><thead><tr><th>단계</th><th>확인하는 것</th><th>결과</th></tr></thead><tbody>${pl}</tbody></table></div><p class="small">측정 ${esc(fmtTime(post.at))}</p>`:'<p class="sub">측정 기록 없음.</p>'}
+      <h3>측정 방법</h3><p class="small">${esc(r.postdeploy_howto.note)}</p><details><summary class="small">측정 명령 보기 (터미널에서 사람이 실행)</summary><pre>${esc(r.postdeploy_howto.commands.join('\n'))}</pre></details>
+    </div>
+    <div class="card"><h2>이 단계의 역할</h2>
+      <p class="sub">문제는 <b>배포 전에</b> 막는다 — 검증 1~6 중 하나라도 실패하면 승인 버튼이 없고, 배포되지 않는다.</p>
+      <p class="sub">적용 후 확인은 '막아야 할 것이 실제로도 막혔는지'를 같은 기준으로 한 번 더 재는 단계다. 실제 AWS 설정(V7)과 통신(V8)을 본다.</p>
+      <p class="small">AWS 읽기 권한이 있는 사람이 측정 명령을 실행하고, 이 화면은 그 결과 기록만 읽음. 이 화면은 AWS 를 변경하지 않음 (시험 환경 반영은 새 화면 5단계에서 사람 확인 후에만 실행).</p>
+    </div>
+  </div>
+  <div class="nav"><button data-next="5">← 사람의 판단</button><button data-go-summary="1">결과 요약 →</button></div>`;
+}
+function bindStep6(){ const b = $('[data-go-summary]'); if(b) b.onclick = () => go('summary'); }
+
+// ---------------- 결과 요약 (모든 후보의 최신 검토 결과를 한 표로)
+const CHECKS = [['V1','지적 사라짐'],['V2','새 문제 없음'],['V3','문법'],['V4','실행 계획'],['V5','허용 범위'],['V6','요구사항']];
+function cellOf(v){
+  const k = (v==='PASS'||v==='WARN') ? 'PASS' : v==='FAIL' ? 'FAIL' : (v==='UNKNOWN'||v==='ERROR'||v==='INCOMPLETE') ? 'UNKNOWN' : 'NA';
+  const t = {PASS: v==='WARN'?'✓ 통과(경고)':'✓ 통과', FAIL:'✕ 실패', UNKNOWN:'? 판단 불가', NA:'– 안 함'}[k];
+  return `<span class="cell ${k}">${t}</span>`;
+}
+function finalOf(r){
+  if(!r) return {t:'검토 전', tone:'muted', k:'none'};
+  if(r.state==='VALIDATION_FAILED') return {t:'차단 — 검증 실패', tone:'bad', k:'blocked'};
+  if(r.state==='POLICY_BLOCKED') return {t:'차단 — 허용 범위 밖', tone:'bad', k:'blocked'};
+  if(r.state==='REVIEW_REQUIRED' && r.level==='PENDING') return {t:'판단 불가', tone:'warn', k:'unknown'};
+  if(r.state==='REVIEW_REQUIRED') return {t:'통과 — '+(r.level_ko||'').replace(/^통과 — /,''), tone:'good', k:'pass'};
+  return {t:r.state_ko||r.state||'', tone:'muted', k:'other'};
+}
+async function viewSummary(){
+  await ensureCase();
+  const c = await loadCands(true);
+  const rows = [];
+  for(const s of (c.sets||[])) for(const it of (s.candidates||[])) rows.push({set:s, it, r:it.latest, f:finalOf(it.latest)});
+  const done = rows.filter(x=>x.r);
+  const v1 = done.filter(x=>(x.r.layers||{}).V1==='PASS');
+  const caught = v1.filter(x=>x.f.k==='blocked');
+  const passed = done.filter(x=>x.f.k==='pass');
+  const unk = done.filter(x=>x.f.k==='unknown');
+  const secs = done.map(x=>(Date.parse(x.r.finished_at)-Date.parse(x.r.started_at))/1000).filter(n=>isFinite(n)&&n>=0);
+  const avg = secs.length ? Math.round(secs.reduce((a,b)=>a+b,0)/secs.length) : null;
+  const byOrigin = {};
+  for(const x of done){ const o = x.it.origin.label; const b = byOrigin[o] || (byOrigin[o] = {n:0, pass:0, blocked:0, unknown:0}); b.n++; if(x.f.k==='pass') b.pass++; else if(x.f.k==='blocked') b.blocked++; else if(x.f.k==='unknown') b.unknown++; }
+  const kpi = (v,l,s,tone) => `<div class="kpi ${tone||''}"><div class="v">${v}</div><div class="l">${esc(l)}</div>${s?`<div class="s">${esc(s)}</div>`:''}</div>`;
+  const tiles = `<div class="kpis">
+    ${kpi(done.length, '검토한 후보', `전체 후보 ${rows.length}개 중`)}
+    ${kpi(v1.length, '점검 도구(Trivy) 재점검 통과', '지적이 사라졌다고 나온 후보')}
+    ${kpi(caught.length, '그중 요구사항 위반으로 차단', 'Trivy 는 통과시켰지만 우리가 막은 것', caught.length?'bad':'')}
+    ${kpi(passed.length, '통과 — 사람 승인 대상', unk.length?`판단 불가 ${unk.length}개는 따로`:'', passed.length?'good':'')}
+    ${kpi(avg==null?'–':avg+'초', '후보 1개 자동 검증 평균', '사람 대기 시간 제외')}
+  </div>`;
+  const head = caught.length ? `<div class="banner bad"><div class="h">Trivy 를 통과한 ${v1.length}개 중 ${caught.length}개가 요구사항을 어겨 차단됐다</div><div class="r">점검 도구는 '지적이 사라졌나'만 본다. 차단된 후보는 사람이 승인할 수 없다.</div></div>`
+             : `<div class="banner muted"><div class="h">검토한 후보 ${done.length}개</div><div class="r">Trivy 재점검 통과 ${v1.length}개.</div></div>`;
+  const oRows = Object.entries(byOrigin).map(([o,b])=>`<tr><td><b>${esc(o)}</b></td><td>${b.n}</td><td>${b.pass}</td><td>${b.blocked}</td><td>${b.unknown}</td></tr>`).join('');
+  const originCard = `<div class="card"><h2>출처별</h2><div class="tw"><table><thead><tr><th>출처</th><th>검토</th><th>통과</th><th>차단</th><th>판단 불가</th></tr></thead><tbody>${oRows||'<tr><td colspan="5" class="small">검토한 후보 없음</td></tr>'}</tbody></table></div>
+    <p class="small" style="margin-top:6px">출처는 결과에 영향을 주지 않는다 — 규칙 기반·시험용·AI 후보 모두 같은 6단계 검증을 거친다.</p></div>`;
+  const sets = (c.sets||[]).map(s => {
+    const trs = (s.candidates||[]).map(it => { const r = it.latest; const f = finalOf(r); const L = (r&&r.layers)||{};
+      return `<tr><td><b>${esc(it.id)}</b></td><td>${tag(it.origin.label,'outline')}</td>${CHECKS.map(([k])=>`<td>${r?cellOf(L[k]):'<span class="cell NA">–</span>'}</td>`).join('')}<td>${tag(f.t, f.tone)}</td><td>${r&&r.decision_ko?tag(r.decision_ko,'outline'):''}</td><td>${r?`<button class="quiet" data-open="${esc(r.id)}">열기</button>`:''}</td></tr>`; }).join('');
+    return `<div class="card"><h2>${esc(s.label)} <span class="small">— 후보 ${(s.candidates||[]).length}개</span></h2><div class="tw"><table class="mx"><thead><tr><th>후보</th><th>출처</th>${CHECKS.map(([k,l],i)=>`<th>${i+1} ${esc(l)}</th>`).join('')}<th>결과</th><th>사람의 결정</th><th>기록</th></tr></thead><tbody>${trs}</tbody></table></div></div>`;
+  }).join('');
+  const legend = `<p class="small">✓ 통과 · ✕ 실패 · ? 판단 불가(결과가 없거나 값이 미확정 — 통과로 치지 않음) · – 실행 안 함(도구 없음). 각 줄은 그 후보의 가장 최근 검토 기록이다. 실행한 PC·도구 버전·시각은 '열기'에서 본다.</p>`;
+  return head + tiles + sets + originCard + legend + `<div class="nav"><button data-next="1">← 검토 화면으로</button><span></span></div>`;
+}
+function bindSummary(){
+  $$('[data-open]').forEach(b => b.onclick = async () => { await loadRecord(b.dataset.open, true); go(4); });
+}
+
+// ---------------- 설정
+async function viewSettings(){
+  const a = S.app || await api('/api/app');
+  const recs = S.records || (S.records = (await api('/api/records')).records || []);
+  const tools = Object.entries(a.tools||{}).map(([k,v])=>`<dt>${esc(k)}</dt><dd>${v.ok?tag('있음','good'):tag('없음','bad')} ${esc(v.version)}</dd>`).join('');
+  const rows = recs.map(r => `<tr><td class="mono small">${esc(fmtTime(r.started_at))}</td><td class="mono small">${esc(r.scenario)}</td><td>${tag(r.classification.label, r.classification.tone)}</td><td>${tag(r.level_ko||r.state_ko,'outline')}</td><td>${r.decision_ko?tag(r.decision_ko,'outline'):''}</td><td><button data-open="${esc(r.id)}">열기</button></td></tr>`).join('');
+  return `
+  <div class="card"><h2>이 PC 의 도구</h2><dl class="kv">${tools}<dt>Python</dt><dd>${esc(a.python)}${a.frozen?' (실행 파일 내장)':''}</dd></dl>
+    <div class="row" style="margin-top:8px"><button class="primary" id="btn-tools">Trivy · Terraform 설치/확인</button><span class="small">tools\\ 폴더에 받는다. 인터넷 필요.</span></div>
+    <div id="jobbox" class="hidden"><div class="prog"><i id="jobprog"></i></div><div class="small" id="jobstatus"></div><div class="log" id="joblog"></div></div>
+    ${a.selfcheck_ok?'':`<p class="small" style="color:var(--bad)">설치 상태 문제: ${(a.selfcheck||[]).map(esc).join(' / ')} — ${esc(a.hint)}</p>`}
+  </div>
+  <div class="card"><h2>검토 기록 전체 <span class="small">${recs.length}건</span></h2><div class="tw"><table><thead><tr><th>시작</th><th>사례/후보</th><th>분류</th><th>결과</th><th>결정</th><th></th></tr></thead><tbody>${rows||'<tr><td colspan="6" class="small">기록 없음</td></tr>'}</tbody></table></div></div>
+  <div class="card"><h2>이 프로그램이 하는 것 / 하지 않는 것</h2>
+    <p class="sub"><b>한다</b> — Trivy 재점검, Terraform 검사·오프라인 plan, 요구사항 대입(허용 집합 계산), 허용 범위 검사, 위험도 산정, 검토 수준 결정, 사람의 결정 기록, PR 초안 작성, 배포 후 측정 기록 읽기.</p>
+    <p class="sub"><b>하지 않는다</b> — ${(a.does_not||[]).map(esc).join(', ')}. 요구사항을 추론하지 않는다. 결과가 없는 검증을 통과로 채우지 않는다.</p>
+    <details><summary>개발용: 실험 재현 · 리포트</summary><div class="row" style="margin-top:6px"><button id="btn-exp">실험 전체 실행</button><button id="btn-rep">리포트만 다시 생성</button><a href="/report/" target="_blank">리포트 열기</a></div></details>
+  </div>
+  <div class="nav"><button data-next="1">← 검토 화면으로</button><span></span></div>`;
+}
+function bindSettings(){
+  $$('[data-open]').forEach(b => b.onclick = async () => { await loadRecord(b.dataset.open, true); go(4); });
+  const t = $('#btn-tools'); if(t) t.onclick = async () => { const r = await api('/api/job/setup_tools', {}); $('#jobbox').classList.remove('hidden'); if(!r.started){ $('#jobstatus').textContent = r.error||'이미 다른 작업이 돌고 있다'; return; } $('#jobstatus').textContent='설치 중…'; startJob($('#joblog'), async ()=>{ $('#jobstatus').textContent='끝'; await loadApp(); }); };
+  const e = $('#btn-exp'); if(e) e.onclick = async () => { const r = await api('/api/job/run_all', {fresh:false, report_only:false}); $('#jobbox').classList.remove('hidden'); if(!r.started){ $('#jobstatus').textContent = r.error||'이미 다른 작업이 돌고 있다'; return; } $('#jobstatus').textContent='실험 실행 중…'; startJob($('#joblog'), j=>{ $('#jobstatus').textContent = j.error?('실패: '+j.error):'끝'; }); };
+  const p = $('#btn-rep'); if(p) p.onclick = async () => { const r = await api('/api/job/run_all', {fresh:false, report_only:true}); $('#jobbox').classList.remove('hidden'); if(!r.started){ $('#jobstatus').textContent = r.error||'이미 다른 작업이 돌고 있다'; return; } startJob($('#joblog'), j=>{ $('#jobstatus').textContent = j.error?('실패: '+j.error):'끝'; }); };
+}
+
+// ---------------- 렌더
+async function render(){
+  markSteps();
+  const v = $('#view');
+  v.innerHTML = '<div class="small" style="padding:10px">불러오는 중…</div>';
+  try{
+    let html;
+    if(S.settings) html = await viewSettings();
+    else if(S.summary) html = await viewSummary();
+    else html = await ({1:viewStep1,2:viewStep2,3:viewStep3,4:viewStep4,5:viewStep5,6:viewStep6}[S.step]||viewStep1)();
+    v.innerHTML = html;
+  }catch(e){ v.innerHTML = `<div class="card"><h2>화면 오류</h2><pre>${esc(e && e.stack || e)}</pre></div>`; }
+  ctxBar();
+  $$('[data-next]').forEach(b => b.onclick = () => go(Number(b.dataset.next)));
+  if(S.settings) bindSettings(); else if(S.summary) bindSummary(); else if(S.step===3) bindStep3(); else if(S.step===4) bindStep4(); else if(S.step===5) bindStep5(); else if(S.step===6) bindStep6();
+  window.scrollTo({top:0});
+}
+(async function boot(){
+  await loadApp();
+  const h = location.hash.replace('#','');
+  if(h==='settings') S.settings = true; else if(h==='summary') S.summary = true; else if(/^step-\d$/.test(h)) S.step = Number(h.slice(5));
+  if(S.app && S.app.job && S.app.job.running){ $('#pill-job').style.display=''; startJob(null, ()=>render()); }
+  render();
+})();
+window.addEventListener('hashchange', () => { const h = location.hash.replace('#',''); S.settings = h==='settings'; S.summary = h==='summary'; if(/^step-\d$/.test(h)) S.step=Number(h.slice(5)); render(); });
+})();
+</script>
+</body>
+</html>

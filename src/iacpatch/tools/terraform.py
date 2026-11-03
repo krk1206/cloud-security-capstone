@@ -15,13 +15,15 @@
 """
 from __future__ import annotations
 
+import datetime as _dt
 import json
 import os
 import re
 import shutil
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Callable, Any, Dict, List, Optional
 
 from ..textio import write_text_lf
 from .runner import CmdResult, ToolNotFound, run, which
@@ -58,6 +60,12 @@ OFFLINE_OVERRIDE = """# iacpatch: offline plan override (auto-generated in the w
 
 COPY_IGNORE = shutil.ignore_patterns(".terraform", "*.tfstate", "*.tfstate.*", "*.tfplan", "plan.bin", "plan.json", ".git")
 LOCK_FILENAME = ".terraform.lock.hcl"
+# 오프라인 작업 폴더(가짜 자격증명 override 파일이 있는 폴더)에서는 AWS 자격증명 환경 변수를 비운다 (2026-10-31).
+# 배포 전 검사가 이 PC 의 AWS 프로필·키를 아예 쓰지 않게 — 제출 코드는 신뢰된 프로그램이 아니다. 함께 고친 것: AWS_PROFILE 에
+# 이 PC 에 없는 프로필 이름이 들어 있으면 오프라인 plan 이 'failed to get shared config profile' 로 실패하던 문제.
+OFFLINE_ENV = {k: "" for k in ("AWS_PROFILE", "AWS_DEFAULT_PROFILE", "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_SESSION_TOKEN",
+                               "AWS_SECURITY_TOKEN", "AWS_ROLE_ARN", "AWS_ROLE_SESSION_NAME", "AWS_WEB_IDENTITY_TOKEN_FILE",
+                               "AWS_CONTAINER_CREDENTIALS_RELATIVE_URI", "AWS_CONTAINER_CREDENTIALS_FULL_URI", "AWS_CONTAINER_AUTHORIZATION_TOKEN")}
 _LOCK_MISMATCH_HINTS = ("lock file", "Inconsistent dependency", "does not match configured version constraint", "locked provider")
 
 
@@ -83,6 +91,8 @@ class StepOutput:
     result: Optional[CmdResult]
     error: str = ""
     data: Dict[str, Any] = field(default_factory=dict)
+    started_at: str = ""      # 실행 증거: 시작 시각(현지)·걸린 시간(초)
+    elapsed: float = 0.0
 
 
 class TerraformAdapter:
@@ -199,13 +209,17 @@ class TerraformAdapter:
 
     # -- 명령 --------------------------------------------------------------
     def _run(self, args: List[str], cwd: str | Path, timeout: int = 600) -> StepOutput:
+        started = _dt.datetime.now().astimezone().isoformat(timespec="seconds")
+        t0 = time.time()
         try:
-            r = run([self.binary] + args, cwd=str(cwd), timeout=timeout)
+            offline = (Path(cwd) / OFFLINE_OVERRIDE_FILENAME).exists()
+            r = run([self.binary] + args, cwd=str(cwd), timeout=timeout, env=OFFLINE_ENV if offline else None)
         except ToolNotFound as e:
-            return StepOutput(False, None, str(e))
+            return StepOutput(False, None, str(e), started_at=started, elapsed=round(time.time() - t0, 2))
+        el = round(time.time() - t0, 2)
         if r.timed_out:
-            return StepOutput(False, r, f"timeout after {timeout}s: {' '.join(args)}")
-        return StepOutput(r.ok, r, "" if r.ok else (r.stderr.strip() or r.stdout.strip())[:4000])
+            return StepOutput(False, r, f"timeout after {timeout}s: {' '.join(args)}", started_at=started, elapsed=el)
+        return StepOutput(r.ok, r, "" if r.ok else (r.stderr.strip() or r.stdout.strip())[:4000], started_at=started, elapsed=el)
 
     def init(self, workdir: str | Path, timeout: int = 900) -> StepOutput:
         """init. 템플릿이 있으면 provider 를 먼저 되살리고(복사 없음), 성공하면 템플릿을 갱신한다.
@@ -289,21 +303,33 @@ class TerraformAdapter:
 
     # -- 한 번에: init → validate → plan → show ------------------------------
     def plan_pipeline(self, workdir: str | Path, offline: bool, var_file: Optional[str] = None,
-                      write_plan_json_to: Optional[str | Path] = None) -> Dict[str, StepOutput]:
+                      write_plan_json_to: Optional[str | Path] = None,
+                      on_step: Optional[Callable[[str, StepOutput, Dict[str, StepOutput]], None]] = None) -> Dict[str, StepOutput]:
+        """on_step(이름, 결과, 지금까지의 단계) — 단계 하나가 끝날 때마다 불린다 (화면이 단계별로 따라오게)."""
         steps: Dict[str, StepOutput] = {}
+
+        def done(name: str) -> bool:
+            if on_step is not None:
+                try:
+                    on_step(name, steps[name], steps)
+                except Exception:  # 기록 실패가 검사를 멈추지 않게
+                    pass
+            return steps[name].ok
         if offline:
             self.add_offline_override(workdir)
         steps["init"] = self.init(workdir)
-        if not steps["init"].ok:
+        if not done("init"):
             return steps
         steps["fmt"] = self.fmt_check(workdir)
+        done("fmt")
         steps["validate"] = self.validate(workdir)
-        if not steps["validate"].ok:
+        if not done("validate"):
             return steps
         steps["plan"] = self.plan(workdir, var_file=var_file)
-        if not steps["plan"].ok:
+        if not done("plan"):
             return steps
         steps["show"] = self.show_json(workdir)
         if steps["show"].ok and write_plan_json_to:
             Path(write_plan_json_to).write_text(json.dumps(steps["show"].data, ensure_ascii=False), encoding="utf-8")
+        done("show")
         return steps

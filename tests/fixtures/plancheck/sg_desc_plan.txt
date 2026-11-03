@@ -1,0 +1,28 @@
+
+OpenTofu used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+-/+ destroy and then create replacement
+
+OpenTofu will perform the following actions:
+
+  # aws_security_group.bastion must be replaced
+-/+ resource "aws_security_group" "bastion" {
+      ~ arn                    = "arn:aws:ec2:ap-northeast-2:111122223333:security-group/sg-0aaa1111bbbb2222c" -> (known after apply)
+      ~ description            = "Bastion host: SSH for administrators" -> "Bastion host: SSH from the admin allowlist only" # forces replacement
+      ~ id                     = "sg-0aaa1111bbbb2222c" -> (known after apply)
+        name                   = "tb-bastion-sg"
+      + name_prefix            = (known after apply)
+      ~ owner_id               = "111122223333" -> (known after apply)
+      - tags                   = {} -> null
+      ~ tags_all               = {} -> (known after apply)
+        # (4 unchanged attributes hidden)
+    }
+
+Plan: 1 to add, 0 to change, 1 to destroy.
+
+─────────────────────────────────────────────────────────────────────────────
+
+Saved the plan to: plan.bin
+
+To perform exactly these actions, run the following command to apply:
+    tofu apply "plan.bin"

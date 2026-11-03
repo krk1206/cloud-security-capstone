@@ -121,17 +121,22 @@ def load_iam_intent(path: str | Path) -> IamIntentSpec:
 
 
 def intent_kind(path: str | Path) -> str:
-    """파일의 kind 필드만 읽는다: 'iam' | 'sg' (기본) | 'unreadable'."""
+    """파일의 kind 필드만 읽는다: 'iam' | 'topology' | 'sg' (기본) | 'unreadable'."""
     try:
         data = json.loads(Path(path).read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return "unreadable"
-    return "iam" if isinstance(data, dict) and str(data.get("kind", "")).lower() == "iam" else "sg"
+    kind = str(data.get("kind", "")).lower() if isinstance(data, dict) else ""
+    return kind if kind in ("iam", "topology") else "sg"
 
 
 def try_load_any_intent(path: str | Path) -> Tuple[Optional[Any], str, Optional[str]]:
-    """(spec, kind, error). kind 는 'sg' | 'iam'. SG intent 는 intent.try_load_intent 로 위임."""
+    """(spec, kind, error). kind 는 'sg' | 'iam' | 'topology'. SG intent 는 intent.try_load_intent 로 위임."""
     kind = intent_kind(path)
+    if kind == "topology":
+        from .topology_intent import try_load_topology_intent
+        tspec, terr = try_load_topology_intent(path)
+        return tspec, "topology", terr
     if kind == "iam":
         try:
             return load_iam_intent(path), "iam", None

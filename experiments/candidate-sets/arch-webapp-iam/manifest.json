@@ -1,6 +1,6 @@
 {
   "set_id": "arch-webapp-iam",
-  "_note": "지도교수 9/29 지시의 '다음 단계' — IAM 축. 원본 = scenarios/arch/webapp-2tier, 대상 finding = aws_iam_policy.web_assets 의 s3:* on * (AVD-AWS-0345, iam.tf). 후보는 iam.tf 전체 대체본. 규칙 기반 1 + seeded 5 (개발 중 작성한 예제, LLM 아님). expected 는 2026-10-02 실행 전 고정 (D-3/D-4). 실측과 다르면 불일치로 기록한다.",
+  "_note": "지도교수 9/29 지시의 '다음 단계' — IAM 축. 원본 = scenarios/arch/webapp-2tier, 대상 finding = aws_iam_policy.web_assets 의 s3:* on * (AVD-AWS-0345, iam.tf). 후보는 iam.tf 전체 대체본. 규칙 기반 1 + seeded 5 (개발 중 작성한 예제, LLM 아님). expected 는 2026-10-02 실행 전 고정 (D-3/D-4). 실측과 다르면 불일치로 기록한다. 2026-10-19: AI 후보 3개(ai-claude-r1~r3) 추가 — Claude 하위 세션, 프롬프트 초안 v1, 예비 시연용(source=claude-code). 기존 후보의 expected 는 바꾸지 않았다.",
   "week4_label_replay": false,
   "_week4_note": "4주차 라벨 표(25건)는 2026-09-22 고정 세트만. 이 세트의 등급 일치는 results.md 로 잰다.",
   "tf_dir": "scenarios/arch/webapp-2tier",
@@ -70,6 +70,36 @@
       "note": "개발 중 작성한 seeded 예제 (2026-10-02)",
       "expected_risk": "HIGH",
       "expected_risk_basis": "hard_high: iam_trust_policy_changed"
+    },
+    {
+      "id": "ai-claude-r1",
+      "candidate": "manual:candidates/ai-claude-r1.tf",
+      "source": "claude-code",
+      "expected": "correct",
+      "expected_reason": "Action 을 s3:GetObject·s3:ListBucket, Resource 를 assets 버킷과 그 객체로만 한정. 신뢰 정책 그대로. V1 PASS·V6 PASS 예상 — 실행 전 Claude(주 세션)가 파일을 읽고 적음, 팀 확인 전",
+      "note": "AI 후보 — Claude(하위 세션 aabd4fd6, 검증 기준 정보 없음), 프롬프트 초안 v1(cc_prompt.py arch-iam) + 도구 금지 한 줄, 2026-10-19 예비 시연용(평가 세트 아님). 응답 코드 그대로 저장",
+      "expected_risk": "MEDIUM",
+      "expected_risk_reason": "IAM 정책 1개만 바뀜 → 기준표상 IAM 은 최소 중간, 규칙 기반과 같은 범위 (실행 전 적음)"
+    },
+    {
+      "id": "ai-claude-r2",
+      "candidate": "manual:candidates/ai-claude-r2.tf",
+      "source": "claude-code",
+      "expected": "correct",
+      "expected_reason": "Action 을 s3:GetObject·s3:ListBucket, Resource 를 assets 버킷과 그 객체로만 한정. 신뢰 정책 그대로. V1 PASS·V6 PASS 예상 — 실행 전 Claude(주 세션)가 파일을 읽고 적음, 팀 확인 전",
+      "note": "AI 후보 — Claude(하위 세션 a3f44c79, 검증 기준 정보 없음), 프롬프트 초안 v1(cc_prompt.py arch-iam) + 도구 금지 한 줄, 2026-10-19 예비 시연용(평가 세트 아님). 응답 코드 그대로 저장",
+      "expected_risk": "MEDIUM",
+      "expected_risk_reason": "IAM 정책 1개만 바뀜 → 기준표상 IAM 은 최소 중간, 규칙 기반과 같은 범위 (실행 전 적음)"
+    },
+    {
+      "id": "ai-claude-r3",
+      "candidate": "manual:candidates/ai-claude-r3.tf",
+      "source": "claude-code",
+      "expected": "correct",
+      "expected_reason": "Action 을 s3:GetObject·s3:ListBucket, Resource 를 assets 버킷과 그 객체로만 한정. 신뢰 정책 그대로. V1 PASS·V6 PASS 예상 — 실행 전 Claude(주 세션)가 파일을 읽고 적음, 팀 확인 전",
+      "note": "AI 후보 — Claude(하위 세션 a9b167a7, 검증 기준 정보 없음), 프롬프트 초안 v1(cc_prompt.py arch-iam) + 도구 금지 한 줄, 2026-10-19 예비 시연용(평가 세트 아님). 응답 코드 그대로 저장",
+      "expected_risk": "MEDIUM",
+      "expected_risk_reason": "IAM 정책 1개만 바뀜 → 기준표상 IAM 은 최소 중간, 규칙 기반과 같은 범위 (실행 전 적음)"
     }
   ]
 }

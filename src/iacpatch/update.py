@@ -22,6 +22,7 @@ import urllib.request
 import zipfile
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional
+from .tools.runner import no_console_window
 
 DEFAULT_UPDATE_URL = "https://github.com/krk1206/cloud-security-capstone/releases/download/dev-latest"
 ZIP_NAME = "IaCPatch-portable.zip"
@@ -48,7 +49,8 @@ def build_info() -> Dict[str, Any]:
     root = Path(__file__).resolve().parents[2]
     if (root / ".git").exists():
         try:
-            sha = subprocess.run(["git", "rev-parse", "HEAD"], cwd=str(root), capture_output=True, text=True, timeout=10).stdout.strip()
+            sha = subprocess.run(["git", "rev-parse", "HEAD"], cwd=str(root), capture_output=True, text=True, timeout=10,
+                                 **no_console_window()).stdout.strip()
             if sha:
                 return {"sha": sha, "built_at": None, "source": "git"}
         except (OSError, subprocess.TimeoutExpired):

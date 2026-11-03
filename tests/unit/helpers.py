@@ -14,6 +14,13 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
+# 시험 환경 반영용 plan 보관 폴더(testbed_ops.store_root) — 테스트는 사용자 임시 폴더(%TEMP%/iacpatch-plans)를 건드리지 않게 따로 쓰고 끝나면 지운다
+import atexit as _atexit
+import tempfile as _tempfile
+_PLAN_STORE = _tempfile.mkdtemp(prefix="iacpatch-plans-test-")
+os.environ["IACPATCH_PLAN_STORE"] = _PLAN_STORE
+_atexit.register(shutil.rmtree, _PLAN_STORE, True)
+
 FIXTURES = ROOT / "tests" / "fixtures"
 PLANS = FIXTURES / "plans"
 TRIVY = FIXTURES / "trivy"

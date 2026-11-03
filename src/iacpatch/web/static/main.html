@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IaCPatch</title>
+<link rel="stylesheet" href="/static/app/app.css">
+<link rel="stylesheet" href="/static/app/main.css">
+</head>
+<body class="m">
+<nav id="mside" aria-label="진행 단계">
+  <div class="mbrand"><svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><rect x="2" y="2" width="28" height="28" rx="7"/><path d="M9 17l5 5 9-11"/></svg><div><b>IaCPatch</b><span>클라우드 인프라 수정 검증</span></div></div>
+  <button type="button" id="mproj" class="mproj" data-go="1"><span>프로젝트</span><b>고르기</b></button>
+  <ol id="msteps"></ol>
+  <div class="mside-foot">
+    <div class="mside-help">
+      <button type="button" data-act="tour">화면 안내</button>
+      <button type="button" data-act="glossary">용어 풀이</button>
+      <button type="button" data-act="big" id="mbig">크게 보기</button>
+      <button type="button" data-act="coverage">검사 범위 표</button>
+    </div>
+    <a href="/work" id="mexpert">원본 증거 (전문가 화면)</a>
+  </div>
+</nav>
+<main id="mmain">
+  <header id="mhead"></header>
+  <section id="mbody" aria-live="polite"></section>
+</main>
+<div id="mboot"><div><b>IaCPatch</b><span id="mbootMsg">불러오는 중…</span></div></div>
+<script type="module" src="/static/app/main.js"></script>
+</body>
+</html>

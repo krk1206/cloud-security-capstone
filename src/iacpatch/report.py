@@ -11,12 +11,19 @@ _ICON = {"PASS": "✅", "WARN": "⚠️", "FAIL": "❌", "UNKNOWN": "❓", "SKIP
 
 def unified_diff(baseline_files: Dict[str, str], candidate_files: Dict[str, str], target_dir: str) -> str:
     out: List[str] = []
+    # 연결한 프로젝트(D-32)는 절대 경로 — 이 PC 의 경로를 PR 에 쓰지 않고 프로젝트 폴더 기준 이름만 쓴다
+    pre = "" if _is_abs(target_dir) else f"{str(target_dir).rstrip('/')}/" if target_dir else ""
     for name, new in candidate_files.items():
         old = baseline_files.get(name, "")
-        diff = difflib.unified_diff(old.splitlines(), new.splitlines(), fromfile=f"a/{target_dir}/{name}", tofile=f"b/{target_dir}/{name}", lineterm="")
+        diff = difflib.unified_diff(old.splitlines(), new.splitlines(), fromfile=f"a/{pre}{name}", tofile=f"b/{pre}{name}", lineterm="")
         out.extend(diff)
         out.append("")
     return "\n".join(out).strip() + "\n"
+
+
+def _is_abs(p: str) -> bool:
+    s = str(p or "")
+    return s.startswith(("/", "\\")) or (len(s) > 2 and s[1] == ":" and s[2] in "/\\")
 
 
 def layer_table(report: ValidityReport) -> str:

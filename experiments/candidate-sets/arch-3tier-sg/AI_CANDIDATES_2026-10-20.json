@@ -1,0 +1,30 @@
+{
+  "made_at": "2026-10-20 01:05~01:08 KST",
+  "how": "Claude Cowork 주 세션이 하위 에이전트(새 컨텍스트, 검증 기준·설계도(intent)·오라클 정보 없음) 3개를 띄워 각각 한 번씩 요청. 요청문 = scripts/cc_prompt.py TEMPLATE 문장에 3계층 사례 값(팀 PC Trivy 0.74.0 원본 점검 2026-10-20 00:57 의 AVD-AWS-0107 · aws_security_group.bastion · security_groups.tf 42번째 줄, 허용 출처 = 설계도의 관리자 허용 목록)을 넣은 것 + 맨 앞에 '도구(파일 읽기·명령 실행·검색)를 쓰지 말고, 아래 요청 문장에만 답해. 답은 요청대로 코드 블록 하나만 출력해.' 한 줄. 응답 코드 블록을 손대지 않고 저장.",
+  "prompt_sha256": "cd255b3547e8acd59fed872469da3cebadd7cb920246a922b0e4fb4cab38a13a",
+  "result_note": "세 응답이 모두 같은 내용(원본에서 42번째 줄 cidr_blocks 만 허용 목록 두 대역으로 바뀜). 시험용 후보 flagged-only-fix.tf 와 바이트 단위로 같음.",
+  "purpose": "예비 시연 (평가 세트 eval-claude-code 아님)",
+  "candidates": [
+    {
+      "set": "arch-3tier-sg",
+      "id": "ai-claude-r1",
+      "agent": "a5772767a6aaebe06",
+      "file": "experiments/candidate-sets/arch-3tier-sg/candidates/ai-claude-r1.tf",
+      "sha256": "a50990342a20f3955da2f9b420cd840137eed96d10b6fe7f23bd069659d8a4af"
+    },
+    {
+      "set": "arch-3tier-sg",
+      "id": "ai-claude-r2",
+      "agent": "aa972bd0dcc6ed8ed",
+      "file": "experiments/candidate-sets/arch-3tier-sg/candidates/ai-claude-r2.tf",
+      "sha256": "a50990342a20f3955da2f9b420cd840137eed96d10b6fe7f23bd069659d8a4af"
+    },
+    {
+      "set": "arch-3tier-sg",
+      "id": "ai-claude-r3",
+      "agent": "a7035e23e0b8919e5",
+      "file": "experiments/candidate-sets/arch-3tier-sg/candidates/ai-claude-r3.tf",
+      "sha256": "a50990342a20f3955da2f9b420cd840137eed96d10b6fe7f23bd069659d8a4af"
+    }
+  ]
+}

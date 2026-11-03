@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional
 
 from ..iam_intent import IamIntentSpec
 from ..intent import IntentSpec
+from ..topology_intent import TopologyIntentSpec
 from ..models import LayerResult, Verdict
 from .iam_oracle import build_iam_world
 from .iam_oracle import evaluate as evaluate_iam
@@ -21,6 +22,17 @@ def v6_intent_oracle(candidate_plan: Optional[Dict[str, Any]], sources: Optional
         return LayerResult("V6", "intent oracle", Verdict.UNKNOWN, f"intent unavailable: {intent_error or 'not provided'} — cannot judge effective state", {}, False)
     if candidate_plan is None:
         return LayerResult("V6", "intent oracle", Verdict.SKIPPED, "candidate plan json missing (V4 did not run)", {}, False)
+    if isinstance(intent, TopologyIntentSpec):
+        from .topology_oracle import evaluate as evaluate_topology
+        try:
+            world = build_world(candidate_plan, sources or {}, external_prefix_lists)
+        except PlanParseError as e:
+            return LayerResult("V6", "intent oracle", Verdict.ERROR, f"plan parse error: {e}", {}, True)
+        trep = evaluate_topology(world, intent)
+        d = trep.to_dict()
+        d["disclaimer"] = ("Proves the designed flows against the effective ALLOW set at security-group level only (ingress). "
+                           "Real reachability (NACL, routing, public IP, host firewall, listening service) is not proven here.")
+        return LayerResult("V6", "intent oracle", trep.verdict, trep.summary[:1500], d, True, "iacpatch.topology_oracle")
     if isinstance(intent, IamIntentSpec):
         try:
             iam_world = build_iam_world(candidate_plan)

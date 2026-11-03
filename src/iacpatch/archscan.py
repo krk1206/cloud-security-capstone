@@ -133,12 +133,25 @@ def run_scan(tf_dir: Path, out_dir: Path, root: Optional[Path] = None, do_plan: 
     rel = _rel(tf_dir, root)
     log(f"대상: {rel}  ({len(inv)} 파일, 리소스 블록 {sum(len(f.resources) for f in inv)}개)")
     for f in inv:
-        log(f"  {f.name:<28} {f.lines:>4} 줄  {', '.join(f.resources) if f.resources else '(리소스 없음)'}")
+        log(f"  {f.name:<28} {f.lines:>4} 행  {', '.join(f.resources) if f.resources else '(리소스 없음)'}")
 
     result: Dict[str, Any] = {
         "schema": "iacpatch-arch-scan-v1", "scan_id": out_dir.name, "tf_dir": rel, "started_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
         "files": [asdict(f) for f in inv], "tools": {}, "plan": {"status": "NOT_RUN"}, "scan": {"status": "NOT_RUN"}, "findings": [],
     }
+
+    # ---- 실행 전 안전 점검 (원본도 신뢰하지 않는다, D-23 v2) — 위반이 있으면 Trivy · Terraform 을 실행하지 않는다
+    from .policy.exec_guard import check_files
+    guard = check_files({p.name: p.read_text(encoding="utf-8") for p in sorted(tf_dir.glob("*.tf")) if not p.name.startswith("zz_iacpatch_")})
+    result["guard"] = {"ok": not guard, "violations": guard}
+    if guard:
+        for v in guard[:10]:
+            log(f"실행 전 안전 점검 위반: {v}")
+        log("원본 코드에 허용 목록 밖 구문 — Trivy · Terraform 실행 안 함 (policy/exec_guard.py)")
+        result["plan"] = {"status": "BLOCKED", "error": "실행 전 안전 점검 위반"}
+        result["scan"] = {"status": "BLOCKED", "error": "실행 전 안전 점검 위반"}
+        (out_dir / "summary.json").write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
+        return result
 
     # ---- terraform: fmt / validate / offline plan (자격증명 없음 — 만들지 않는다)
     tf = TerraformAdapter(env.get("TERRAFORM_BIN"), region, template_dir=_template_dir(root), provider_version=provider_version)
@@ -158,7 +171,7 @@ def run_scan(tf_dir: Path, out_dir: Path, root: Optional[Path] = None, do_plan: 
             bad = [k for k, v in steps.items() if not v.ok]
             log(f"terraform: 실패 단계 {bad} — {st[bad[0]]['error'][:300] if bad else ''}")
     elif do_plan:
-        log("terraform 없음 → plan NOT_RUN (화면의 '도구 설치/확인' 또는 tools/ 에 두기)")
+        log("terraform 없음 → plan 미실행 (설정 화면의 '도구 설치 · 확인' 또는 tools/ 폴더에 배치)")
 
     # ---- trivy
     trivy = TrivyAdapter(env.get("TRIVY_BIN"))
@@ -172,13 +185,13 @@ def run_scan(tf_dir: Path, out_dir: Path, root: Optional[Path] = None, do_plan: 
                               "failures": scan.summary.get("failures", 0), "checks_executed": scan.summary.get("checks_executed", 0),
                               "parse_errors": scan.parse_errors, "by_severity": dict(Counter(r["severity"] for r in rows)),
                               "argv": scan.argv}
-            log(f"trivy {scan.version}: 검사 {result['scan']['checks_executed']}개 중 실패(finding) {result['scan']['failures']}개 "
+            log(f"trivy {scan.version}: 검사 {result['scan']['checks_executed']}개 중 탐지(finding) {result['scan']['failures']}개 "
                 f"{result['scan']['by_severity']}" + (f"  파싱 실패 {len(scan.parse_errors)}건!" if scan.parse_errors else ""))
         else:
             result["scan"] = {"status": "ERROR", "error": scan.error, "argv": scan.argv}
             log(f"trivy 실패: {scan.error[:300]}")
     else:
-        log("trivy 없음 → 스캔 NOT_RUN")
+        log("trivy 없음 → 스캔 미실행")
 
     result["finished_at"] = time.strftime("%Y-%m-%dT%H:%M:%S")
     (out_dir / "summary.json").write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
