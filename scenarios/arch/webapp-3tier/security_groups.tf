@@ -1,7 +1,4 @@
-# 보안 그룹(SG) 층: 계층마다 하나. "어떤 출처(IP 대역 또는 다른 계층의 SG)가 어떤 포트로 들어올 수 있나" 를 정한다.
-# 출처를 IP 대역 대신 다른 SG 로 적으면 "그 SG 가 붙은 서버에서 오는 통신만" 허용된다.
-
-# ALB: 사용자(CloudFront 경유) HTTPS 를 받는 유일한 입구.
+# ALB Security Group
 resource "aws_security_group" "alb" {
   name        = "${var.project}-alb-sg"
   description = "Public entry: HTTPS from users"
@@ -28,7 +25,7 @@ resource "aws_security_group" "alb" {
   }
 }
 
-# Bastion: 관리자가 비공개 서버에 들어가기 전에 거치는 점프 서버.
+# Bastion Security Group
 resource "aws_security_group" "bastion" {
   name        = "${var.project}-bastion-sg"
   description = "Bastion host: SSH for administrators"
@@ -39,7 +36,12 @@ resource "aws_security_group" "bastion" {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+
+    # 수정 1: 관리자 대역만 허용
+    cidr_blocks = [
+      "203.0.113.0/24",
+      "198.51.100.0/24"
+    ]
   }
 
   egress {
@@ -55,7 +57,7 @@ resource "aws_security_group" "bastion" {
   }
 }
 
-# 웹 서버: ALB 가 보내는 HTTP 와 Bastion 에서 오는 SSH 만 받는다.
+# Web Security Group
 resource "aws_security_group" "web" {
   name        = "${var.project}-web-sg"
   description = "Web tier: HTTP from the ALB, SSH from the bastion"
@@ -90,7 +92,7 @@ resource "aws_security_group" "web" {
   }
 }
 
-# NLB: 웹 서버가 API 를 부르는 내부 로드밸런서.
+# NLB Security Group
 resource "aws_security_group" "nlb" {
   name        = "${var.project}-nlb-sg"
   description = "Internal NLB: API calls from the web tier"
@@ -117,7 +119,7 @@ resource "aws_security_group" "nlb" {
   }
 }
 
-# API 서버: NLB 를 거친 API 호출과 Bastion SSH 만 받는다.
+# API Security Group
 resource "aws_security_group" "api" {
   name        = "${var.project}-api-sg"
   description = "API tier: calls through the NLB, SSH from the bastion"
@@ -152,7 +154,7 @@ resource "aws_security_group" "api" {
   }
 }
 
-# Redis: API 서버의 캐시.
+# Redis Security Group
 resource "aws_security_group" "redis" {
   name        = "${var.project}-redis-sg"
   description = "Cache: Redis from the API tier"
@@ -179,7 +181,7 @@ resource "aws_security_group" "redis" {
   }
 }
 
-# MySQL (주·복제): 데이터 저장소.
+# MySQL Security Group
 resource "aws_security_group" "db" {
   name        = "${var.project}-db-sg"
   description = "Database: MySQL"
@@ -193,13 +195,9 @@ resource "aws_security_group" "db" {
     security_groups = [aws_security_group.api.id]
   }
 
-  ingress {
-    description     = "MySQL from the web tier"
-    from_port       = 3306
-    to_port         = 3306
-    protocol        = "tcp"
-    security_groups = [aws_security_group.web.id]
-  }
+  # 수정 2:
+  # WEB -> MySQL 3306 허용 ingress 블록 삭제
+  # API -> MySQL 3306 허용 규칙만 유지
 
   egress {
     description = "All outbound"
