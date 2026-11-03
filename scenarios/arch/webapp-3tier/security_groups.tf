@@ -29,6 +29,7 @@ resource "aws_security_group" "alb" {
 }
 
 # Bastion: 관리자가 비공개 서버에 들어가기 전에 거치는 점프 서버.
+# SSH 는 관리자 접속 허용 목록(203.0.113.0/24, 198.51.100.0/24)에서만 받는다.
 resource "aws_security_group" "bastion" {
   name        = "${var.project}-bastion-sg"
   description = "Bastion host: SSH for administrators"
@@ -39,7 +40,7 @@ resource "aws_security_group" "bastion" {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = ["203.0.113.0/24", "198.51.100.0/24"]
   }
 
   egress {
@@ -180,6 +181,7 @@ resource "aws_security_group" "redis" {
 }
 
 # MySQL (주·복제): 데이터 저장소.
+# 설계도(arch-3tier-flows v1)상 MySQL 로 들어오는 통신은 API 서버 → 3306 뿐이다.
 resource "aws_security_group" "db" {
   name        = "${var.project}-db-sg"
   description = "Database: MySQL"
@@ -191,14 +193,6 @@ resource "aws_security_group" "db" {
     to_port         = 3306
     protocol        = "tcp"
     security_groups = [aws_security_group.api.id]
-  }
-
-  ingress {
-    description     = "MySQL from the web tier"
-    from_port       = 3306
-    to_port         = 3306
-    protocol        = "tcp"
-    security_groups = [aws_security_group.web.id]
   }
 
   egress {
