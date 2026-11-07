@@ -1,0 +1,183 @@
+# 워크플로 ① 패치 잡 — PR 에 Terraform 결함이 있으면 패치 후보를 만들고 V1~V6 로 검증한 뒤
+# 게이트 결정에 따라 패치 PR 을 자동 생성한다. 이 잡은 AWS 에 접속하지 않고 apply 도 하지 않는다 (offline plan).
+#
+# 흐름:  PR 열림 → 바뀐 .tf 폴더 찾기 → intent 있나? → Trivy 결함 있나? → predeploy(생성→P0→V1~V6→위험도→게이트)
+#        → CREATE_PR_* 면 패치 브랜치 push + 패치 PR 생성 → 결과를 원래 PR 에 댓글 1개로 → 기록은 artifact 로.
+name: IaCPatch Patch
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'infrastructure/**'
+      - 'scenarios/**'
+      - 'policy/**'
+  workflow_dispatch:
+    inputs:
+      target_dir:
+        description: 'Terraform 폴더 (예: infrastructure/sg-baseline)'
+        required: true
+        default: 'infrastructure/sg-baseline'
+      intent:
+        description: 'intent 파일 (비우면 policy/intent/<폴더이름>.json)'
+        required: false
+        default: ''
+      scenario:
+        description: '시나리오 ID (기록용)'
+        required: false
+        default: 'manual'
+      generator:
+        description: '패치 생성기'
+        type: choice
+        options: [rule_based, llm]
+        default: rule_based
+
+permissions:
+  contents: write        # 패치 브랜치 push
+  pull-requests: write   # 댓글 · 패치 PR 생성
+  id-token: none         # 이 잡은 AWS 역할을 받지 않는다
+
+concurrency:
+  group: iacpatch-patch-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
+env:
+  TRIVY_VERSION: 0.74.0
+  TERRAFORM_VERSION: 1.16.1
+  AWS_PROVIDER_VERSION: 5.100.0
+  PYTHONPATH: src
+  TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/tools/plugin-cache
+  GH_TOKEN: ${{ github.token }}
+  GITHUB_TOKEN: ${{ github.token }}
+
+jobs:
+  patch:
+    name: Patch + V1~V6 (offline)
+    runs-on: ubuntu-latest
+    # fork 에서 온 PR 은 토큰이 읽기 전용이라 댓글·PR 생성이 안 된다 → 협력자 브랜치 PR 과 수동 실행만
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - name: Checkout (PR 브랜치 그대로)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Setup Terraform (버전 고정)
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: false
+
+      - name: Install Trivy (버전 고정)
+        run: |
+          curl -sSL -o /tmp/trivy.deb "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.deb"
+          sudo dpkg -i /tmp/trivy.deb
+          trivy --version
+
+      - name: Cache Terraform providers
+        uses: actions/cache@v4
+        with:
+          path: tools/plugin-cache
+          key: tfplugins-${{ runner.os }}-aws-${{ env.AWS_PROVIDER_VERSION }}
+
+      - name: Selfcheck (도구 버전 기록)
+        run: |
+          mkdir -p tools/plugin-cache
+          python -m iacpatch selfcheck
+
+      # 어느 Terraform 폴더를 볼지 정한다. PR 이면 "이 PR 에서 바뀐 .tf 가 있는 폴더", 수동이면 입력값.
+      - name: Determine target dirs
+        id: targets
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            printf '%s\n' "${{ inputs.target_dir }}" > targets.txt
+          else
+            BASE="${{ github.event.pull_request.base.sha }}"
+            git diff --name-only "$BASE"...HEAD -- '*.tf' \
+              | xargs -r -n1 dirname | sort -u \
+              | grep -vE '^(tests|experiments)/' \
+              | while read -r d; do [ -d "$d" ] && ls "$d"/*.tf >/dev/null 2>&1 && echo "$d"; done > targets.txt || true
+          fi
+          echo "대상 폴더:"; cat targets.txt || true
+          echo "count=$(grep -c . targets.txt || true)" >> "$GITHUB_OUTPUT"
+
+      - name: Scan → patch → verify (폴더마다)
+        if: steps.targets.outputs.count != '0'
+        id: run
+        env:
+          GENERATOR: ${{ inputs.generator || 'rule_based' }}
+          SCENARIO: ${{ inputs.scenario || format('pr-{0}', github.event.pull_request.number) }}
+          INTENT_OVERRIDE: ${{ inputs.intent }}
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -uo pipefail
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          mkdir -p data/runs scan-results
+          : > comment.md
+          CREATED=0; HELD=0
+          while read -r d; do
+            [ -z "$d" ] && continue
+            name=$(basename "$d")
+            intent="${INTENT_OVERRIDE:-policy/intent/$name.json}"
+            echo "::group::$d"
+            if [ ! -f "$intent" ]; then
+              printf '## iacpatch 패치 단계 — `%s`\n\n- intent 없음 (`%s`) — **범위 밖**. 이 폴더는 검증 기준(설계도)이 없어 패치 단계를 건너뛴다.\n\n' "$d" "$intent" >> comment.md
+              echo "::endgroup::"; continue
+            fi
+            TFVARS=""; [ -f "$d/terraform.tfvars.example" ] && TFVARS="--tf-vars $d/terraform.tfvars.example"
+            trivy config "$d" $TFVARS --format json --output "scan-results/$name.json" --quiet || true
+            N=$(python -c 'import json,sys; d=json.load(open(sys.argv[1])); print(sum(1 for r in d.get("Results",[]) for m in r.get("Misconfigurations",[]) if m.get("Status")=="FAIL"))' "scan-results/$name.json")
+            echo "Trivy FAIL finding: $N 건"
+            if [ "$N" = "0" ]; then
+              printf '## iacpatch 패치 단계 — `%s`\n\n- Trivy 결함 0건 — **패치 단계 생략** (검사 범위: Trivy AWS 룰, intent `%s`).\n\n' "$d" "$intent" >> comment.md
+              echo "::endgroup::"; continue
+            fi
+            before=$(ls -1 data/runs | sort | tail -n1 || true)
+            [ -f "$d/terraform.tfvars.example" ] && export IACPATCH_TF_VAR_FILE=terraform.tfvars.example || unset IACPATCH_TF_VAR_FILE
+            python -m iacpatch predeploy --target-dir "$d" --intent "$intent" --scenario "$SCENARIO-$name" \
+              --generator "$GENERATOR" --offline || true
+            RUN=$(ls -1 data/runs | grep -v README | sort | tail -n1)
+            [ "$RUN" = "$before" ] && { echo "기록이 생기지 않음"; echo "::endgroup::"; continue; }
+            ACTION=$(python -c "import json;print((json.load(open('data/runs/$RUN/run.json')).get('gate') or {}).get('action','-'))")
+            echo "gate action = $ACTION"
+            case "$ACTION" in
+              CREATE_PR_AUTO|CREATE_PR_APPROVAL)
+                BASE_BRANCH="${PR_HEAD_REF:-main}"
+                if python -m iacpatch pr --run "$RUN" --execute --base "$BASE_BRANCH"; then CREATED=$((CREATED+1)); else echo "패치 PR 생성 실패 (기록은 artifact 에)"; fi
+                git checkout -q "${{ github.event.pull_request.head.sha || github.sha }}" || true
+                ;;
+              HOLD_FOR_HUMAN) HELD=$((HELD+1)) ;;
+            esac
+            python scripts/ci_patch_comment.py "data/runs/$RUN" --target-dir "$d" >> comment.md
+            printf '\n' >> comment.md
+            echo "::endgroup::"
+          done < targets.txt
+          echo "created=$CREATED" >> "$GITHUB_OUTPUT"
+          echo "held=$HELD" >> "$GITHUB_OUTPUT"
+          cat comment.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Post comment on the triggering PR
+        if: github.event_name == 'pull_request' && steps.targets.outputs.count != '0'
+        run: |
+          [ -s comment.md ] || echo "iacpatch: 처리할 내용 없음" > comment.md
+          gh pr comment "${{ github.event.pull_request.number }}" --body-file comment.md
+
+      - name: Upload run records
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: iacpatch-run-${{ github.run_id }}
+          path: |
+            data/runs/
+            scan-results/
+            comment.md
+          if-no-files-found: ignore
+          retention-days: 30
