@@ -14,6 +14,20 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
+# 시험 환경 반영용 plan 보관 폴더(testbed_ops.store_root) — 테스트는 사용자 임시 폴더(%TEMP%/iacpatch-plans)를 건드리지 않게 따로 쓰고 끝나면 지운다
+import atexit as _atexit
+import tempfile as _tempfile
+_PLAN_STORE = _tempfile.mkdtemp(prefix="iacpatch-plans-test-")
+os.environ["IACPATCH_PLAN_STORE"] = _PLAN_STORE
+_atexit.register(shutil.rmtree, _PLAN_STORE, True)
+# 고객 요청함 상태(16차, D-52) — 테스트는 저장소 data/inbox 를 건드리지 않게 임시 파일을 쓴다 (없으면 기본값 = 정해 둔 날짜 기준)
+_INBOX_DIR = _tempfile.mkdtemp(prefix="iacpatch-inbox-test-")
+os.environ["IACPATCH_INBOX_FILE"] = str(Path(_INBOX_DIR) / "state.json")
+_atexit.register(shutil.rmtree, _INBOX_DIR, True)
+# 17차 (D-53): 요청함의 '지금' 을 고정한다 — 요청 1 ~ 3 이 와 있고 요청 4(11-07 09:40)는 아직인 때. 전에는 실제 시계를 써서
+# 11-07 09:40 이 지나면 ① 목록을 보는 시험(test_web)이 저절로 틀렸다 (날짜가 지나면 요청이 더 들어오므로)
+os.environ.setdefault("IACPATCH_INBOX_NOW", "2026-11-06T21:00:00+09:00")
+
 FIXTURES = ROOT / "tests" / "fixtures"
 PLANS = FIXTURES / "plans"
 TRIVY = FIXTURES / "trivy"

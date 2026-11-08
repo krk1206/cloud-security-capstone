@@ -1,0 +1,137 @@
+# Terraform Plan — 고친 사본 (2026-11-02, 검토 문서 대응 · D-41)
+#
+# GitHub main 의 .github/workflows/terraform-plan.yml (759b3be) 에서 고친 것:
+#   1. 대상 = Terraform 루트 목록(ROOTS) 기준. '바뀐 파일의 상위 폴더' 는 modules/ 안 변경 때 그 모듈을 쓰는 루트를 놓친다 (iac-scan 과 같은 규칙).
+#   2. AWS 역할 ARN(계정 번호 포함)을 파일에 적지 않는다 → 저장소 변수 `AWS_ROLE_ARN` (Settings → Secrets and variables → Actions → Variables).
+#      `aws sts get-caller-identity` 출력(계정 번호)도 로그에 찍지 않는다 — 역할 이름만.
+#   3. 포크에서 온 PR 은 OIDC 역할을 쓰지 않는다 (외부 코드가 우리 계정 역할로 plan 을 돌리지 못하게). 같은 저장소 브랜치 PR · 수동 실행만.
+#   4. plan 결과 아티팩트: `plan.json` 은 변수 값 · 리소스 속성 · 계정 번호가 들어갈 수 있다. 공개 저장소에서는 올리지 않고
+#      리소스 주소 · 동작(create/update/delete)만 뽑은 `summary.json` 과 사람용 `plan.txt` 만 올린다. 비공개 저장소에서만 plan.json 포함.
+#   5. Terraform 판 · 커밋 · 대상 루트를 `versions.txt` 로 같이 남긴다.
+#
+# `.github/` 는 사람만 고친다 (CLAUDE.md). 이 파일은 사본이다 — 사람이 .github/workflows/terraform-plan.yml 로 올리고, 저장소 변수 AWS_ROLE_ARN 을 만든다.
+# 하지 않는 것: terraform apply (어떤 경우에도) · PR 자동 생성 · 병합.
+
+name: Terraform Plan
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  id-token: write      # OIDC 토큰 발급 (액세스 키 없이 AWS 역할 사용)
+  contents: read
+
+env:
+  AWS_REGION: ap-northeast-2
+  TF_VERSION: 1.16.1
+  TF_IN_AUTOMATION: "true"
+  ROOTS: "infrastructure/sg-baseline infrastructure/three-tier"
+
+jobs:
+  plan:
+    name: terraform plan (V3 fmt/validate · V4 plan)
+    runs-on: ubuntu-latest
+    # 포크 PR 은 돌리지 않는다 (역할 사용 금지). 같은 저장소 브랜치의 PR 과 수동 실행만
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve target roots
+        id: roots
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+            CHANGED=$(git diff --name-only "$BASE"...HEAD -- infrastructure/ || true)
+            TARGETS=""
+            for f in $CHANGED; do
+              hit=""
+              for r in $ROOTS; do
+                case "$f" in "$r"/*) hit="$r";; esac
+              done
+              if [ -n "$hit" ]; then TARGETS="$TARGETS $hit"; continue; fi
+              case "$f" in
+                infrastructure/modules/*)
+                  mod=$(echo "$f" | cut -d/ -f3)
+                  for r in $ROOTS; do
+                    if grep -rqs "modules/${mod}\"" "$r"/*.tf 2>/dev/null; then TARGETS="$TARGETS $r"; fi
+                  done;;
+              esac
+            done
+          else
+            TARGETS="$ROOTS"
+          fi
+          TARGETS=$(echo $TARGETS | tr ' ' '\n' | sort -u | tr '\n' ' ')
+          echo "dirs=$TARGETS" >> "$GITHUB_OUTPUT"
+          mkdir -p plan-results
+          { echo "terraform: ${TF_VERSION}"; echo "commit: ${GITHUB_SHA}"; echo "run: ${GITHUB_RUN_ID}"; echo "targets: ${TARGETS:-없음}"; } | tee plan-results/versions.txt
+
+      - name: Configure AWS credentials (OIDC, 역할 ARN 은 저장소 변수)
+        if: steps.roots.outputs.dirs != ''
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Role check (계정 번호는 찍지 않음)
+        if: steps.roots.outputs.dirs != ''
+        run: |
+          ARN=$(aws sts get-caller-identity --query Arn --output text)
+          echo "역할: $(echo "$ARN" | sed -E 's/[0-9]{12}/************/')"
+
+      - name: Setup Terraform
+        if: steps.roots.outputs.dirs != ''
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      # V3 (fmt/validate) + V4 (plan). 하나라도 실패하면 체크 실패. apply 는 없다
+      - name: fmt / validate / plan
+        if: steps.roots.outputs.dirs != ''
+        run: |
+          OUT="$GITHUB_WORKSPACE/plan-results"
+          RC=0
+          for d in ${{ steps.roots.outputs.dirs }}; do
+            [ -d "$d" ] || continue
+            name=$(basename "$d")
+            echo "=============== $d"
+            (
+              cd "$d"
+              terraform init -input=false -no-color
+              terraform fmt -check -diff || { echo "V3 fmt 실패: $d"; exit 1; }
+              terraform validate -no-color || { echo "V3 validate 실패: $d"; exit 1; }
+              VARS=""
+              [ -f terraform.tfvars.example ] && VARS="-var-file=terraform.tfvars.example"
+              terraform plan -input=false -no-color -out=tfplan $VARS || { echo "V4 plan 실패: $d"; exit 1; }
+              terraform show -json tfplan > "$OUT/${name}.plan.json"
+              terraform show -no-color tfplan > "$OUT/${name}.plan.txt"
+              # 리소스 주소 · 동작만 (값 없음) — 공개 저장소에 올리는 요약
+              jq '{format_version, terraform_version, resource_changes: [.resource_changes[]? | {address, type, actions: .change.actions}]}' \
+                "$OUT/${name}.plan.json" > "$OUT/${name}.summary.json"
+              echo "plan 요약: ${name}.summary.json ($(jq '.resource_changes | length' "$OUT/${name}.summary.json") 리소스)"
+            ) || RC=1
+          done
+          exit $RC
+
+      # 공개 저장소: plan.json(변수 값 · 속성 포함) 은 올리지 않는다
+      - name: Drop full plan.json on public repos
+        if: always() && steps.roots.outputs.dirs != '' && github.event.repository.private != true
+        run: |
+          rm -f plan-results/*.plan.json
+          # plan.txt 의 12자리 숫자(계정 번호 꼴)도 가린다 — sensitive 표시가 없는 ARN 에 들어 있을 수 있다
+          for f in plan-results/*.plan.txt; do [ -f "$f" ] && sed -E -i 's/[0-9]{12}/************/g' "$f"; done
+          echo "공개 저장소 — plan.json 은 아티팩트에서 뺌 (summary.json · plan.txt[계정 번호 가림] 만)" | tee -a plan-results/versions.txt
+
+      - name: Upload plan results
+        if: always() && steps.roots.outputs.dirs != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plan-${{ github.run_number }}
+          path: plan-results/
+          retention-days: 7

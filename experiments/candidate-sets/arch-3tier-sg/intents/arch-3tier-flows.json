@@ -1,0 +1,33 @@
+{
+  "kind": "topology",
+  "intent_version": "1",
+  "intent_id": "arch-3tier-flows",
+  "status": "active",
+  "description": "scenarios/arch/webapp-3tier 의 설계도(예시 토폴로지) 화살표를 그대로 적은 의도. 설계도에 있는 통신 9개는 열려 있어야 하고, 그 밖의 들어오는 통신은 전부 막혀 있어야 한다. 관리자 접속 허용 목록 203.0.113.0/24·198.51.100.0/24 는 시연용 예시 대역(문서용 TEST-NET)이며 실제 배포 때 팀이 사무실·VPN 대역으로 바꾼다. 2026-10-20 실행 전 고정.",
+  "target_dir": "scenarios/arch/webapp-3tier",
+  "vpc_cidr": "10.0.0.0/16",
+  "tiers": [
+    {"id": "alb", "label": "ALB", "security_group": "aws_security_group.alb"},
+    {"id": "web", "label": "웹 서버", "security_group": "aws_security_group.web"},
+    {"id": "nlb", "label": "NLB", "security_group": "aws_security_group.nlb"},
+    {"id": "api", "label": "API 서버", "security_group": "aws_security_group.api"},
+    {"id": "bastion", "label": "Bastion", "security_group": "aws_security_group.bastion"},
+    {"id": "redis", "label": "Redis", "security_group": "aws_security_group.redis"},
+    {"id": "db", "label": "MySQL", "security_group": "aws_security_group.db"}
+  ],
+  "external": [
+    {"id": "internet", "label": "사용자(인터넷)", "cidrs_v4": ["0.0.0.0/0"]},
+    {"id": "admin", "label": "관리자 접속 허용 목록", "cidrs_v4": ["203.0.113.0/24", "198.51.100.0/24"]}
+  ],
+  "flows": [
+    {"id": "user-alb", "from": "internet", "to": "alb", "protocol": "tcp", "port": 443, "label": "사용자 접속"},
+    {"id": "alb-web", "from": "alb", "to": "web", "protocol": "tcp", "port": 80, "label": "웹 요청 전달"},
+    {"id": "web-nlb", "from": "web", "to": "nlb", "protocol": "tcp", "port": 8080, "label": "API 호출"},
+    {"id": "nlb-api", "from": "nlb", "to": "api", "protocol": "tcp", "port": 8080, "label": "API 호출 전달"},
+    {"id": "api-redis", "from": "api", "to": "redis", "protocol": "tcp", "port": 6379, "label": "캐시 조회"},
+    {"id": "api-db", "from": "api", "to": "db", "protocol": "tcp", "port": 3306, "label": "DB 읽기·쓰기"},
+    {"id": "admin-bastion", "from": "admin", "to": "bastion", "protocol": "tcp", "port": 22, "label": "관리자 접속"},
+    {"id": "bastion-web", "from": "bastion", "to": "web", "protocol": "tcp", "port": 22, "label": "서버 관리"},
+    {"id": "bastion-api", "from": "bastion", "to": "api", "protocol": "tcp", "port": 22, "label": "서버 관리"}
+  ]
+}

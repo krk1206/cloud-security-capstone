@@ -25,7 +25,7 @@ from typing import Any, Dict, List, Optional
 from ..config import Settings, load_json
 from ..evidence import read_tf_files
 from ..models import Finding, PatchCandidate, PolicyResult, ReviewLevel, ReviewState, RiskDecision, Validity, ValidityReport, Verdict
-from ..policy.risk import score_risk
+from ..policy.risk import score_risk, target_resource_type
 from ..policy.validator import validate_candidate
 from ..report import unified_diff
 from ..textio import write_text_lf
@@ -59,9 +59,13 @@ class ReviewOptions:
     candidate_plan: Optional[str] = None
     intent: Optional[str] = None
     out_dir: Optional[str] = None       # 기본 data/reviews
+    fresh_baseline: bool = False        # True 면 원본 검사도 캐시 없이 지금 다시 (시연용)
     mock_dir: Optional[str] = None
     local_tools: bool = False           # trivy/terraform 이 있으면 V1~V4 를 로컬에서 실행 (없으면 NOT_RUN). --verification 이 있으면 그쪽 우선
+    design_meta: Optional[Dict[str, Any]] = None   # 설계도 확정 상태 (web/designs.confirmation — 초안 · 확정 · 팀 작성 평가 기준). 기록 state.design.confirmation (D-38)
     fingerprint: Optional[str] = None   # 입력·정책·코드·도구의 sha256 (scripts/run_candidate_set.py 가 계산). 같은 지문의 기록은 재사용된다
+    display_name: str = ""              # 화면·보고서에 쓰는 후보 이름 ('후보 07', '직접 제출 · 10/31 14:02'). 비우면 scenario (2026-10-31, 피드백 7)
+    submission: Optional[Dict[str, Any]] = None   # 화면에서 제출한 파일 전체 목록과 처리 결과 (직접 제출일 때만). 기록에 그대로 남긴다
 
 
 @dataclass
@@ -129,12 +133,50 @@ class _Run:
         write_text_lf(self.dir / rel, text)
 
 
+def record_design(path: Path, run_dir: Path, repo_root: Path) -> Optional[Dict[str, Any]]:
+    """설계 기준 파일 → {"intent_id","intent_version","kind","path","sha256","copy"} 그리고 run_dir/input/design.json 사본. 없으면 None."""
+    if not path.is_file():
+        return None
+    raw = path.read_bytes()
+    try:
+        meta = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, ValueError):
+        meta = {}
+    (run_dir / "input").mkdir(parents=True, exist_ok=True)
+    (run_dir / "input" / "design.json").write_bytes(raw)
+    try:
+        rel = path.resolve().relative_to(repo_root.resolve()).as_posix()
+    except ValueError:
+        rel = str(path)
+    return {"intent_id": str(meta.get("intent_id") or ""), "intent_version": str(meta.get("intent_version") or ""),
+            "kind": str(meta.get("kind") or "security_group"), "path": rel, "sha256": hashlib.sha256(raw).hexdigest(),
+            "copy": "input/design.json"}
+
+
 def run_review(settings: Settings, opt: ReviewOptions) -> ReviewResult:
     root = Path(opt.out_dir) if opt.out_dir else settings.path("data/reviews")
     run = _Run(root, opt.scenario)
     run.set(tf_dir=opt.tf_dir)          # `iacpatch pr --review` 가 후보 파일을 되돌려 놓을 위치 (저장소 상대 경로)
+    try:                                # 이 판정을 만든 프로그램 · 정책 · 규칙의 판 (D-37) — 기록만 보고도 어느 코드가 판정했는지 알 수 있게
+        from ..version import provenance
+        run.set(provenance=provenance(Path(settings.repo_root)))
+    except Exception as e:  # 기록 못 해도 검사는 진행 (실패를 숨기지 않게 메모)
+        run.set(provenance={"error": str(e)})
     if opt.fingerprint:
         run.set(fingerprint=opt.fingerprint)
+    if opt.display_name:
+        run.set(candidate_label=opt.display_name)
+    if opt.intent:
+        # 이 검사가 쓴 설계 기준(설계도) — 버전 · sha256 · 파일 사본을 기록에 같이 둔다. 설계도가 나중에 바뀌어도
+        # 이 기록은 당시 기준으로 해석된다 (교수 피드백 1, 2026-10-31). 사본은 바이트 그대로 저장해 sha256 이 같다
+        des = record_design(settings.path(opt.intent), run.dir, settings.path("."))
+        if des:
+            if opt.design_meta:
+                des["confirmation"] = dict(opt.design_meta)     # 검사 당시 확정 상태 — 초안이면 '고객 요구 충족' 을 말하지 않는다 (D-38)
+            run.set(design=des)
+    if opt.submission:
+        run.write_json("input/submission.json", opt.submission)
+        run.set(candidate_summary=str(opt.submission.get("summary") or ""))
     policy = load_json(settings.path(settings.policy_file))
     rubric = load_json(settings.path(settings.rubric_file))
     tf_dir = settings.path(opt.tf_dir)
@@ -154,6 +196,16 @@ def run_review(settings: Settings, opt: ReviewOptions) -> ReviewResult:
     original = read_tf_files(tf_dir, policy.get("editable_file_globs"))
     if not original:
         msg = f"원본 디렉터리에 *.tf 가 없다: {tf_dir}"
+        run.error(msg)
+        run.transition(ReviewState.INPUT_ERROR, msg)
+        return ReviewResult(run.run_id, run.dir, ReviewState.INPUT_ERROR, message=msg)
+    # 원본도 신뢰하지 않는다 (D-23 v2): 원본 plan(V4 기준)도 Terraform 으로 돌리므로, 원본에 허용 목록 밖 구문이 있으면 도구를 실행하지 않는다
+    from ..policy.exec_guard import check_files
+    og = check_files(original)
+    run.write_json("input/original_guard.json", {"ok": not og, "violations": og,
+                                                 "rule": "policy/exec_guard.py (허용 목록: 순수 함수 · aws provider · 모듈 없음)"})
+    if og:
+        msg = "원본 코드에 실행 전 안전 점검 위반 — Trivy · Terraform 을 실행하지 않음: " + "; ".join(og[:3]) + (f" 외 {len(og) - 3}건" if len(og) > 3 else "")
         run.error(msg)
         run.transition(ReviewState.INPUT_ERROR, msg)
         return ReviewResult(run.run_id, run.dir, ReviewState.INPUT_ERROR, message=msg)
@@ -185,7 +237,7 @@ def run_review(settings: Settings, opt: ReviewOptions) -> ReviewResult:
     src_check: SourceCheck = check_source_consistency(report, target, tf_dir, original)
     run.write_json("input/source_check.json", src_check.__dict__)
     if not src_check.ok:
-        msg = "스캔 결과와 원본 코드가 일치하지 않는다 (지목된 줄 내용이 다름). 스캔을 다시 하거나 같은 시점의 원본을 써야 한다"
+        msg = "스캔 결과와 원본 코드 불일치 (지목된 행 내용이 다름) — 재스캔 또는 같은 시점의 원본 사용 필요"
         run.error(msg)
         run.transition(ReviewState.INPUT_ERROR, msg)
         return ReviewResult(run.run_id, run.dir, ReviewState.INPUT_ERROR, message=msg)
@@ -209,6 +261,7 @@ def run_review(settings: Settings, opt: ReviewOptions) -> ReviewResult:
     cand = load_candidate(spec, target, original, Path(opt.mock_dir) if opt.mock_dir else None, intent_raw, policy)
     shape, reasons = validate_candidate_shape(cand, original)
     run.write_json("candidate.json", cand.to_dict())
+    run.set(candidate_origin=cand.origin, candidate_generator=cand.generator)   # 후보를 못 만든 기록에도 출처를 남긴다 (⑤ 규칙 기반 생성 불가 문구, D-45)
     if shape != "OK":
         st = ReviewState.CANDIDATE_INVALID if shape == "CANDIDATE_INVALID" else ReviewState.INFO_INSUFFICIENT
         run.error("; ".join(reasons))
@@ -228,13 +281,14 @@ def run_review(settings: Settings, opt: ReviewOptions) -> ReviewResult:
         validity = ValidityReport("pre_deploy", [], Validity.INCOMPLETE, "정책 위반으로 검증 연결을 진행하지 않음")
         # 차단돼도 텍스트 근거 위험도는 계산해 둔다 (왜 위험한 변경인지 리포트에 남기기 위함). 검증은 진행하지 않는다
         change = diff_hcl(original, cand.files)
-        risk_blocked = score_risk_text(rubric, change, target_type=target.resource.split(".")[0])
+        risk_blocked = score_risk_text(rubric, change, target_type=target_resource_type(target.resource))
         run.write_json("risk.json", {"decision": risk_blocked.to_dict(), "hcl_change": change.__dict__, "plan_based": None})
         level, lreasons = decide_review_level(validity, pol, risk_blocked, cand.needs_info)
         ctx = _ctx(opt, run, target, others, cand, pol, validity, risk_blocked, level, lreasons, src_check, [], change.__dict__, None, [])
         run.write_text("review.md", render_review(ctx))
         run.write_text("pr_body.md", render_pr_body(ctx, diff_text))
         run.set(review_level=level.value, finished_at=_now())
+        _write_manifest_safely(run.dir)
         return ReviewResult(run.run_id, run.dir, ReviewState.POLICY_BLOCKED, level, "; ".join(pol.violations[:3]), validity, cand, risk_blocked)
 
     # ------------------------------------------------------------------ 3. 검증 결과 연결
@@ -248,7 +302,8 @@ def run_review(settings: Settings, opt: ReviewOptions) -> ReviewResult:
     if opt.local_tools and not verification_path:
         # 도구가 있으면 V1~V4 를 지금 실행 (predeploy 와 같은 코드). 없으면 NOT_RUN 으로 기록된다
         from .local_verify import run_local_verification
-        lv = run_local_verification(settings, tf_dir, cand.files, target, policy, run.dir / "local_verify", report)
+        lv = run_local_verification(settings, tf_dir, cand.files, target, policy, run.dir / "local_verify", report,
+                                    fresh_baseline=opt.fresh_baseline)
         verification_path = str(lv.verification_path)
         if not baseline_plan and lv.baseline_plan:
             baseline_plan = str(lv.baseline_plan)
@@ -274,7 +329,7 @@ def run_review(settings: Settings, opt: ReviewOptions) -> ReviewResult:
 
     # ------------------------------------------------------------------ 4. 위험도 (텍스트 근거 + plan 근거)
     change = diff_hcl(original, cand.files)
-    risk_text = score_risk_text(rubric, change, target_type=target.resource.split(".")[0])
+    risk_text = score_risk_text(rubric, change, target_type=target_resource_type(target.resource))
     plan_risk: Optional[RiskDecision] = None
     v5 = validity.layer("V5")
     if v5 is not None and v5.verdict not in (Verdict.NOT_RUN, Verdict.SKIPPED) and candidate_plan:
@@ -282,7 +337,7 @@ def run_review(settings: Settings, opt: ReviewOptions) -> ReviewResult:
             world = build_world(load_plan(candidate_plan), cand_sources)
             diff_stats = next((c for c in pol.checks if c.get("check") == "diff_stats"), {})
             v6 = validity.layer("V6")
-            plan_risk = score_risk(rubric, v5.details, world, diff_stats, v6.details if v6 else None, target_type=target.resource.split(".")[0])
+            plan_risk = score_risk(rubric, v5.details, world, diff_stats, v6.details if v6 else None, target_type=target_resource_type(target.resource))
         except Exception as e:  # plan 이 깨졌으면 텍스트 근거만
             linked.notes.append(f"plan 기반 위험도 계산 실패: {e}")
     risk = merge_with_plan_based(risk_text, plan_risk)
@@ -299,10 +354,20 @@ def run_review(settings: Settings, opt: ReviewOptions) -> ReviewResult:
     run.write_text("review.md", render_review(ctx))
     run.write_text("pr_body.md", render_pr_body(ctx, diff_text))
     run.set(finished_at=_now())
-    msg = "검토 자료 생성 완료" if final_state == ReviewState.REVIEW_REQUIRED else "연결된 검증 결과에 실패가 있어 후보를 반영하면 안 됨"
+    _write_manifest_safely(run.dir)
+    msg = "검토 자료 생성 완료" if final_state == ReviewState.REVIEW_REQUIRED else "검증 결과에 실패 포함 — 후보 반영 불가"
     if vstatus == "PENDING":
-        msg += " — 검증 대기 계층이 있음 (패치 검증 완료 아님)"
+        msg += " — 미검증 단계 존재 (패치 검증 완료 아님)"
     return ReviewResult(run.run_id, run.dir, final_state, level, msg, validity, cand, risk)
+
+
+def _write_manifest_safely(d: Path) -> None:
+    """남는 것: 기록 폴더 파일 전부의 해시 목록 (evidence/manifest.json). 실패해도 검토 결과에는 영향 없음."""
+    try:
+        from ..evidence_log import write_manifest
+        write_manifest(d)
+    except OSError:
+        pass
 
 
 def _ctx(opt, run, target, others, cand, pol, validity, risk, level, lreasons, src_check, vnotes, hcl_change, tool_versions, checks, unknowns=None):
@@ -312,7 +377,8 @@ def _ctx(opt, run, target, others, cand, pol, validity, risk, level, lreasons, s
         if not orig.exists() or orig.read_text(encoding="utf-8") != content:
             changed.append(n)
     return {
-        "scenario": opt.scenario, "run_id": run.run_id, "state": run.state["state"], "finding": target, "other_findings": others,
+        "scenario": opt.scenario, "display": opt.display_name or opt.scenario, "run_id": run.run_id, "state": run.state["state"],
+        "finding": target, "other_findings": others,
         "candidate": cand, "policy": pol, "validity": validity, "risk": risk, "level": level, "level_reasons": lreasons,
         "diff_path": "candidate.diff", "files_changed": changed,
         "source_check": src_check.__dict__, "verification_notes": vnotes, "hcl_change": hcl_change,
@@ -334,8 +400,8 @@ def _unknowns(validity: ValidityReport, linked: LinkedVerification, risk: Option
             if f.get("factor") == "undetermined":
                 out.append(f"위험도 미확정 항목: {f.get('value')}")
     if not src_check.ok or src_check.cause_lines_checked == 0:
-        out.append("스캔-원본 동일 시점 여부를 완전히 확인하지 못했다 (A 가 source_commit 을 넘기면 확정 가능)")
-    out.append("V7(실제 AWS 상태)·V8(통신 확인)은 배포 후에만 가능하며 이번 로컬 흐름에 없다")
+        out.append("스캔-원본 동일 시점 여부 완전 확인 불가 (스캔 시점 source_commit 이 있으면 확정 가능)")
+    out.append("V7(AWS 적용 규칙 조회)·V8(통신 시험)은 실제 AWS 검사(시험 환경)에서만 가능 — 이번 로컬 흐름에 미포함")
     return out
 
 
@@ -343,11 +409,11 @@ def _human_checks(target: Finding, cand: PatchCandidate, validity: ValidityRepor
     items = [
         f"diff 가 대상 finding({target.rule_id} @ {target.resource})만 다루는지 확인",
         "승인 출처(허용 CIDR 등)가 팀이 정한 값과 일치하는지 확인 (코드가 추측한 값이 아님)",
-        "검증 표에 '검증 대기'·'판정 불가'·'실패' 가 없는지 확인 — 있으면 A 의 결과를 받아 다시 review 실행",
+        "검증 표에 '미검증'·'판정 불가'·'실패' 가 없는지 확인 — 있으면 검증 결과를 보완해 review 재실행",
     ]
     if cand.needs_info:
         items.append("후보의 누락 정보 채우기: " + "; ".join(cand.needs_info))
     if risk is not None and any(f.get("factor") == "undetermined" for f in risk.factors):
         items.append("위험도 미확정 항목(같은 ENI 의 다른 SG, 실제 삭제/교체 여부)은 plan JSON 을 넘겨 다시 실행하거나 사람이 확인")
-    items.append("이 후보를 반영할지 결정 — 반영하더라도 terraform apply 는 사람이 실행하고, 배포 후 V7/V8 을 기록")
+    items.append("이 후보의 반영 여부 결정 — 반영 시에도 terraform apply 는 사람이 실행하고, 실제 AWS 검사 V7/V8 결과를 기록")
     return items

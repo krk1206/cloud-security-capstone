@@ -1,0 +1,6 @@
+#!/bin/bash
+# 가짜 aws — 화면 E2E 전용 (실제 AWS 에 닿지 않는다). 있는지 확인만 통과시키고, 모든 호출은 자격 증명 없음으로 실패한다.
+echo "{\"at\": $(date +%s), \"argv\": \"$*\"}" >> /tmp/claude-0/-home-claude/8555f975-09e8-5e0e-8dca-92479ac45f1c/scratchpad/e2e/fakeaws_calls.jsonl
+if [ "$1" = "--version" ]; then echo "aws-cli/2.0.0 fake-e2e"; exit 0; fi
+echo "Unable to locate credentials (fake aws for E2E)" >&2
+exit 255

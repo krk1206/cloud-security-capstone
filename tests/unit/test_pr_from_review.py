@@ -65,7 +65,11 @@ class PrFromReviewTests(unittest.TestCase):
         rd = res.run_dir.resolve()   # prepare_pr 는 기록 경로를 resolve() 해서 쓴다 — Windows 의 임시 폴더는 짧은 이름(RUNNER~1)과 긴 이름이 다르다 (CI 실측 2026-09-28)
         self.assertIn(f"{rd / 'candidate' / 'main.tf'} {ROOT / TF_DIR / 'main.tf'}", script)
         self.assertIn("git push -u origin iacpatch/pr-t-", script)
-        self.assertIn(f"--body-file {rd / 'pr_body.md'}", script)
+        # 예제 폴더(저장소 상대 경로) 대상 = 시연용 PR: 본문 사본 맨 위에 '병합하지 않습니다' 가 붙는다 (2026-11-03). 원본 pr_body.md 는 그대로
+        self.assertIn(f"--body-file {rd / 'pr_body_final.md'}", script)
+        final = (res.run_dir / "pr_body_final.md").read_text(encoding="utf-8")
+        self.assertTrue(final.startswith("> **시연용 PR (예제 폴더) — 병합하지 않습니다.**"), final[:120])
+        self.assertIn((res.run_dir / "pr_body.md").read_text(encoding="utf-8").strip()[:200], final)
         msg = (res.run_dir / "commit_message.txt").read_text(encoding="utf-8")
         self.assertIn("[iacpatch] pr-t: AVD-AWS-0107 on aws_security_group.", msg)   # 리소스 이름은 시나리오의 것
         self.assertNotIn("[approval required]", msg)                 # LIGHT_REVIEW 는 승인 표시 없음

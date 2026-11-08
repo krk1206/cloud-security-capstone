@@ -14,7 +14,10 @@
 ## 1. 지원 범위 (Tier 1, 구현됨)
 
 - 정책 문서 출처: `aws_iam_policy` / `aws_iam_role_policy` / `aws_iam_user_policy` / `aws_iam_group_policy` 의 `policy`(plan 에 확정된 JSON), `aws_iam_role.inline_policy`.
-  `data.aws_iam_policy_document` 는 plan 에서 문자열로 해소되므로 그대로 읽힌다.
+  `data.aws_iam_policy_document` 는 plan 에서 문자열로 해소되므로 그대로 읽힌다 — 단 문서가 apply 뒤에 정해지는 값(예: `bucket_prefix` 버킷의 ARN)을 참조하면 plan 에 정책 값이 없다(미확정).
+  **그때만 (2026-11-06, D-51)** 대상 정책의 `policy` 가 코드에 정확히 `data.aws_iam_policy_document.<이름>.json` 이고 그 data 블록이 하나뿐이면, 코드의 statement 블록을 읽어
+  리소스를 실제 이름 대신 참조(`${aws_s3_bucket.assets.arn}/*`)로 비교한다 (`verify/iam_hcl.py` — 요구사항 파일의 같은 참조도 같은 이름으로 바꿈). plan 의 configuration(문장 수 · 글자 값 · 참조)과
+  맞지 않거나, 변수 · locals · 함수 · dynamic · heredoc · count/for_each · 모듈 · 인덱스 · 템플릿 지시자가 있으면 원래대로 UNKNOWN. 코드에서 읽었으면 판정 근거에 '코드에서 읽음' 으로 남는다.
 - **역할 단위 합산 (지원):** intent 의 `targets.roles` 에 적힌 역할에 붙는 정책을 모두 모아 본다 — `aws_iam_role_policy_attachment`(plan 안 정책 참조가 정확히 하나일 때),
   `aws_iam_role_policy`, `inline_policy`. 그래서 "대상 정책은 고치고 다른 정책으로 권한을 옮기는" 패치가 잡힌다 (seeded inline-role-policy, second-policy).
 - Statement 문법 부분집합: `Effect: Allow` 만, `Action`/`Resource` 는 문자열 또는 문자열 리스트, 와일드카드는 `*` 만.

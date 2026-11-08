@@ -276,6 +276,107 @@ def hcl_sg_list_elements(block_body: str) -> Optional[Dict[str, List[str]]]:
     return {"refs": refs, "literals": lits, "opaque": opaque}
 
 
+def hcl_static_blocks(body: str, block: str) -> Optional[List[str]]:
+    """리소스 본문에서 최상위(깊이 0)의 정적 `block { ... }` 들의 본문 목록. dynamic 블록이 있으면 None (순서·개수를 확정할 수 없음)."""
+    if re.search(r'dynamic\s+"%s"' % re.escape(block), body):
+        return None
+    out: List[str] = []
+    depth = 0
+    in_str = False
+    i, n = 0, len(body)
+    pat = re.compile(r'%s\s*\{' % re.escape(block))
+    while i < n:
+        ch = body[i]
+        if in_str:
+            if ch == "\\":
+                i += 2
+                continue
+            if ch == '"':
+                in_str = False
+            i += 1
+            continue
+        if ch == '"':
+            in_str = True
+        elif ch == "#" or body.startswith("//", i):
+            j = body.find("\n", i)
+            i = n if j < 0 else j
+            continue
+        elif ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+        elif depth == 0 and (i == 0 or not (body[i - 1].isalnum() or body[i - 1] == "_")):
+            m = pat.match(body, i)
+            if m:
+                inner = find_resource_block("resource \"x\" \"y\" {" + body[m.end():], "x", "y")
+                if inner is None:
+                    return None
+                out.append(inner)
+                i = m.end() + len(inner) + 1
+                continue
+        i += 1
+    return out
+
+
+def _hcl_literal(block_body: str, attr: str) -> Optional[str]:
+    m = re.search(r'(?m)^\s*%s\s*=\s*(.+?)\s*$' % re.escape(attr), block_body)
+    if not m:
+        return None
+    v = m.group(1).strip()
+    if v.startswith('"') and v.endswith('"') and len(v) >= 2:
+        return v[1:-1]
+    if re.fullmatch(r'-?\d+', v):
+        return v
+    return None          # 변수·함수 등 리터럴이 아니면 비교에 쓰지 않는다
+
+
+def _resolve_sg_slots_by_hcl(pending: List[Tuple[int, str, int]], rules: List[Rule], planned: List[Dict[str, Any]],
+                             sources: Dict[str, str], rname: str, direction: str) -> bool:
+    """여러 inline 규칙의 security_groups 가 plan 시점에 모두 미확정일 때, 소스(HCL)의 블록과 1:1 로 맞춰 채운다.
+
+    plan JSON 의 inline 규칙은 집합(set)이라 순서가 소스와 다르다. 그래서 순서가 아니라 리터럴 값
+    (from_port, to_port, protocol, description) 이 정확히 한 블록과 같을 때만 그 블록의 참조를 넣는다.
+    하나라도 짝이 모호하거나 참조가 아닌 원소(var.x 등)가 있으면 아무것도 바꾸지 않는다 (→ 기존처럼 unknown).
+    """
+    items = [(i, n) for (i, k, n) in pending if k == "sg"]
+    if len(items) < 2 or not sources:
+        return False
+    body = None
+    for _, text in sources.items():
+        body = find_resource_block(text, SG_TYPE, rname)
+        if body is not None:
+            break
+    if body is None:
+        return False
+    blocks = hcl_static_blocks(body, direction)
+    if not blocks:
+        return False
+    keyed = []
+    for b in blocks:
+        elems = hcl_sg_list_elements(b)
+        keyed.append(((_hcl_literal(b, "from_port"), _hcl_literal(b, "to_port"), normalize_protocol(_hcl_literal(b, "protocol")),
+                       _hcl_literal(b, "description") or ""), elems))
+    assign: Dict[int, List[str]] = {}
+    used: set = set()
+    for i, n_slots in items:
+        rv = planned[i] or {}
+        key = (str(rv.get("from_port")), str(rv.get("to_port")), normalize_protocol(rv.get("protocol")), str(rv.get("description") or ""))
+        hits = [j for j, (k, _) in enumerate(keyed) if k == key]
+        if len(hits) != 1 or hits[0] in used:
+            return False
+        elems = keyed[hits[0]][1]
+        if not elems or elems["opaque"] or elems["literals"] or len(elems["refs"]) != n_slots:
+            return False
+        used.add(hits[0])
+        assign[i] = list(elems["refs"])
+    for i, refs in assign.items():
+        for ref in refs:
+            rules[i].sources.append(Source("sg", ref, note="resolved from source block (port/description match)"))
+        rules[i].unknown_fields = [f for f in rules[i].unknown_fields if f != "security_groups"]
+    pending[:] = [x for x in pending if not (x[1] == "sg" and x[0] in assign)]
+    return True
+
+
 def hcl_declares_block(sources: Dict[str, str], rtype: str, rname: str, block: str) -> Optional[bool]:
     """소스 텍스트에서 해당 리소스가 block(예: ingress) 을 정적/동적으로 선언하는지.
 
@@ -440,7 +541,8 @@ def build_world(
                 if _is_unknown(ru.get("protocol")) or _is_unknown(ru.get("from_port")) or _is_unknown(ru.get("to_port")):
                     unknown_fields.extend(f for f in ("protocol", "from_port", "to_port") if _is_unknown(ru.get(f)))
                 built.append(Rule(direction, proto, _port(fp, proto), _port(tp, proto), srcs, f"{addr}#{direction}[{i}]", unknown_fields))
-            # 미확정 슬롯을 참조로 해석 (모호하지 않을 때만)
+            # 미확정 슬롯을 참조로 해석 (모호하지 않을 때만). 규칙이 여럿이면 먼저 소스 블록과 값으로 짝을 맞춰 본다
+            _resolve_sg_slots_by_hcl(pending, built, rules, sources or {}, r.get("name", ""), direction)
             _resolve_pending(pending, built, ref_sgs, ref_pls, world)
             sg.rules.extend(built)
         world.security_groups[addr] = sg

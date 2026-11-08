@@ -1,0 +1,59 @@
+{
+  "kind": "iam",
+  "intent_id": "three-tier-team-web-role-upload",
+  "intent_version": "1",
+  "status": "active",
+  "source": "proposal",
+  "description": "v1: 팀 설계 문서의 웹 서버 역할 권한(GetObject · ListBucket)에 고객 요청 6 의 업로드(PutObject)를 더한 요구사항 초안 (발췌 = scenarios/arch/three-tier-team-upload/DESIGN.md) — 담당자가 확인하고 확정해야 기준이 된다 (D-52). 버킷은 bucket_prefix 라 이름 대신 코드의 참조로 적는다.",
+  "targets": {
+    "roles": [
+      "aws_iam_role.web"
+    ]
+  },
+  "approved_permissions": [
+    {
+      "actions": [
+        "s3:GetObject"
+      ],
+      "resources": [
+        "${aws_s3_bucket.assets.arn}/*"
+      ]
+    },
+    {
+      "actions": [
+        "s3:ListBucket"
+      ],
+      "resources": [
+        "${aws_s3_bucket.assets.arn}"
+      ]
+    },
+    {
+      "actions": [
+        "s3:PutObject"
+      ],
+      "resources": [
+        "${aws_s3_bucket.assets.arn}/*"
+      ]
+    }
+  ],
+  "required_permissions": [
+    {
+      "label": "read-assets-objects",
+      "action": "s3:GetObject",
+      "resource": "${aws_s3_bucket.assets.arn}/*"
+    },
+    {
+      "label": "list-assets-bucket",
+      "action": "s3:ListBucket",
+      "resource": "${aws_s3_bucket.assets.arn}"
+    },
+    {
+      "label": "upload-assets-objects",
+      "action": "s3:PutObject",
+      "resource": "${aws_s3_bucket.assets.arn}/*"
+    }
+  ],
+  "approved_managed_policy_arns": [
+    "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+  ]
+}

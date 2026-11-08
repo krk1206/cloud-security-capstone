@@ -1,0 +1,87 @@
+{
+  "set_id": "three-tier-team-upload",
+  "week4_label_replay": false,
+  "_week4_note": "4주차 라벨 표(25건)는 2026-09-22 고정 세트만. 이 세트의 결과는 2026-11-06 실행 기록(docs/DECISIONS.md D-52)으로 잰다.",
+  "_note": "팀 3계층 요청 6 (D-52, 2026-11-06): 팀장(A) infrastructure/three-tier 의 사본(scenarios/arch/three-tier-team-upload)의 웹 서버 역할 정책 문서에 업로드용 statement 를 s3:*(assets 객체)로 넣은 설정 오류 하나 (AVD-AWS-0345). 요구사항 v1 = 팀 설계 문서의 읽기 + 고객 요청 6 의 업로드(PutObject) — 초안, 담당자가 ③ 에서 확정. 고친 정책은 버킷 ARN 을 참조해 plan 에 정책 값이 없다 → V6 는 코드의 data.aws_iam_policy_document 를 읽는다 (verify/iam_hcl.py). 화면 수정안 4개(featured) + 평가용 2개. expected 는 2026-11-06 실행 전 고정. 실제 AWS 시험 환경 없음.",
+  "tf_dir": "scenarios/arch/three-tier-team-upload",
+  "trivy_json": "experiments/arch-three-tier-team-upload/trivy-scan.json",
+  "rule": "AVD-AWS-0345",
+  "resource": "data.aws_iam_policy_document.web_s3_read",
+  "file": "iam.tf",
+  "line": 22,
+  "intent": "experiments/candidate-sets/three-tier-team-upload/intents/web-role-upload.json",
+  "proposal": "scenarios/arch/three-tier-team-upload/DESIGN.md",
+  "proposal_label": "팀 설계 문서 + 고객 요청 6",
+  "local_tools": true,
+  "candidates": [
+    {
+      "id": "put-star",
+      "candidate": "manual:candidates/put-star.tf",
+      "source": "seeded",
+      "expected": "deceptive",
+      "expected_reason": "s3:* → s3:Put* — Trivy 0345 는 s3:* 만 봐서 V1 PASS (2026-11-06 확인: s3:Put* 지적 없음). s3:Put* 는 PutObject 보다 넓음(PutObjectAcl 등) → V6 '요구사항 밖 권한' FAIL",
+      "note": "개발 중 작성한 seeded 예제 (2026-11-06, B 의 Claude 세션 작성) — LLM 출력 아님",
+      "change_summary": "업로드 권한 s3:* → s3:Put* (assets 객체)",
+      "expected_risk": "MEDIUM",
+      "expected_risk_basis": "IAM 리소스 변경 → medium floor. 신뢰 정책 · 삭제 · 교체 없음"
+    },
+    {
+      "id": "fix-put",
+      "candidate": "manual:candidates/fix-put.tf",
+      "source": "seeded",
+      "expected": "correct",
+      "expected_reason": "s3:* → s3:PutObject — 요구사항(읽기 · 목록 · 올리기)과 같음. 버킷 ARN 참조라 plan 에 정책 값이 없음 → V6 는 코드에서 읽어 참조끼리 비교. V1 · V5 · V6 PASS 예상",
+      "note": "개발 중 작성한 seeded 예제 (2026-11-06, B 의 Claude 세션 작성) — LLM 출력 아님",
+      "change_summary": "업로드 권한 s3:* → s3:PutObject (assets 객체)",
+      "expected_risk": "MEDIUM",
+      "expected_risk_basis": "IAM 리소스 변경 → medium floor. 신뢰 정책 · 삭제 · 교체 없음"
+    },
+    {
+      "id": "remove-upload",
+      "candidate": "manual:candidates/remove-upload.tf",
+      "source": "seeded",
+      "expected": "breaks_required",
+      "expected_reason": "업로드 statement 를 통째로 지움 — Trivy 통과(V1 PASS), 고객이 부탁한 업로드가 안 됨 → V6 '꼭 필요한 권한 없음'(upload-assets-objects) FAIL",
+      "note": "개발 중 작성한 seeded 예제 (2026-11-06, B 의 Claude 세션 작성) — LLM 출력 아님",
+      "change_summary": "업로드 권한 statement 삭제 (읽기 · 목록만 남음)",
+      "expected_risk": "MEDIUM",
+      "expected_risk_basis": "IAM 리소스 변경 → medium floor. 신뢰 정책 · 삭제 · 교체 없음"
+    },
+    {
+      "id": "put-delete",
+      "candidate": "manual:candidates/put-delete.tf",
+      "source": "seeded",
+      "expected": "unapproved",
+      "expected_reason": "s3:* → s3:PutObject + s3:DeleteObject — Trivy 통과, 지우기는 요구사항 밖 → V6 FAIL",
+      "note": "개발 중 작성한 seeded 예제 (2026-11-06, B 의 Claude 세션 작성) — LLM 출력 아님",
+      "change_summary": "업로드 권한 s3:* → s3:PutObject · s3:DeleteObject",
+      "expected_risk": "MEDIUM",
+      "expected_risk_basis": "IAM 리소스 변경 → medium floor. 신뢰 정책 · 삭제 · 교체 없음"
+    },
+    {
+      "id": "get-put-star",
+      "candidate": "manual:candidates/get-put-star.tf",
+      "source": "seeded",
+      "expected": "deceptive",
+      "expected_reason": "s3:* → s3:Get* + s3:Put* — Trivy 통과 (2026-11-06 확인), 요구사항보다 넓음 → V6 FAIL",
+      "note": "개발 중 작성한 seeded 예제 (2026-11-06, B 의 Claude 세션 작성) — LLM 출력 아님 — 화면 수정안 4개 밖, 평가용",
+      "change_summary": "업로드 권한 s3:* → s3:Get* · s3:Put*",
+      "expected_risk": "MEDIUM",
+      "expected_risk_basis": "IAM 리소스 변경 → medium floor. 신뢰 정책 · 삭제 · 교체 없음"
+    },
+    {
+      "id": "rule-based",
+      "candidate": "rule_based",
+      "source": "rule_based",
+      "expected": "unsupported",
+      "expected_reason": "규칙 기반 생성기는 승인 권한이 하나일 때만 · 리소스 블록의 글자 정책만 고친다 — 승인 권한 3개 · data 소스 정책이라 NOT_SUPPORTED (generator/rule_based.py 에 적힌 한계)",
+      "note": "규칙 기반 생성기 (LLM 아님) — 화면 수정안 4개 밖, 평가용"
+    }
+  ],
+  "featured": [
+    "put-star",
+    "fix-put",
+    "remove-upload",
+    "put-delete"
+  ]
+}

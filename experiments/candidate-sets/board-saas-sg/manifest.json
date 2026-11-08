@@ -1,0 +1,53 @@
+{
+  "set_id": "board-saas-sg",
+  "_note": "고객 제안서 예제 (D-46, 2026-11-03): 가상 고객 '모두의 게시판' 의 제안서(scenarios/arch/board-saas/PROPOSAL.md) 조건을 옮긴 설계도(intents/board-flows.json)가 v1 초안이고, 담당자가 ③ 에서 확정해야 기준이 된다. 대상 finding = bastion SSH 0.0.0.0/0 (AVD-AWS-0107, 제안서 조건 2 위반). 화면에 보이는 수정안 4개(featured: 설계도대로 · DB 공개 추가 · CIDR 쪼개기 · 규칙 삭제) + AI 수정 · 설계도대로 자동 수정(규칙 기반) · 직접 올리기. expected 는 2026-11-03 실행 전 고정. 실제 AWS 시험 환경 없음.",
+  "tf_dir": "scenarios/arch/board-saas",
+  "trivy_json": "experiments/arch-board-saas/trivy-scan.json",
+  "rule": "AVD-AWS-0107",
+  "resource": "aws_security_group.bastion",
+  "file": "security_groups.tf",
+  "line": 11,
+  "intent": "experiments/candidate-sets/board-saas-sg/intents/board-flows.json",
+  "proposal": "scenarios/arch/board-saas/PROPOSAL.md",
+  "local_tools": true,
+  "candidates": [
+    {
+      "id": "fix-office",
+      "candidate": "manual:candidates/fix-office.tf",
+      "source": "seeded",
+      "expected": "correct",
+      "note": "제안서 조건 2 대로 — 점프 서버 SSH 출발지 0.0.0.0/0 → 본사 사무실 203.0.113.0/24. 설계도와 같아져야 한다",
+      "change_summary": "점프 서버 SSH 허용 출발지 0.0.0.0/0 → 본사 사무실 대역 1개"
+    },
+    {
+      "id": "fix-and-db-open",
+      "candidate": "manual:candidates/fix-and-db-open.tf",
+      "source": "seeded",
+      "expected": "unapproved",
+      "note": "점프 서버는 고쳤지만 DB 3306 을 인터넷 전체에 추가로 열었다 (제안서 조건 4 위반) — Trivy 0107 은 해결, 설계도 비교(V6)에서 '설계도에 없는 통신' 으로 막혀야 한다",
+      "change_summary": "점프 서버 SSH 허용 출발지 0.0.0.0/0 → 본사 사무실 대역 1개 · DB 에 인터넷 전체 출발 3306 규칙 추가"
+    },
+    {
+      "id": "split-cidr",
+      "candidate": "manual:candidates/split-cidr.tf",
+      "source": "seeded",
+      "expected": "deceptive",
+      "note": "0.0.0.0/0 을 0.0.0.0/1 + 128.0.0.0/1 로 쪼갬 — Trivy 는 통과하지만 합치면 인터넷 전체. 자체 검사 · 설계도 비교에서 막혀야 한다",
+      "change_summary": "점프 서버 SSH 허용 출발지 0.0.0.0/0 → 0.0.0.0/1 + 128.0.0.0/1"
+    },
+    {
+      "id": "remove-rule",
+      "candidate": "manual:candidates/remove-rule.tf",
+      "source": "seeded",
+      "expected": "breaks_required",
+      "note": "점프 서버 SSH 규칙을 통째로 삭제 — Trivy 는 통과하지만 본사 사무실 접속(제안서 조건 2)까지 막힌다. 설계도 비교에서 '설계도에 있는데 막힘' 으로 막혀야 한다",
+      "change_summary": "점프 서버 SSH 규칙 삭제"
+    }
+  ],
+  "featured": [
+    "split-cidr",
+    "fix-and-db-open",
+    "fix-office",
+    "remove-rule"
+  ]
+}

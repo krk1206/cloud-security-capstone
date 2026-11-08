@@ -16,6 +16,20 @@ from ..models import RISK_TO_AUTONOMY_CAP, RiskDecision, RiskLevel
 from ..verify.sgmodel import SGWorld
 
 
+def target_resource_type(address: Optional[str]) -> Optional[str]:
+    """finding 의 리소스 주소 → 리소스 타입. 앞의 'module.<이름>.' 과 'data.' 를 건너뛴다.
+    예: data.aws_iam_policy_document.x → aws_iam_policy_document · module.m.aws_iam_policy.x → aws_iam_policy.
+    (D-51: 예전에는 주소의 첫 조각만 써서 data 소스 대상이 'data' → 네트워크 가족으로 가 IAM 수정이 '대상 외 종류' +2 를 받았다)"""
+    if not address:
+        return None
+    parts = str(address).split(".")
+    while len(parts) >= 3 and parts[0] == "module":
+        parts = parts[2:]
+    if len(parts) >= 2 and parts[0] == "data":
+        return parts[1]
+    return parts[0] or None
+
+
 def target_family(rubric: Dict[str, Any], target_type: Optional[str]):
     """대상 finding 의 리소스 타입 → (가족 이름, 가족 판정 함수). SG 계열이면 network_types, IAM 계열이면 iam_type_prefixes."""
     iam_prefixes = tuple(rubric.get("iam_type_prefixes") or ["aws_iam_"])

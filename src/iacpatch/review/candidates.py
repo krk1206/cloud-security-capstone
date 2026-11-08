@@ -4,6 +4,7 @@
     mock:<fixture>      tests/fixtures/mock_llm/<fixture>.json (사람이 미리 만든 고정 응답). origin="mock"
     manual:<path>       사람이 준비한 파일. origin="manual"
     rule_based          규칙 기반 baseline 생성기(generator/rule_based.py)가 그 자리에서 만든다. origin="rule_based". intent 필요
+    llm:<dir>           AI 수정(llmfix.py, D-27)이 받은 응답에서 꺼낸 파일들 + candidate.json(모델 · 프롬프트 지문 · 시도 번호). origin="llm"
                           - *.json : LLM 응답 계약과 같은 형식 {"status","files":[{"path","content"}],"rationale",...}
                           - *.tf   : 대상 finding 이 가리키는 파일의 **전체 내용**으로 사용 (파일 하나만 바꾸는 경우)
                           - 디렉터리: 안의 *.tf 를 같은 이름의 원본 파일 대체본으로 사용
@@ -50,11 +51,11 @@ class CandidateSpec:
         if spec.strip().lower() in ("rule_based", "rule-based", "rule_based:"):
             return cls("rule_based", "rule-v1", note)
         if ":" not in spec:
-            raise CandidateSourceError("후보 지정 형식은 mock:<fixture> | manual:<path> | rule_based 이다")
+            raise CandidateSourceError("후보 지정 형식 오류 — mock:<fixture> | manual:<path> | rule_based 중 하나")
         kind, ref = spec.split(":", 1)
         kind = kind.strip().lower()
-        if kind not in ("mock", "manual") or not ref.strip():
-            raise CandidateSourceError(f"알 수 없는 후보 출처 {spec!r} (mock:<fixture> | manual:<path> | rule_based)")
+        if kind not in ("mock", "manual", "llm") or not ref.strip():
+            raise CandidateSourceError(f"알 수 없는 후보 출처 {spec!r} (mock:<fixture> | manual:<path> | llm:<dir> | rule_based)")
         return cls(kind, ref.strip(), note)
 
 
@@ -145,8 +146,32 @@ def load_rule_based_candidate(target: Finding, original_files: Dict[str, str], i
     return cand
 
 
+def load_llm_candidate(path: str | Path, note: str = "") -> PatchCandidate:
+    """AI 수정 한 시도의 결과 폴더 (llmfix.py 가 씀): *.tf 파일 + candidate.json. 내용은 신뢰하지 않는다 — 다른 후보와 같은 검사를 받는다."""
+    p = Path(path)
+    base = dict(candidate_id=_new_id(), origin="llm", generator="claude-code:cli", model="", provenance=note or "AI(Claude Code) 수정안")
+    if not p.is_dir():
+        return PatchCandidate(status="GENERATION_FAILED", files={}, error=f"AI 수정 결과 폴더가 없다: {p}", **base)
+    meta: Dict = {}
+    if (p / "candidate.json").exists():
+        try:
+            meta = json.loads((p / "candidate.json").read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            meta = {}
+    for k in ("model", "prompt_sha256", "prompt_version", "raw_response_path", "provenance", "generator"):
+        if meta.get(k):
+            base[k] = str(meta[k])
+    files = {tf.name: tf.read_text(encoding="utf-8") for tf in sorted(p.glob("*.tf"))}
+    if not files:
+        return PatchCandidate(status="GENERATION_FAILED", files={}, error=str(meta.get("error") or "AI 응답에서 파일을 꺼내지 못했다"),
+                              attempt=int(meta.get("attempt") or 1), **base)
+    return PatchCandidate(status="PATCH", files=files, rationale=str(meta.get("rationale") or ""), attempt=int(meta.get("attempt") or 1), **base)
+
+
 def load_candidate(spec: CandidateSpec, target: Finding, original_files: Dict[str, str], mock_dir: Optional[Path] = None,
                    intent_raw: Optional[Dict] = None, policy: Optional[Dict] = None) -> PatchCandidate:
+    if spec.kind == "llm":
+        return load_llm_candidate(spec.ref, spec.note)
     if spec.kind == "mock":
         return load_mock_candidate(spec.ref, spec.note, mock_dir)
     if spec.kind == "rule_based":
@@ -166,15 +191,15 @@ def validate_candidate_shape(cand: PatchCandidate, original_files: Dict[str, str
     if cand.status != "PATCH":
         return "CANDIDATE_INVALID", [f"알 수 없는 후보 상태 {cand.status}"]
     if not cand.files:
-        return "CANDIDATE_INVALID", ["빈 후보: 파일 목록이 없다"]
+        return "CANDIDATE_INVALID", ["빈 후보: 파일 목록 없음"]
     if all(not (c or "").strip() for c in cand.files.values()):
-        return "CANDIDATE_INVALID", ["빈 후보: 모든 파일 내용이 비어 있다"]
+        return "CANDIDATE_INVALID", ["빈 후보: 모든 파일 내용이 비어 있음"]
     unknown = [f for f in cand.files if f not in original_files]
     if unknown:
-        return "CANDIDATE_INVALID", [f"원본에 없는 파일: {unknown} (새 파일 생성은 허용하지 않는다)"]
+        return "CANDIDATE_INVALID", [f"원본에 없는 파일: {unknown} (새 파일 생성 불가)"]
     identical = [f for f, c in cand.files.items() if original_files.get(f) == c]
     if len(identical) == len(cand.files):
-        return "CANDIDATE_INVALID", ["원본과 동일한 후보: 변경된 내용이 없다"]
+        return "CANDIDATE_INVALID", ["원본과 동일한 후보: 변경 내용 없음"]
     if not (cand.rationale or "").strip():
-        cand.needs_info.append("수정 이유(rationale) 미기재 — 검토 전에 사람이 적어야 한다")
+        cand.needs_info.append("수정 이유(rationale) 미기재 — 검토 전 사람이 작성 필요")
     return "OK", []

@@ -7,9 +7,11 @@
 """
 from __future__ import annotations
 
+import datetime as _dt
 import json
 import re
 import os
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -70,6 +72,11 @@ class TrivyScan:
     error: str = ""
     argv: List[str] = field(default_factory=list)
     parse_errors: List[str] = field(default_factory=list)   # stderr 의 "[terraform parser] Error parsing file …" — Trivy 는 못 읽은 파일을 건너뛰고 exit 0 + 검사 '성공' 으로 센다 (팀 PC 실습 09-29)
+    # 실행 증거 (화면의 '탐지 방식' 카드가 그대로 보여 준다): 시작 시각·걸린 시간·종료 코드·stderr 끝부분
+    started_at: str = ""
+    elapsed: float = 0.0
+    returncode: Optional[int] = None
+    stderr_tail: str = ""
 
 
 class TrivyAdapter:
@@ -99,21 +106,26 @@ class TrivyAdapter:
             argv += ["--tf-vars", str(tf_vars)]
         if output_json:
             argv += ["--output", str(output_json)]
+        started = _dt.datetime.now().astimezone().isoformat(timespec="seconds")
+        t0 = time.time()
         try:
             r = run(argv, timeout=timeout, env=self._ENV)
         except ToolNotFound as e:
-            return TrivyScan(False, {}, [], {}, "", str(e), argv)
+            return TrivyScan(False, {}, [], {}, "", str(e), argv, started_at=started, elapsed=round(time.time() - t0, 2))
+        el = round(time.time() - t0, 2)
+        tail = (r.stderr or "")[-1500:]
         if r.timed_out:
-            return TrivyScan(False, {}, [], {}, "", "trivy timed out", argv)
+            return TrivyScan(False, {}, [], {}, "", "trivy timed out", argv, started_at=started, elapsed=el, returncode=r.returncode, stderr_tail=tail)
         if r.returncode != 0:
-            return TrivyScan(False, {}, [], {}, "", (r.stderr or r.stdout)[:2000], argv)
+            return TrivyScan(False, {}, [], {}, "", (r.stderr or r.stdout)[:2000], argv, started_at=started, elapsed=el, returncode=r.returncode, stderr_tail=tail)
         try:
             text = Path(output_json).read_text(encoding="utf-8") if output_json else r.stdout
             report = json.loads(text)
         except (OSError, json.JSONDecodeError) as e:
-            return TrivyScan(False, {}, [], {}, "", f"cannot parse trivy output: {e}", argv)
+            return TrivyScan(False, {}, [], {}, "", f"cannot parse trivy output: {e}", argv, started_at=started, elapsed=el, returncode=r.returncode, stderr_tail=tail)
         ver = str((report.get("Trivy") or {}).get("Version") or self.version())
-        return TrivyScan(True, report, parse_findings(report), scan_summary(report), ver, "", argv, parse_errors(r.stderr))
+        return TrivyScan(True, report, parse_findings(report), scan_summary(report), ver, "", argv, parse_errors(r.stderr),
+                         started_at=started, elapsed=el, returncode=r.returncode, stderr_tail=tail)
 
 
 def parse_errors(stderr: str) -> List[str]:

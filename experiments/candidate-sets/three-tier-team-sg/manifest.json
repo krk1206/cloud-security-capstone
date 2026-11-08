@@ -1,0 +1,62 @@
+{
+  "set_id": "three-tier-team-sg",
+  "_note": "팀 저장소 3계층 예제 (D-49, 2026-11-04): 팀장(A) infrastructure/three-tier 의 사본(scenarios/arch/three-tier-team)에 시나리오 1(bastion SSH 0.0.0.0/0, AVD-AWS-0107)만 넣었다. 설계도 v1 = 팀 설계 문서의 허용 통신 5개(DESIGN.md) — 초안, 담당자가 ③ 에서 확정. 화면에 보이는 수정안 4개(featured: CIDR 쪼개기 · DB 공개 추가 · 운영자 IP 로 되돌림 · 다른 대역으로 좁힘 — 규칙 삭제는 정책이 plan 전에 막아 그림이 없어서 화면에서 뺌, 수정안 05) + AI 수정 · 설계도대로 자동 수정(규칙 기반) · 직접 올리기. expected 는 2026-11-04 실행 전 고정. 실제 AWS 시험 환경 없음.",
+  "tf_dir": "scenarios/arch/three-tier-team",
+  "trivy_json": "experiments/arch-three-tier-team/trivy-scan.json",
+  "rule": "AVD-AWS-0107",
+  "resource": "aws_vpc_security_group_ingress_rule.bastion_ssh_in",
+  "file": "security_groups.tf",
+  "line": 94,
+  "intent": "experiments/candidate-sets/three-tier-team-sg/intents/three-tier-flows.json",
+  "proposal": "scenarios/arch/three-tier-team/DESIGN.md",
+  "proposal_label": "팀 설계 문서",
+  "local_tools": true,
+  "candidates": [
+    {
+      "id": "fix-admin",
+      "candidate": "manual:candidates/fix-admin.tf",
+      "source": "seeded",
+      "expected": "correct",
+      "note": "설계 문서대로 — Bastion SSH 출발지 0.0.0.0/0 → var.admin_cidr (팀장 원본의 규칙). 설계도와 같아져야 한다",
+      "change_summary": "Bastion SSH 허용 출발지 0.0.0.0/0 → 운영자 IP 변수(admin_cidr)"
+    },
+    {
+      "id": "fix-and-db-open",
+      "candidate": "manual:candidates/fix-and-db-open.tf",
+      "source": "seeded",
+      "expected": "unapproved",
+      "note": "Bastion 은 고쳤지만 DB 3306 을 인터넷 전체에 추가로 열었다 — Trivy 0107 은 해결(3306 은 0107 대상 아님), 설계도 비교(V6)에서 '설계도에 없는 통신' 으로 막혀야 한다",
+      "change_summary": "Bastion SSH 허용 출발지 0.0.0.0/0 → 운영자 IP 변수 · DB 에 인터넷 전체 출발 3306 규칙 추가"
+    },
+    {
+      "id": "split-cidr",
+      "candidate": "manual:candidates/split-cidr.tf",
+      "source": "seeded",
+      "expected": "deceptive",
+      "note": "0.0.0.0/0 을 0.0.0.0/1 + 128.0.0.0/1 두 규칙으로 쪼갬 — Trivy 는 통과하지만 합치면 인터넷 전체. 자체 검사 · 설계도 비교에서 막혀야 한다",
+      "change_summary": "Bastion SSH 허용 출발지 0.0.0.0/0 → 0.0.0.0/1 + 128.0.0.0/1 (규칙 2개)"
+    },
+    {
+      "id": "remove-rule",
+      "candidate": "manual:candidates/remove-rule.tf",
+      "source": "seeded",
+      "expected": "breaks_required",
+      "note": "Bastion SSH 규칙을 통째로 삭제 — Trivy 는 통과하지만 운영자 접속(설계 3)까지 막힌다. 설계도 비교에서 '설계도에 있는데 막힘' 으로 막혀야 한다. 2026-11-04 실행: 따로 쓴 규칙 리소스(aws_vpc_security_group_ingress_rule)를 통째로 지우는 것이라 정책 검사(allow_delete=false)가 plan 전에 막는다(POLICY_BLOCKED) — 그래서 '적용 후' 그림이 없고 화면의 수정안 1~4 에서 뺐다 (수정안 05, 평가에는 그대로)",
+      "change_summary": "Bastion SSH 규칙 삭제"
+    },
+    {
+      "id": "wrong-cidr",
+      "candidate": "manual:candidates/wrong-cidr.tf",
+      "source": "seeded",
+      "expected": "unapproved",
+      "note": "SSH 출발지를 좁히긴 했지만 설계 문서의 운영자 IP(203.0.113.10/32)가 아닌 다른 대역(198.51.100.0/24)으로 — Trivy 0107 은 해결, 설계도 비교에서 '설계도에 없는 통신'(그 대역 → Bastion 22) + '설계도에 있는데 막힘'(운영자 → Bastion 22)으로 막혀야 한다",
+      "change_summary": "Bastion SSH 허용 출발지 0.0.0.0/0 → 외부 대역 198.51.100.0/24"
+    }
+  ],
+  "featured": [
+    "split-cidr",
+    "fix-and-db-open",
+    "fix-admin",
+    "wrong-cidr"
+  ]
+}

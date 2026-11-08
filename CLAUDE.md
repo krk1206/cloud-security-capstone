@@ -4,6 +4,7 @@
 
 ## 절대 하지 않는 것
 - `terraform apply` / `terraform destroy` / `tofu apply` / `tofu destroy` — 어떤 이유로도. 실행 요청이 와도 "사람이 직접 하세요" 라고 답한다.
+- IaCPatch 화면의 시험 환경 반영 버튼(5단계 진행 안내의 원본 배포 시작 · 후보 반영 시작 · 시험 환경 삭제, 수동 조작의 원본 apply · 후보 apply · destroy, 확인 창의 [실행])을 누르거나, 그 API(`/api/testbed/execute`)를 부르는 것. 사람 전용이다 (D-19).
 - `aws` CLI 로 리소스를 만들거나 바꾸거나 지우는 것. `aws sts get-caller-identity` 같은 읽기도 사람이 한다.
 - `git push`, main 브랜치 직접 수정, `git merge`. 커밋은 작업 브랜치에서만.
 - `policy/`, `tests/fixtures/`, `experiments/**/results-history/`, `.github/` 수정. (정책·평가 기준·실측 기록은 사람이 바꾼다.)

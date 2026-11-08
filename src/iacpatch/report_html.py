@@ -32,7 +32,7 @@ SET_TITLES = {"eval-a-probe-rule": "규칙 기반 baseline — SG (A 의 우회 
               "eval-claude-code": "LLM 축 — Claude Code 후보"}
 SET_SHORT = {"eval-a-probe-rule": "SG · 규칙 기반", "eval-seeded-sg": "SG · seeded", "eval-iam-rule": "IAM · 규칙 기반",
              "eval-seeded-iam": "IAM · seeded", "eval-claude-code": "LLM · Claude Code"}
-LEVEL_KO = {"LIGHT_REVIEW": "경량 검토(PR 자동)", "FULL_REVIEW": "정식 검토(승인 필수)", "REPORT_ONLY": "리포트만", "BLOCKED": "차단", "PENDING": "검증 대기", "None": "-", None: "-"}
+LEVEL_KO = {"LIGHT_REVIEW": "경량 검토(사람 확인 후 PR)", "FULL_REVIEW": "정식 검토(승인 필수)", "REPORT_ONLY": "리포트만", "BLOCKED": "차단", "PENDING": "미검증", "None": "-", None: "-"}
 STATE_KO = {"REVIEW_REQUIRED": "검토 자료 생성", "VALIDATION_FAILED": "검증 실패(차단)", "POLICY_BLOCKED": "정책 위반(차단)", "CANDIDATE_INVALID": "후보 무효",
             "INFO_INSUFFICIENT": "정보 부족(후보 없음)", "NO_FINDING": "탐지 없음", "AMBIGUOUS_FINDING": "finding 모호", "INPUT_ERROR": "입력 오류"}
 LAYERS = ("V1", "V2", "V3", "V4", "V5", "V6")
@@ -339,7 +339,7 @@ def _stops_html(stops: Counter) -> str:
     order = ["정책", "V1", "V2", "V3", "V4", "V5", "V6", "V6 UNKNOWN", "미검증", "통과", "검사 대상 아님"]
     color = {"정책": "var(--critical)", "V1": "var(--s1)", "V2": "var(--s1)", "V3": "var(--s1)", "V4": "var(--s1)", "V5": "var(--s1)", "V6": "var(--s2)",
              "V6 UNKNOWN": "var(--warning)", "미검증": "var(--muted)", "통과": "var(--good)", "검사 대상 아님": "var(--muted)"}
-    label = {"정책": "정책 검증 (범위 밖 변경)", "V6": "V6 오라클 (실효 상태)", "V6 UNKNOWN": "V6 판단 불가 → 사람", "미검증": "미검증 계층 있음", "통과": "전부 통과",
+    label = {"정책": "정책 검증 (범위 밖 변경)", "V6": "V6 오라클 (실효 상태)", "V6 UNKNOWN": "V6 판정 불가 → 사람 검토", "미검증": "미검증 계층 있음", "통과": "전부 통과",
              "검사 대상 아님": "검사 대상 아님 (탐지 없음·후보 없음·무효)"}
     top = max(list(stops.values()) + [1])
     parts = []

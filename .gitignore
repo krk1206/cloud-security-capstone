@@ -34,9 +34,27 @@ packaging/dist/
 packaging/*.spec
 /IaCPatch.exe
 /IaCPatch-console.exe
+/IaCPatch*.exe
+/*.exe
 # 스캐너 사각 탐색 원문(변형 main.tf·trivy.json·plan.json, 실행마다 수 MB) — 요약 FUZZ_RESULTS.md 만 커밋
 experiments/fuzz/
 
 # 아키텍처 배포 뒤 사람이 채우는 값(실제 IP) — 예시(.example.json)만 커밋
 scenarios/arch/webapp-2tier/sandbox/v8-checks.json
 scenarios/arch/webapp-2tier/sandbox/intent.sandbox.json
+
+# 9차 (2026-11-02): 이 PC 에서만 생기는 기록 · 상태 — 계정 번호 · IP 가 들어갈 수 있어 GitHub 에 올리지 않는다 (CLAUDE.md: 자격증명 · 토큰을 화면에 찍지 않는다)
+data/measurements/
+data/calibration/
+data/llm_runs/
+data/designs/
+data/projects/
+data/testbed_ops/
+data/testbed_ops.jsonl
+data/testbed_switch.jsonl
+data/.job.lock
+# 16차 (2026-11-06, D-52): 고객 요청함의 도착 · 읽음 상태 — PC 마다 다르다 (요청 내용은 scenarios/requests 에 그대로)
+data/inbox/
+.env
+.env.*
+*.pem

@@ -130,16 +130,40 @@ class V8Tests(unittest.TestCase):
         s.close()
         return p
 
+    def _with_dropped_ports(self, ports):
+        """보안 그룹이 조용히 버리는 포트를 흉내 낸다 (그 포트로 가는 연결 = timeout). 나머지는 실제 소켓."""
+        import iacpatch.postdeploy as pd
+        real = pd._tcp_probe
+        pd._tcp_probe = lambda host, port, timeout: {"result": "timeout", "elapsed": timeout} if port in ports else real(host, port, timeout)
+        self.addCleanup(setattr, pd, "_tcp_probe", real)
+
     def test_allowed_open_and_forbidden_closed(self):
+        intent = intent_for("aws_security_group.x")
+        drop1, drop2 = self._closed_port(), self._closed_port()
+        self._with_dropped_ports({drop1, drop2})
+        with _Listener() as l:
+            spec = {"checks": [
+                {"label": "ssh from approved", "host": "127.0.0.1", "port": l.port, "expect": "open", "vantage": "local", "source_class": "approved", "service_label": "ssh", "timeout_s": 2},
+                {"label": "ssh from unapproved", "host": "127.0.0.1", "port": drop1, "expect": "closed", "vantage": "local", "source_class": "unapproved", "service_label": "ssh", "timeout_s": 2},
+                {"label": "rdp from unapproved", "host": "127.0.0.1", "port": drop2, "expect": "closed", "vantage": "local", "source_class": "unapproved", "service_label": "rdp", "timeout_s": 2},
+            ]}
+            r = v8_connectivity(spec, intent, execute=True)
+        self.assertEqual(r.verdict, Verdict.PASS, r.summary)
+
+    def test_refused_is_not_proof_of_block(self):
+        """닫힌 포트(refused)는 패킷이 서버까지 갔다는 뜻 — 보안 그룹이 막았다는 증거가 아니므로 통과로 세지 않는다."""
         intent = intent_for("aws_security_group.x")
         with _Listener() as l:
             spec = {"checks": [
                 {"label": "ssh from approved", "host": "127.0.0.1", "port": l.port, "expect": "open", "vantage": "local", "source_class": "approved", "service_label": "ssh", "timeout_s": 2},
                 {"label": "ssh from unapproved", "host": "127.0.0.1", "port": self._closed_port(), "expect": "closed", "vantage": "local", "source_class": "unapproved", "service_label": "ssh", "timeout_s": 2},
-                {"label": "rdp from unapproved", "host": "127.0.0.1", "port": self._closed_port(), "expect": "closed", "vantage": "local", "source_class": "unapproved", "service_label": "rdp", "timeout_s": 2},
+                {"label": "rdp from unapproved", "host": "127.0.0.1", "port": self._closed_port(), "expect": "closed", "vantage": "remote", "source_class": "unapproved", "service_label": "rdp", "observed": "closed"},
             ]}
             r = v8_connectivity(spec, intent, execute=True)
-        self.assertEqual(r.verdict, Verdict.PASS, r.summary)
+        self.assertEqual(r.verdict, Verdict.UNKNOWN, r.summary)
+        outs = {x["label"]: x["outcome"] for x in r.details["results"]}
+        self.assertEqual(outs["ssh from unapproved"], "INCONCLUSIVE")
+        self.assertEqual(outs["rdp from unapproved"], "INCONCLUSIVE")
 
     def test_required_access_broken_fails(self):
         intent = intent_for("aws_security_group.x")

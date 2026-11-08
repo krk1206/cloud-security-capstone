@@ -15,6 +15,9 @@ SG intent(intent.py) 와 같은 역할이지만 대상이 IAM 이다. `"kind": "
 }
 
 - action/resource 의 와일드카드는 `*` 만 지원한다. `?` 나 정책 변수(${aws:...}) 가 나오면 오라클은 UNKNOWN 을 낸다.
+- resource 에 Terraform 리소스 참조를 쓸 수 있다 (15차, D-51): "${aws_s3_bucket.assets.arn}/*" — 버킷 이름이 apply 때 정해지는 코드
+  (bucket_prefix)에서 '그 버킷' 을 가리키는 방법. 읽을 때 토큰 "tf:aws_s3_bucket.assets.arn/*" 로 바꾸고(verify/iam_hcl), 오라클은 코드에서
+  읽은 정책의 같은 참조와 비교한다. 리소스의 arn · id · bucket 참조만 바꾸고 그 밖의 ${...} 는 그대로 둔다.
 - 값은 실행 전에 고정한다 (D-2 와 같은 원칙). 자리표시자(<...>) 가 남아 있으면 로드하지 않는다.
 """
 from __future__ import annotations
@@ -25,6 +28,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from .intent import IntentError, _check_placeholders
+from .verify.iam_hcl import symbolize_pattern
 
 
 @dataclass
@@ -92,14 +96,14 @@ def parse_iam_intent(data: Dict[str, Any], path: str = "") -> IamIntentSpec:
         if not isinstance(a, dict):
             raise IntentError(f"approved_permissions[{i}] must be an object")
         approved.append(ApprovedPermission(_str_list(a.get("actions"), f"approved_permissions[{i}].actions"),
-                                           _str_list(a.get("resources"), f"approved_permissions[{i}].resources")))
+                                           [symbolize_pattern(r) for r in _str_list(a.get("resources"), f"approved_permissions[{i}].resources")]))
     if not approved:
         raise IntentError("approved_permissions must not be empty (an empty allow set makes every statement EXCESS)")
     required: List[RequiredPermission] = []
     for i, r in enumerate(data.get("required_permissions") or []):
         if not isinstance(r, dict) or not r.get("action") or not r.get("resource"):
             raise IntentError(f"required_permissions[{i}] needs action and resource")
-        required.append(RequiredPermission(str(r.get("label") or f"required-{i}"), str(r["action"]).strip(), str(r["resource"]).strip()))
+        required.append(RequiredPermission(str(r.get("label") or f"required-{i}"), str(r["action"]).strip(), symbolize_pattern(str(r["resource"]).strip())))
     managed = data.get("approved_managed_policy_arns") or []
     if not isinstance(managed, list):
         raise IntentError("approved_managed_policy_arns must be a list")
@@ -121,17 +125,22 @@ def load_iam_intent(path: str | Path) -> IamIntentSpec:
 
 
 def intent_kind(path: str | Path) -> str:
-    """파일의 kind 필드만 읽는다: 'iam' | 'sg' (기본) | 'unreadable'."""
+    """파일의 kind 필드만 읽는다: 'iam' | 'topology' | 'sg' (기본) | 'unreadable'."""
     try:
         data = json.loads(Path(path).read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return "unreadable"
-    return "iam" if isinstance(data, dict) and str(data.get("kind", "")).lower() == "iam" else "sg"
+    kind = str(data.get("kind", "")).lower() if isinstance(data, dict) else ""
+    return kind if kind in ("iam", "topology") else "sg"
 
 
 def try_load_any_intent(path: str | Path) -> Tuple[Optional[Any], str, Optional[str]]:
-    """(spec, kind, error). kind 는 'sg' | 'iam'. SG intent 는 intent.try_load_intent 로 위임."""
+    """(spec, kind, error). kind 는 'sg' | 'iam' | 'topology'. SG intent 는 intent.try_load_intent 로 위임."""
     kind = intent_kind(path)
+    if kind == "topology":
+        from .topology_intent import try_load_topology_intent
+        tspec, terr = try_load_topology_intent(path)
+        return tspec, "topology", terr
     if kind == "iam":
         try:
             return load_iam_intent(path), "iam", None

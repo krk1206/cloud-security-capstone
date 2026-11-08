@@ -20,6 +20,12 @@ Tier 1 에서 판단하지 않는 것 (→ UNKNOWN, 자동 승인 금지):
 Action 은 대소문자 무시, Resource(ARN) 는 대소문자 구분.
 
 우선순위: EXCESS/MISSING 이 하나라도 있으면 FAIL. FAIL 이 없고 UNKNOWN 이 있으면 UNKNOWN. 둘 다 없으면 PASS.
+
+plan 에 정책 값이 없을 때 (15차, D-51): build_iam_world(plan, sources) 에 코드(.tf)를 주면, policy 가 data "aws_iam_policy_document"
+하나를 그대로 쓰는 경우에 한해 그 statement 를 코드에서 읽는다 (verify/iam_hcl.py — plan 의 configuration 과 대조, 모르면 그대로 UNKNOWN).
+리소스 참조는 토큰("tf:aws_s3_bucket.assets.arn/*")으로 바뀌고, 요구사항의 "${aws_s3_bucket.assets.arn}/*" 도 같은 토큰이 된다
+(iam_intent). 메시지 · 화면에는 코드 모양("${...}")으로 되돌려 적는다 (iam_hcl.display).
+plan 에 값이 있는 정책(JSON)에 'tf:' 로 시작하는 글자가 있으면 토큰 흉내로 보고 판정 불가.
 """
 from __future__ import annotations
 
@@ -30,6 +36,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from ..iam_intent import IamIntentSpec
 from ..models import Verdict
+from .iam_hcl import TOKEN, display, policy_doc_from_source
 from .plan_model import PlanParseError
 
 POLICY_TYPES = ("aws_iam_policy", "aws_iam_role_policy", "aws_iam_user_policy", "aws_iam_group_policy")
@@ -54,6 +61,7 @@ class IamStatement:
     has_condition: bool = False
     has_principal: bool = False
     sid: str = ""
+    symbolic: bool = False           # 코드(HCL)에서 읽은 문 — 리소스에 참조 토큰(tf:...)이 있을 수 있다 (iam_hcl)
 
     def unsupported_reasons(self) -> List[str]:
         r = []
@@ -68,7 +76,9 @@ class IamStatement:
         if self.has_principal:
             r.append(f"{self.origin}: Principal present (resource policy?) — not evaluated")
         for v in self.actions + self.resources:
-            if "${" in v or "?" in v:
+            if not self.symbolic and v.startswith(TOKEN):
+                r.append(f"{self.origin}: pattern {v!r} looks like an internal reference token (tf:) — not evaluated")
+            elif "${" in v or "?" in v:
                 r.append(f"{self.origin}: pattern {v!r} uses a variable or '?' — not supported")
             elif not _ASCII_TOKEN_RE.match(v):
                 r.append(f"{self.origin}: pattern {v!r} contains whitespace, control or non-ASCII characters — not evaluated")
@@ -80,6 +90,8 @@ class IamPolicyDoc:
     address: str
     statements: List[IamStatement] = field(default_factory=list)
     unknown_reason: str = ""         # 값 미확정 / 파싱 실패
+    source: str = "plan"             # plan | hcl (plan 에 값이 없어 코드에서 읽음)
+    via: str = ""                    # hcl 일 때 읽은 data 블록 주소
 
 
 @dataclass
@@ -99,8 +111,9 @@ class IamRole:
 class IamWorld:
     policies: Dict[str, IamPolicyDoc] = field(default_factory=dict)
     roles: Dict[str, IamRole] = field(default_factory=dict)
-    notes: List[str] = field(default_factory=list)
+    notes: List[str] = field(default_factory=list)        # 판정에 영향 (오라클이 대상 범위에 UNKNOWN 으로 붙인다)
     source: str = "plan"
+    info: List[str] = field(default_factory=list)          # 알림만 (코드에서 읽은 정책 등) — 판정에 영향 없음
 
 
 # ---------------------------------------------------------------------------
@@ -228,7 +241,27 @@ def _trust_open_statements(address: str, text: str) -> Tuple[List[str], str]:
     return out, ""
 
 
-def build_iam_world(plan: Dict[str, Any]) -> IamWorld:
+def _doc_from_hcl(addr: str, plan: Dict[str, Any], sources: Optional[Dict[str, str]], world: IamWorld) -> Optional[IamPolicyDoc]:
+    """plan 에 policy 값이 없는 정책 리소스 → 코드의 data "aws_iam_policy_document" 에서 읽은 문서 (못 읽으면 None, 이유는 info 에)."""
+    if not sources:
+        return None
+    stmts, via, why = policy_doc_from_source(addr, plan, sources)
+    if stmts is None:
+        world.info.append(f"{addr}: plan 에 정책 값이 없고 코드에서도 읽지 못함 — {'; '.join(why[:2])}")
+        return None
+    doc = IamPolicyDoc(addr, source="hcl", via=via)
+    for i, st in enumerate(stmts):
+        doc.statements.append(IamStatement(origin=f"{via}#{i}", effect=st["effect"], actions=list(st["actions"]), resources=list(st["resources"]),
+                                           not_actions=list(st["not_actions"]), not_resources=list(st["not_resources"]),
+                                           has_condition=bool(st["has_condition"]), has_principal=bool(st["has_principal"]),
+                                           sid=str(st.get("sid") or ""), symbolic=True))
+    world.info.append(f"{addr}: plan 에 정책 값이 없어(버킷 이름 등이 apply 때 정해짐) 코드의 {via} 에서 읽음 — "
+                      "리소스는 실제 이름 대신 코드의 참조(${...})로 비교")
+    return doc
+
+
+def build_iam_world(plan: Dict[str, Any], sources: Optional[Dict[str, str]] = None) -> IamWorld:
+    """plan JSON → IAM 세계. sources(파일명 → .tf 글자)를 주면 plan 에 값이 없는 정책을 코드에서 읽어 본다 (iam_hcl, 15차)."""
     if not isinstance(plan, dict) or "planned_values" not in plan:
         raise PlanParseError("plan JSON has no planned_values")
     world = IamWorld()
@@ -247,7 +280,7 @@ def build_iam_world(plan: Dict[str, Any]) -> IamWorld:
         if t in POLICY_TYPES:
             pol_text = vals.get("policy")
             if pol_text is None and "policy" in unknown_attrs.get(addr, []):
-                doc = IamPolicyDoc(addr, unknown_reason="policy value unknown at plan time (computed)")
+                doc = _doc_from_hcl(addr, plan, sources, world) or IamPolicyDoc(addr, unknown_reason="policy value unknown at plan time (computed)")
             else:
                 doc = parse_policy_document(addr, pol_text)
             world.policies[addr] = doc
@@ -357,9 +390,10 @@ class IamOracleReport:
     scopes: List[IamScopeResult]
     intent_id: str
     notes: List[str] = field(default_factory=list)
+    info: List[str] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:
-        return {"verdict": self.verdict.value, "summary": self.summary, "intent_id": self.intent_id, "kind": "iam", "notes": self.notes,
+        return {"verdict": self.verdict.value, "summary": self.summary, "intent_id": self.intent_id, "kind": "iam", "notes": self.notes, "info": self.info,
                 "scopes": [{"scope_id": s.scope_id, "verdict": s.verdict.value, "excess": s.excess, "missing": s.missing,
                             "unknown_reasons": s.unknown_reasons, "evaluated_docs": s.evaluated_docs, "allowed_pairs": s.allowed_pairs}
                            for s in self.scopes]}
@@ -377,7 +411,7 @@ def _evaluate_docs(scope_id: str, docs: List[IamPolicyDoc], intent: IamIntentSpe
     res = IamScopeResult(scope_id, Verdict.PASS, unknown_reasons=list(extra_unknown))
     allow_stmts: List[IamStatement] = []
     for doc in docs:
-        res.evaluated_docs.append(doc.address)
+        res.evaluated_docs.append(doc.address if doc.source != "hcl" else f"{doc.address} <- {doc.via} (code)")
         if doc.unknown_reason:
             res.unknown_reasons.append(f"{doc.address}: {doc.unknown_reason}")
             continue
@@ -393,7 +427,7 @@ def _evaluate_docs(scope_id: str, docs: List[IamPolicyDoc], intent: IamIntentSpe
                     ok = any(any(pattern_subset(a, qa, True) for qa in ap.actions) and any(pattern_subset(r, qr, False) for qr in ap.resources)
                              for ap in intent.approved)
                     if not ok:
-                        res.excess.append(f"{st.origin}: {a} on {r}")
+                        res.excess.append(f"{st.origin}: {a} on {display(r)}")
     had_unsupported = bool(res.unknown_reasons)
     for req in intent.required:
         hit = any(any(pattern_matches(a, req.action, True) for a in st.actions) and any(pattern_matches(r, req.resource, False) for r in st.resources)
@@ -401,10 +435,10 @@ def _evaluate_docs(scope_id: str, docs: List[IamPolicyDoc], intent: IamIntentSpe
         if not hit:
             if had_unsupported:
                 # 평가 못 한 문(NotAction/Condition/미확정 정책)이 그 권한을 줄 수도 있다 → MISSING 이 아니라 판단 불가
-                res.unknown_reasons.append(f"{req.label}: {req.action} on {req.resource} is not granted by any evaluated Allow statement; "
+                res.unknown_reasons.append(f"{req.label}: {req.action} on {display(req.resource)} is not granted by any evaluated Allow statement; "
                                            "only unevaluated statements could grant it")
             else:
-                res.missing.append(f"{req.label}: {req.action} on {req.resource} not allowed by any evaluated Allow statement")
+                res.missing.append(f"{req.label}: {req.action} on {display(req.resource)} not allowed by any evaluated Allow statement")
     if res.excess or res.missing:
         res.verdict = Verdict.FAIL
     elif res.unknown_reasons:
@@ -454,4 +488,4 @@ def evaluate(world: IamWorld, intent: IamIntentSpec) -> IamOracleReport:
         else:
             parts.append(f"{s.scope_id}: PASS ({s.allowed_pairs} allowed action×resource pairs all within approved set; required present)")
     summary = f"{verdict.value}: " + " | ".join(parts) if parts else f"{verdict.value}: no targets"
-    return IamOracleReport(verdict, summary, scopes, intent.intent_id, notes=list(world.notes))
+    return IamOracleReport(verdict, summary, scopes, intent.intent_id, notes=list(world.notes), info=list(world.info))
