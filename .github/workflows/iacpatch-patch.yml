@@ -48,15 +48,24 @@ env:
   AWS_PROVIDER_VERSION: 5.100.0
   PYTHONPATH: src
   TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/tools/plugin-cache
-  GH_TOKEN: ${{ github.token }}
-  GITHUB_TOKEN: ${{ github.token }}
+  # 패치 PR 을 만드는 토큰. Secrets 에 IACPATCH_PR_TOKEN 이 있으면 그것으로 만든다 (2026-11-10).
+  # 이유: 봇 토큰(GITHUB_TOKEN)으로 만든 PR 은 pull_request 이벤트가 안 나서, 필수 검사(Trivy IaC Scan)가 돌지 않아 병합이 막힌다.
+  # 사람 토큰으로 만들면 보통 PR 처럼 검사 · 워크플로 ② 가 자동으로 돈다. 없으면 예전처럼 봇 토큰 + ② 직접 호출.
+  # (iacpatch pr 은 GitHub API 를 GITHUB_TOKEN 으로 부른다. git push 는 checkout 이 넣어 둔 봇 토큰을 그대로 쓴다)
+  GH_TOKEN: ${{ secrets.IACPATCH_PR_TOKEN || github.token }}
+  GITHUB_TOKEN: ${{ secrets.IACPATCH_PR_TOKEN || github.token }}
+  HAS_PR_TOKEN: ${{ secrets.IACPATCH_PR_TOKEN != '' }}
 
 jobs:
   patch:
     name: Patch + V1~V6 (offline)
     runs-on: ubuntu-latest
     # fork 에서 온 PR 은 토큰이 읽기 전용이라 댓글·PR 생성이 안 된다 → 협력자 브랜치 PR 과 수동 실행만
-    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    # 이 워크플로가 만든 패치 PR(브랜치 iacpatch/...)에는 다시 돌지 않는다 — 패치 위에 또 패치를 만드는 반복을 막는다 (2026-11-10)
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.pull_request.head.repo.full_name == github.repository &&
+       !startsWith(github.event.pull_request.head.ref, 'iacpatch/'))
     steps:
       - name: Checkout (PR 브랜치 그대로)
         uses: actions/checkout@v4
@@ -157,7 +166,8 @@ jobs:
                   # 봇(GITHUB_TOKEN) 이 만든 PR 은 pull_request 이벤트를 내지 않는다 → 워크플로 ② 를 직접 부른다 (workflow_dispatch 는 허용됨).
                   PATCH_BRANCH=$(python -c "import json;print(json.load(open('data/runs/$RUN/pr.json')).get('branch',''))")
                   PATCH_PR=$(python -c "import json;print(json.load(open('data/runs/$RUN/pr.json')).get('number',''))")
-                  if [ -n "$PATCH_BRANCH" ] && [ -f .github/workflows/iacpatch-testbed.yml ]; then
+                  # 사람 토큰(IACPATCH_PR_TOKEN)으로 만든 PR 이면 pull_request 이벤트로 ② 가 이미 돈다 → 직접 부르지 않는다 (두 번 도는 것 방지)
+                  if [ "$HAS_PR_TOKEN" != "true" ] && [ -n "$PATCH_BRANCH" ] && [ -f .github/workflows/iacpatch-testbed.yml ]; then
                     gh workflow run iacpatch-testbed.yml --ref "$PATCH_BRANCH" \
                       -f target_dir="$d" -f intent="$intent" -f base_ref="$BASE_BRANCH" -f pr_number="$PATCH_PR" \
                       && echo "워크플로 ② 호출: ref=$PATCH_BRANCH base=$BASE_BRANCH pr=#$PATCH_PR" \

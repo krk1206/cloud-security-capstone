@@ -68,9 +68,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: gh pr comment ${{ github.event.pull_request.number }} --body-file comment.md
 
-      # PR 게이트: 이 PR 에서 바뀐 infrastructure/ 하위 폴더만 검사한다.
-      # (main 에 의도적 결함 시나리오가 있는 동안 팀원의 코드 PR 이 기존 결함 때문에 막히지 않게 함)
-      - name: Gate - fail on HIGH/CRITICAL (pull requests only, changed infra dirs)
+      # PR 게이트: 이 PR 에서 바뀐 infrastructure/ 하위 폴더만, 그리고 이 PR 이 "새로 만든" HIGH/CRITICAL 만 막는다.
+      # (main 에 의도적 결함 시나리오가 있는 동안 팀원의 코드 PR 이 기존 결함 때문에 막히지 않게 함.
+      #  2026-11-10: 예전에는 HIGH 가 하나라도 남으면 실패라서, SSH 만 고치고 원래 있던 egress 지적이 남은 정상 패치 PR 도 막혔다.
+      #  이제 PR 의 기준 커밋(base)에서 같은 폴더를 스캔해 비교하고, 새로 생긴 것만 실패로 본다 — scripts/ci_scan_gate.py)
+      - name: Gate - fail on NEW HIGH/CRITICAL (pull requests only, changed infra dirs)
         if: github.event_name == 'pull_request'
         run: |
           BASE="${{ github.event.pull_request.base.sha }}"
@@ -79,13 +81,24 @@ jobs:
             echo "infrastructure/ 변경 없음 - 게이트 생략"
             exit 0
           fi
+          mkdir -p gate/base-tree
+          git archive "$BASE" infrastructure | tar -x -C gate/base-tree
           RC=0
           for d in $CHANGED; do
             [ -d "$d" ] || continue
             case "$d" in *-testbed|*-testbed/*) echo "== skip: $d (시험 환경 폴더 — 결함을 일부러 포함, 게이트 제외)"; continue;; esac
             echo "== gate: $d"
+            name=$(echo "$d" | tr '/' '_')
             TFVARS=""
             [ -f "$d/terraform.tfvars.example" ] && TFVARS="--tf-vars $d/terraform.tfvars.example"
-            trivy config "$d" $TFVARS --severity HIGH,CRITICAL --exit-code 1 || RC=1
+            trivy config "$d" $TFVARS --format json --output "gate/$name.head.json" --quiet
+            BASEARG=""
+            if [ -d "gate/base-tree/$d" ]; then
+              BTFVARS=""
+              [ -f "gate/base-tree/$d/terraform.tfvars.example" ] && BTFVARS="--tf-vars gate/base-tree/$d/terraform.tfvars.example"
+              trivy config "gate/base-tree/$d" $BTFVARS --format json --output "gate/$name.base.json" --quiet
+              BASEARG="--base gate/$name.base.json"
+            fi
+            python3 scripts/ci_scan_gate.py --head "gate/$name.head.json" $BASEARG --severity HIGH,CRITICAL --label "$d" || RC=1
           done
           exit $RC
