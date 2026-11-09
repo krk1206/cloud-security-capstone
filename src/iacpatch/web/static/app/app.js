@@ -311,7 +311,7 @@ function viewDesign() {
   const admin = (design.external || []).find((e) => e.id === "admin");
   let out = PURPOSE + head(1, "고객 설계도 — 허용하는 통신 경로", `고객이 허용한 통신 경로 ${rows.length}개 (가운데 그림의 화살표). 이 경로 외 통신은 모두 막혀야 함 — 수정 코드는 이 설계도를 기준으로 검사.`);
   // 설계도 버전 (D-30): 편집은 흐름 화면 ① 에서. 여기서는 지금 기준 버전만 보여 준다
-  if (curSet().intent_kind === "topology") out += `<div class="keyline"><span>지금 기준</span><span class="chip keep">설계도 v${esc(curSet().design_version || 1)}</span><span class="small muted">버전 ${esc(curSet().design_versions || 1)}개 · 구성요소 · 통신을 바꾸려면 <a href="/">흐름 화면 ① 설계도 바꾸기</a></span></div>`;
+  if (curSet().intent_kind === "topology") out += `<div class="keyline"><span>지금 기준</span><span class="chip keep">설계도 v${esc(curSet().design_version || 1)}</span><span class="small muted">버전 ${esc(curSet().design_versions || 1)}개 · 구성요소 · 통신을 바꾸려면 <a href="/main">흐름 화면 ① 설계도 바꾸기</a></span></div>`;
   if (admin) out += `<div class="keyline"><span>관리자 SSH 허용 대역</span>${admin.cidrs_v4.map((c) => `<span class="chip">${esc(c)}</span>`).join("")}</div>`;
   out += moreBox("design", "설계 기준 경로 목록 · 코드 위치",
     rows.map((r, i) => `<div class="req" data-flow="${esc(r.id.slice(5))}"><span class="chip keep">${i + 1}</span><div class="t">${esc(r.text)}</div><span></span></div>`).join("")

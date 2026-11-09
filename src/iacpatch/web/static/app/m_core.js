@@ -137,7 +137,7 @@ export function render() {
   const q = st.n === 3 && caseMode() === "iam" ? "허용 권한 기준" : st.q;       // 15차: 권한 요청의 ③ = IAM 요구사항
   $("#mhead").innerHTML = `<div class="mh-q"><span class="mh-n">${st.n}</span><div><h1>${esc(q)}</h1>
       <p class="mh-todo"><b>할 일</b><span>${esc(todoNow(st))}</span></p></div></div>
-    <div class="mh-r"><div class="mh-tags">${p ? `<span class="mh-proj"><i>프로젝트</i>${esc(p.name)}</span>` : ""}${S.design && S.design.exists && S.step >= 3 ? `<span class="mh-ver ${designConf().cls}" title="${esc(designConf().title)}">원하는 구조 v${esc(designVersion())}${S.design.auto ? " · 자동" : ""} · ${esc(designConf().word)}</span>` : ""}${iamTag()}</div>${nav}</div>`;
+    <div class="mh-r"><div class="mh-tags"><a class="mh-ver ok" href="/" style="text-decoration:none" title="4단계 시연 화면으로">시연 화면</a>${p ? `<span class="mh-proj"><i>프로젝트</i>${esc(p.name)}</span>` : ""}${S.design && S.design.exists && S.step >= 3 ? `<span class="mh-ver ${designConf().cls}" title="${esc(designConf().title)}">원하는 구조 v${esc(designVersion())}${S.design.auto ? " · 자동" : ""} · ${esc(designConf().word)}</span>` : ""}${iamTag()}</div>${nav}</div>`;
   const fn = screens[S.step];
   if (fn) fn();
   refreshTodo();          // 화면 함수가 상태(고칠 대상 등)를 정한 뒤 머리말 '할 일' 을 그 상태로

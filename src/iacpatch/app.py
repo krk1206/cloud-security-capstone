@@ -394,8 +394,8 @@ def gui(port: Optional[int] = None, open_browser: bool = True) -> int:
             # 어두운 3D 화면이 뜨기 전 흰 화면이 번쩍이지 않게 배경색도 맞춘다. 옛 pywebview 에 없는 인자는 빼고 다시 연다.
             # text_select=True: 화면 글자를 드래그로 골라 복사할 수 있게 (pywebview 기본값은 선택 막음)
             base = dict(width=1600, height=960, min_size=(1100, 680))
-            for extra in (dict(maximized=True, background_color="#04070D", text_select=True), dict(maximized=True, background_color="#04070D"),
-                          dict(background_color="#04070D", text_select=True), dict(background_color="#04070D"), {}):
+            for extra in (dict(maximized=True, background_color="#F2F4F6", text_select=True), dict(maximized=True, background_color="#F2F4F6"),
+                          dict(background_color="#F2F4F6", text_select=True), dict(background_color="#F2F4F6"), {}):
                 try:
                     webview.create_window(WINDOW_TITLE, url, **base, **extra)
                     break

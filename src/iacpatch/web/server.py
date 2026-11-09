@@ -1212,8 +1212,11 @@ class Handler(BaseHTTPRequestHandler):
         q = parse_qs(u.query)
         qid = q.get("id", [""])[0]
         try:
-            if u.path in ("/", "/main", "/main.html"):
-                # 첫 화면 = 새 프로그램 (2026-11-01 갈아엎기 3차: 8단계 사용자 질문 흐름). 전문가 화면(원본 증거 · 시험 환경)은 /work
+            if u.path in ("/", "/demo", "/demo.html"):
+                # 첫 화면 = 시연 화면 (2026-11-10: 4단계 — 문제 · 수정안 · 검사 결과 · 결정). 8단계 전체 화면은 /main, 전문가 화면은 /work
+                self._send(200, (STATIC / "demo.html").read_bytes(), "text/html; charset=utf-8")
+            elif u.path in ("/main", "/main.html"):
+                # 8단계 사용자 질문 흐름 (2026-11-01 갈아엎기 3차). 시연 화면의 '자세히 보기'
                 self._send(200, (STATIC / "main.html").read_bytes(), "text/html; charset=utf-8")
             elif u.path in ("/story", "/story.html"):
                 self._send(200, (STATIC / "story.html").read_bytes(), "text/html; charset=utf-8")

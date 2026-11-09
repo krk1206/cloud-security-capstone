@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IaCPatch 검증 시연</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- 글꼴: 인터넷이 되면 IBM Plex, 안 되면 맑은 고딕. 화면 표시를 막지 않게 늦게 붙인다 (오프라인 시연에서도 바로 뜸) -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="/static/app/demo.css">
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="toprow">
+      <div class="eyebrow">놈3 캡스톤 · IaCPatch 시연 화면</div>
+      <div class="toolbar">
+        <span class="tools" id="tools">도구 확인 중</span>
+        <a class="link-btn" href="/main" title="8단계 전체 화면 (자세히)">자세히 보기</a>
+      </div>
+    </div>
+    <h1>IaCPatch 검증 시연</h1>
+    <p class="lead">AI가 만든 테라폼 보안 수정안을 Trivy로 다시 검사하면 <strong>'지적 없음'</strong>이 나온다. 그게 진짜로 고친 건지는 설계도와 비교해서 따로 확인한다. 아래 결과는 이 컴퓨터에서 실제로 돌린 검사 기록이다.</p>
+    <div class="cases" id="cases" role="tablist" aria-label="예제"></div>
+    <div class="figs" id="figs"></div>
+  </div>
+</header>
+
+<nav class="steps" aria-label="순서">
+  <div class="wrap">
+    <a href="#problem"><b>1</b>문제</a>
+    <a href="#candidates"><b>2</b>수정안</a>
+    <a href="#results"><b>3</b>검사 결과</a>
+    <a href="#decision"><b>4</b>결정</a>
+    <span class="job" id="job" hidden></span>
+  </div>
+</nav>
+
+<main>
+  <section class="step" id="problem">
+    <div class="wrap">
+      <div class="step-head">
+        <div class="num">1 · 문제</div>
+        <h2 id="p-title">설정 오류</h2>
+        <p class="sub" id="p-summary"></p>
+      </div>
+      <div class="grid2">
+        <div class="panel">
+          <h3>문제가 된 코드</h3>
+          <div class="code"><div class="code-title" id="p-file"></div><pre id="p-code"></pre></div>
+          <div class="finding" id="p-finding"></div>
+        </div>
+        <div class="panel">
+          <h3 id="d-title">설계도</h3>
+          <p class="small" id="d-desc"></p>
+          <ol class="flows" id="d-list"></ol>
+          <div id="d-confirm"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" id="candidates">
+    <div class="wrap">
+      <div class="step-head">
+        <div class="num">2 · 수정안</div>
+        <h2>수정안을 고르고 검사한다</h2>
+        <p class="sub">팀이 미리 만든 수정안과, 지금 AI(Claude Code)나 규칙 기반으로 새로 만든 수정안을 같은 검사에 넣는다. 수정안이 맞는지 틀린지는 화면에 미리 적어 두지 않는다.</p>
+      </div>
+      <div class="actions" id="c-actions"></div>
+      <div class="cards" id="c-cards"></div>
+    </div>
+  </section>
+
+  <section class="step" id="results">
+    <div class="wrap">
+      <div class="step-head">
+        <div class="num">3 · 검사 결과</div>
+        <h2>Trivy 재검사와 설계도 비교를 나란히 본다</h2>
+        <p class="sub">초록 칸은 Trivy가 다시 검사한 결과, 파란 칸은 설계도와 비교한 결과다. 줄을 누르면 4번에서 그 수정안의 위험도와 결정을 본다.</p>
+      </div>
+      <div class="tbl"><table class="results"><thead><tr>
+        <th style="width:16%">수정안</th>
+        <th style="width:16%">Trivy 다시 검사<br><span class="v">V1 · V2</span></th>
+        <th style="width:15%">문법 · plan · 범위<br><span class="v">V3 · V4 · V5</span></th>
+        <th>설계도 비교<br><span class="v">V6</span></th>
+        <th style="width:15%">결과</th>
+      </tr></thead><tbody id="r-body"></tbody></table></div>
+      <div class="callout" id="r-callout"></div>
+      <div class="legend">
+        <div><b>정책</b>바꾸면 안 되는 걸 바꿨나 (예: 규칙 삭제)</div>
+        <div><b>V1</b>Trivy 지적이 사라졌나</div>
+        <div><b>V2</b>Trivy 새 지적이 생겼나</div>
+        <div><b>V3</b>문법이 맞나 (validate)</div>
+        <div><b>V4</b>plan이 만들어지나</div>
+        <div><b>V5</b>바뀐 범위가 허용 범위 안인가</div>
+        <div><b>V6</b>설계도와 같은가</div>
+        <div><b>V7 · V8</b>실제 AWS 확인 (이 화면에서는 안 함)</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" id="decision">
+    <div class="wrap">
+      <div class="step-head">
+        <div class="num">4 · 결정</div>
+        <h2>통과한 수정안은 위험도를 보고 사람이 정한다</h2>
+        <p class="sub">위험도는 "이 변경이 잘못되면 영향이 얼마나 넓은가"다. 검사 통과와 따로 매기고, Trivy 심각도와도 다르다. 적용(apply)은 항상 사람이 승인한 뒤에 한다.</p>
+      </div>
+      <div class="two">
+        <div class="panel" id="x-panel"><p class="small">3단계 표에서 수정안 줄을 누르면 여기에 나온다.</p></div>
+        <div class="tbl"><table class="grade">
+          <thead><tr><th style="width:20%">등급</th><th style="width:32%">점수</th><th>다음 처리</th></tr></thead>
+          <tbody>
+            <tr><td><span class="pill pass">LOW</span></td><td>0~2점</td><td>사람 1명이 바뀐 내용과 검사 표를 보고 진행 (수정 이유가 빠졌으면 MEDIUM처럼 승인 필요)</td></tr>
+            <tr><td><span class="pill warn">MEDIUM</span></td><td>3~5점, IAM 변경은 최소 이 등급</td><td>승인자가 근거를 보고 승인해야 진행</td></tr>
+            <tr><td><span class="pill fail">HIGH</span></td><td>6점 이상, 또는 강제 조건</td><td>수정 반영 금지, 보고서만</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+      <div class="steps-next">
+        <span class="s">사람 승인 (이 화면)</span><span class="arrow">다음</span>
+        <span class="s">PR</span><span class="arrow">다음</span>
+        <span class="s">② 임시 AWS 환경에서 V7 · V8</span><span class="arrow">다음</span>
+        <span class="s">PR 병합 · ③ 상시 환경 반영 (사람 승인)</span>
+      </div>
+      <p class="small">이 다음은 GitHub Actions 파이프라인이다. 지금 ② ③ 에 연결된 대상은 infrastructure/sg-baseline 하나이고, 위 예제(팀 3계층)는 아직 연결되지 않았다.</p>
+    </div>
+  </section>
+</main>
+
+<footer><div class="wrap">
+  <div>설정 오류(Misconfiguration)를 다룬다. 소프트웨어 결함(취약점, CVE)은 범위가 아니다.</div>
+  <div>이 화면은 기존 프로그램의 검사 엔진(V1~V6, 위험도 기준표 risk-v2)을 그대로 쓴다. 8단계 전체 화면은 오른쪽 위 '자세히 보기'.</div>
+</div></footer>
+
+<script src="/static/app/demo.js"></script>
+</body>
+</html>

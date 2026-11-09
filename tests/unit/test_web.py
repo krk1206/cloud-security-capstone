@@ -80,9 +80,18 @@ class WebServerTests(unittest.TestCase):
         self.assertEqual(st, 400)
         self.assertFalse(r["ok"])
 
-    def test_first_screen_is_the_new_story_app(self):
-        # 첫 화면 = 새 프로그램 8단계 (2026-11-01 D-31). 이전 흐름 화면은 /story, 작업 화면은 /work. 모두 외부 스크립트 없음
+    def test_first_screen_is_the_demo_and_main_keeps_8_steps(self):
+        # 첫 화면 = 시연 화면 4단계 (2026-11-10). 8단계 화면은 /main ('자세히 보기'), 이전 흐름 화면은 /story, 작업 화면은 /work. 모두 외부 스크립트 없음
         st, raw = self.s.get("/")
+        demo = raw.decode("utf-8")
+        self.assertEqual(st, 200)
+        self.assertIn('src="/static/app/demo.js"', demo)
+        self.assertIn('href="/main"', demo)
+        self.assertNotIn('src="http', demo)
+        for path in ("/static/app/demo.js", "/static/app/demo.css"):
+            st, _ = self.s.get(path)
+            self.assertEqual(st, 200, path)
+        st, raw = self.s.get("/main")
         html = raw.decode("utf-8")
         self.assertEqual(st, 200)
         self.assertIn('src="/static/app/main.js"', html)
