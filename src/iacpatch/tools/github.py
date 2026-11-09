@@ -179,15 +179,29 @@ def _base_problems(repo_root: Path, src: PrSource, remote: str, base_branch: str
     if tgt and not run(["git", "cat-file", "-e", f"{ref}:{tgt}"], cwd=str(repo_root)).ok:
         return [f"{ref} 에 프로젝트 폴더 {tgt} 가 없음 — PR 이 폴더 전체를 새로 만드는 것으로 보임"]
     orig_root = src.record_dir / "original"
+    # predeploy(run) 기록은 original/ 폴더 대신 baseline_files.json 에 원본을 둔다 (CI 경로). 둘 중 있는 쪽을 쓴다.
+    baseline: Dict[str, str] = {}
+    bf = src.record_dir / "baseline_files.json"
+    if bf.exists():
+        try:
+            baseline = {str(k): str(v) for k, v in json.loads(bf.read_text(encoding="utf-8")).items()}
+        except Exception:
+            baseline = {}
     for p in src.files:
         rel = p.relative_to(src.files_root).as_posix()
         o = orig_root / rel
         b = run(["git", "show", f"{ref}:{_jp(tgt, rel)}"], cwd=str(repo_root))
-        if not o.exists():
+        if o.exists():
+            orig_text: Optional[str] = o.read_text(encoding="utf-8")
+        elif rel in baseline:
+            orig_text = baseline[rel]
+        else:
+            orig_text = None
+        if orig_text is None:
             out.append(f"{rel}: 이 기록에 원본 사본이 없음 — 기준 브랜치와 같은지 확인 못 함")
         elif not b.ok:
             out.append(f"{rel}: {ref} 에 없는 파일 — PR 이 새 파일로 만듦")
-        elif b.stdout.replace("\r\n", "\n") != o.read_text(encoding="utf-8").replace("\r\n", "\n"):
+        elif b.stdout.replace("\r\n", "\n") != orig_text.replace("\r\n", "\n"):
             out.append(f"{rel}: {ref} 의 파일이 검사한 원본과 다름 — PR 의 변경이 검사한 변경과 달라짐")
     return out
 
