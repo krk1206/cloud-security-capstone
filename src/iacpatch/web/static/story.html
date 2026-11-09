@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IaCPatch — 흐름</title>
+<link rel="stylesheet" href="/static/app/app.css">
+<link rel="stylesheet" href="/static/app/story.css">
+</head>
+<body class="story">
+<header id="stop">
+  <div class="brand">
+    <svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><rect x="2" y="2" width="28" height="28" rx="7"/><path d="M9 17l5 5 9-11"/></svg>
+    <div><b>IaCPatch</b><span>AI·사람이 고친 Terraform 코드가 보안 문제를 해결하면서 고객 설계를 지키는지 검사</span></div>
+  </div>
+  <ol id="chapters" aria-label="흐름"></ol>
+  <a class="workbtn" href="/work" id="workLink">자세히 (작업 화면)</a>
+</header>
+<main id="sstage">
+  <section id="sdiagram">
+    <div class="dhead"><b id="sdTitle">고객 설계도</b><span id="dver" class="dver"></span>
+      <div class="legend"><span class="lg design">설계 통신</span><span class="lg ok">정상 통신</span><span class="lg bad">설계에 없는 연결</span><span class="lg off">허용 규칙 없는 필수 통신</span><span class="lg nodeX">설계에 없는 리소스</span><span class="lg nodeM">코드에 없는 구성요소</span></div>
+    </div>
+    <div class="dwrap"><svg id="sdia" role="img" aria-label="설계도 그림"></svg></div>
+    <div class="dnote" id="sdNote"></div>
+  </section>
+  <aside id="scard" aria-live="polite"></aside>
+</main>
+<footer id="gates" aria-label="8개 검사 관문"></footer>
+<div id="sboot"><div><b>IaCPatch</b><span id="sbootMsg">불러오는 중…</span></div></div>
+<script type="module" src="/static/app/story.js"></script>
+</body>
+</html>

@@ -26,7 +26,7 @@ from .generator.rule_based import RuleBasedGenerator
 from .intent import IntentSpec, try_load_intent
 from .models import Finding, GateAction, GateDecision, LayerResult, PatchCandidate, PolicyResult, RiskDecision, Validity, ValidityReport, Verdict
 from .policy.gate import decide
-from .policy.risk import score_risk
+from .policy.risk import score_risk, target_resource_type
 from .policy.validator import validate_candidate
 from .report import console_summary, intent_summary_md, pr_body, unified_diff
 from .runrecord import RunRecord
@@ -114,6 +114,13 @@ def run_predeploy(settings: Settings, target_dir: str, intent_path: str, scenari
     var_file = settings.tf_var_file or None
 
     try:
+        # 0) 원본 실행 전 안전 점검 (D-23 v2) — 원본도 신뢰하지 않는다. 위반이 있으면 Trivy · Terraform 을 실행하지 않는다
+        from .policy.exec_guard import check_files
+        og = check_files(read_tf_files(src_dir, policy.get("editable_file_globs")))
+        if og:
+            rec.step("original_guard", "BLOCKED", "; ".join(og[:3]))
+            rec.finish("INPUT_ERROR", note="원본 코드에 실행 전 안전 점검 위반", violations=og)
+            return PipelineResult(rec.run_id, rec.dir, "INPUT_ERROR", note="원본 코드에 실행 전 안전 점검 위반 — 도구 실행 안 함: " + "; ".join(og[:3]))
         # 1) 원본 스캔
         rec.start_timer("scan_before")
         before = trivy.scan_dir(src_dir, rec.dir / "trivy_before.json", tf_vars=(str(src_dir / var_file) if var_file else None))
@@ -256,7 +263,7 @@ def run_predeploy(settings: Settings, target_dir: str, intent_path: str, scenari
                 world = None
         risk: Optional[RiskDecision] = None
         if v5 is not None and v5.executed and v5.verdict != Verdict.SKIPPED:
-            risk = score_risk(rubric, v5.details, world, diff_stats, v6.details if v6 else None, target_type=target.resource.split(".")[0])
+            risk = score_risk(rubric, v5.details, world, diff_stats, v6.details if v6 else None, target_type=target_resource_type(target.resource))
             rec.write_json("risk.json", risk.to_dict())
         gate = decide(validity, policy_res, risk, candidate.proposed_autonomy)
         rec.write_json("gate.json", gate.to_dict())

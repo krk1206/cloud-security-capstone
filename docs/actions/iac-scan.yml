@@ -1,0 +1,127 @@
+# IaC Security Scan — 고친 사본 (2026-11-02, 검토 문서 대응 · D-41)
+#
+# GitHub main 의 .github/workflows/iac-scan.yml (759b3be) 에서 고친 것:
+#   1. Trivy 를 apt 의 '지금 최신' 이 아니라 팀 기준 0.74.0 으로 고정하고, 실행 때 `trivy --version` (버전 + 내장 체크 번들 digest) 을 결과에 남긴다.
+#      → 보고서의 지적 수 · 규칙 id 가 날마다 달라지지 않는다 (룰셋은 버전마다 다르다 — README '버전을 기록한다').
+#   2. 보고(JSON 아티팩트)와 게이트(HIGH/CRITICAL 이면 실패)가 **같은 대상**을 본다. 전에는 보고는 sg-baseline 만, 게이트는 '바뀐 폴더' 였다.
+#   3. 대상 = Terraform **루트 폴더** 목록(ROOTS)으로 정한다. '바뀐 파일의 상위 폴더' 는 modules/ 안 파일이 바뀌었을 때 그 모듈을 쓰는 루트를 놓친다.
+#      바뀐 파일이 modules/ 아래면, 그 모듈을 `source = "...modules/<이름>"` 로 참조하는 루트를 모두 대상으로 넣는다.
+#   4. 체크 번들 자동 갱신을 끈다 (`--skip-check-update`, `--skip-version-check`) — 같은 입력 · 같은 판 → 같은 결과.
+#
+# `.github/` 는 사람만 고친다 (CLAUDE.md). 이 파일은 사본이다 — 사람이 .github/workflows/iac-scan.yml 로 올린다.
+# 하지 않는 것: terraform apply · AWS 접속 · PR 자동 생성.
+
+name: IaC Security Scan
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    paths:
+      - 'infrastructure/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  TRIVY_VERSION: "0.74.0"            # 팀 기준 (scripts/setup_tools.* 와 같은 값). 바꾸면 결과 표의 '판' 도 바뀐다
+  TRIVY_SKIP_VERSION_CHECK: "true"   # check.trivy.dev 접속 끔 (앱 tools/trivy.py 와 같은 조건)
+  # Terraform 루트 폴더 목록 — 새 루트를 만들면 여기에 적는다 (자동 탐색하지 않는다: 모듈 폴더를 루트로 잘못 잡지 않게)
+  ROOTS: "infrastructure/sg-baseline infrastructure/three-tier"
+
+jobs:
+  trivy-config:
+    name: Trivy IaC Scan (report = gate 대상)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Trivy (고정 버전)
+        run: |
+          set -euo pipefail
+          URL="https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.deb"
+          curl -fsSL -o /tmp/trivy.deb "$URL"
+          sudo dpkg -i /tmp/trivy.deb
+          mkdir -p scan-results
+          { echo "trivy:"; trivy --version; echo; echo "commit: ${GITHUB_SHA}"; echo "run: ${GITHUB_RUN_ID}"; } | tee scan-results/versions.txt
+          # 설치된 판이 고정값과 다르면 실패 (apt 가 다른 판을 넣는 일을 막는다)
+          trivy --version | grep -q "Version: ${TRIVY_VERSION}"
+
+      # 대상 루트: PR 이면 바뀐 파일이 속한 루트(+ 바뀐 모듈을 쓰는 루트), push/수동이면 ROOTS 전부
+      - name: Resolve target roots
+        id: roots
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+            CHANGED=$(git diff --name-only "$BASE"...HEAD -- infrastructure/ || true)
+          else
+            CHANGED=""
+          fi
+          TARGETS=""
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            TARGETS="$ROOTS"
+          else
+            for f in $CHANGED; do
+              hit=""
+              for r in $ROOTS; do
+                case "$f" in "$r"/*) hit="$r";; esac
+              done
+              if [ -n "$hit" ]; then TARGETS="$TARGETS $hit"; continue; fi
+              # modules/ 아래 파일 → 그 모듈을 참조하는 루트 전부
+              case "$f" in
+                infrastructure/modules/*)
+                  mod=$(echo "$f" | cut -d/ -f3)
+                  for r in $ROOTS; do
+                    if grep -rqs "modules/${mod}\"" "$r"/*.tf 2>/dev/null; then TARGETS="$TARGETS $r"; fi
+                  done;;
+              esac
+            done
+          fi
+          TARGETS=$(echo $TARGETS | tr ' ' '\n' | sort -u | tr '\n' ' ')
+          echo "targets=$TARGETS" >> "$GITHUB_OUTPUT"
+          echo "대상 루트: ${TARGETS:-없음 (검사 생략)}" | tee -a scan-results/versions.txt
+
+      # 보고 = 게이트와 같은 대상. JSON 은 --include-non-failures 로 통과 항목도 남긴다 (몇 개를 봤는지 보이게)
+      - name: Scan (report, JSON + 표)
+        if: steps.roots.outputs.targets != ''
+        run: |
+          set -uo pipefail
+          for d in ${{ steps.roots.outputs.targets }}; do
+            [ -d "$d" ] || { echo "폴더 없음: $d"; continue; }
+            name=$(basename "$d")
+            TFVARS=""
+            [ -f "$d/terraform.tfvars.example" ] && TFVARS="--tf-vars $d/terraform.tfvars.example"
+            echo "== report: $d"
+            trivy config "$d" $TFVARS --skip-check-update --skip-version-check --include-non-failures \
+              --format json --output "scan-results/${name}.json" || echo "report 실패: $d (게이트 단계에서 다시 판정)"
+            trivy config "$d" $TFVARS --skip-check-update --skip-version-check || true
+          done
+
+      - name: Upload results (JSON · 판 정보)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-scan-results-${{ github.run_number }}
+          path: scan-results/
+          retention-days: 14
+
+      # 게이트: 같은 대상에서 HIGH/CRITICAL 이 하나라도 있으면 실패 (PR 만 — main 에 의도적 결함 시나리오가 있는 동안 push 는 보고만)
+      - name: Gate - fail on HIGH/CRITICAL (pull requests only, same targets)
+        if: github.event_name == 'pull_request' && steps.roots.outputs.targets != ''
+        run: |
+          set -uo pipefail
+          RC=0
+          for d in ${{ steps.roots.outputs.targets }}; do
+            [ -d "$d" ] || continue
+            TFVARS=""
+            [ -f "$d/terraform.tfvars.example" ] && TFVARS="--tf-vars $d/terraform.tfvars.example"
+            echo "== gate: $d"
+            trivy config "$d" $TFVARS --skip-check-update --skip-version-check --severity HIGH,CRITICAL --exit-code 1 || RC=1
+          done
+          exit $RC

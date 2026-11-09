@@ -1,0 +1,26 @@
+{
+  "kind": "topology",
+  "intent_version": "1",
+  "intent_id": "board-saas-proposal",
+  "status": "active",
+  "source": "proposal",
+  "target_dir": "scenarios/arch/board-saas",
+  "vpc_cidr": "10.30.0.0/16",
+  "description": "v1: 고객 제안서(scenarios/arch/board-saas/PROPOSAL.md) '2. 보안 조건' 을 그대로 옮긴 설계도 초안 — 담당자가 제안서와 맞는지 확인하고 확정해야 기준이 된다 (D-46)",
+  "tiers": [
+    {"id": "bastion", "label": "점프 서버 (Bastion)", "security_group": "aws_security_group.bastion"},
+    {"id": "web", "label": "웹 서버", "security_group": "aws_security_group.web"},
+    {"id": "db", "label": "데이터베이스 (MySQL)", "security_group": "aws_security_group.db"}
+  ],
+  "external": [
+    {"id": "internet", "label": "사용자(인터넷)", "cidrs_v4": ["0.0.0.0/0"]},
+    {"id": "office", "label": "본사 사무실", "cidrs_v4": ["203.0.113.0/24"]}
+  ],
+  "flows": [
+    {"id": "internet-web-80", "from": "internet", "to": "web", "protocol": "tcp", "port": 80, "label": "조건 1: 웹 공개 (HTTP)"},
+    {"id": "internet-web-443", "from": "internet", "to": "web", "protocol": "tcp", "port": 443, "label": "조건 1: 웹 공개 (HTTPS)"},
+    {"id": "office-bastion-22", "from": "office", "to": "bastion", "protocol": "tcp", "port": 22, "label": "조건 2: 점프 서버 SSH 는 본사 사무실만"},
+    {"id": "bastion-web-22", "from": "bastion", "to": "web", "protocol": "tcp", "port": 22, "label": "조건 3: 웹 서버 SSH 는 점프 서버만"},
+    {"id": "web-db-3306", "from": "web", "to": "db", "protocol": "tcp", "port": 3306, "label": "조건 4: DB 는 웹 서버만"}
+  ]
+}

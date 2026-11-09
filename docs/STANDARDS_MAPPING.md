@@ -34,3 +34,16 @@
 | 과다 개방 SG | 관리 포트를 인터넷 전체에 열지 않음, 승인 출처만 | SK 3.1 [확인됨], CIS 5.2/5.3 [번호 확인], WA SEC05 [확인] | `aws_security_group`, `aws_vpc_security_group_ingress_rule`, prefix list, 참조 SG | AVD-AWS-0107 | V1/V2 + V5 + V6(SG) |
 | IAM 과다 권한 | 최소 권한, 와일드카드 금지, 신뢰 정책 제한 | SK 2.x [채움], CIS 1.16 [번호 확인], WA SEC03 [확인] | `aws_iam_policy`, `aws_iam_role_policy`, `inline_policy`, attachment, `assume_role_policy` | AVD-AWS-0345/0342 (0057 deprecated) | V5 + V6(IAM Tier 1) |
 | Public S3 (6~7주차) | 공개 접근 차단, 공개 ACL·정책 금지 | SK S3 항목 [채움], CIS S3 항목 [확인] | `aws_s3_bucket_public_access_block`, `aws_s3_bucket_acl`, `aws_s3_bucket_policy` | AVD-AWS-0086~0094 계열 [룰 ID 실측 필요] | (미구현) |
+
+## 4. 2026-11-02 갱신 — '우리 Validator' 열이 가리키는 코드와 재현 방법
+
+검토 문서(11-02) "기준 매핑표 + 재현 가능한 증거" 대응. 이 표의 '우리' 열은 아래 코드 · 문서로 추적한다. 기준 항목 번호 · 문구는 §2 대로 **원문 확인 전까지 '매핑하였다' 로만** 쓴다.
+
+| 유형 | 기준 (출처 열은 §1 · docs/cis-mapping.md) | 우리 쪽 검사 (코드) | 재현 |
+|---|---|---|---|
+| 관리 포트 · 고위험 포트 인터넷 개방 | SK 3.1 [2차 출처 확인] · Security Hub EC2.13 / EC2.14 / **EC2.19 blockedPorts 목록** (sg_scan 이 그대로 씀, 2026-11-01 문서 확인) · CIS 5.2/5.3 [번호 원문 확인 필요] | Trivy AVD-AWS-0107 (V1 · V2) + 자체 검사 `verify/sg_scan.py` (`mgmt_public` · `highrisk_public` · `all_ports_public` · `split_any` · `ipv6_any`) | `trivy config <폴더>` (0.74.0) 와 `python3 -m unittest tests/unit/test_sg_scan.py`; 체크 메타는 `scripts/trivy_check_meta.py` |
+| 고객 설계(허용 통신) 밖 개방 · 필수 통신 차단 | 기준 문서 항목 없음 — 고객 요구사항(설계도)이 기준 | V6 토폴로지 오라클 `verify/topology_oracle.py` (docs/VERIFICATION_SCOPE.md §2.2) | `tests/unit/test_topology_oracle.py` 23건 · 변이 시험(§4) |
+| IAM 최소 권한 | CIS 1.16 [번호 확인] · WA SEC03 · Trivy AVD-AWS-0345 / 0342 (0057 deprecated) | V6 IAM 오라클 `verify/iam_oracle.py` (Tier 1, docs/IAM_SCOPE.md) | `tests/unit/test_iam_slice.py`, `docs/CROSS_VERIFICATION_2026-09-22.md` |
+| 변경 범위 통제 (패치가 건드려도 되는 것) | 팀 정책 (기준 문서 항목 아님) | V5 `policy/patch_policy.json` (sg-iam-v2) | `tests/unit/test_policy_risk_gate.py` |
+
+Trivy 가 선언한 CIS 태그와 실제 CIS 판 번호가 다를 수 있다는 점(TRIVY_CIS_MAPPING.md §0, AVD-AWS-0173 사례)은 그대로다. S3 유형은 여전히 '탐지만' (docs/OUT_OF_SCOPE.md).

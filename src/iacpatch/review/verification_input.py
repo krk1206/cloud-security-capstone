@@ -31,14 +31,14 @@ from ..verify.plan_model import PlanParseError, load_plan
 from ..verify.v6 import v6_intent_oracle
 
 LAYER_NAMES = {
-    "V1": "대상 finding 제거 (Trivy 재스캔)",
-    "V2": "새 finding 발생 여부 (Trivy 전후 비교)",
+    "V1": "기존 탐지 해소 확인 (Trivy 재검사)",
+    "V2": "신규 탐지 확인 (Trivy 수정 전·후 비교)",
     "V3": "terraform validate",
     "V4": "terraform plan",
-    "V5": "plan 구조 비교 (허용 범위)",
-    "V6": "Intent Oracle (실효 허용 집합)",
-    "V7": "배포 후 실제 AWS 상태",
-    "V8": "허용 통신 성공 / 금지 통신 실패",
+    "V5": "변경 허용 범위 검사 (plan 비교)",
+    "V6": "설계 기준 통신 비교 (실효 허용 집합)",
+    "V7": "AWS 적용 규칙 조회",
+    "V8": "통신 시험 (허용 경로 접속 성공 · 차단 경로 접속 차단)",
 }
 PRE_DEPLOY = ["V1", "V2", "V3", "V4", "V5", "V6"]
 POST_DEPLOY = ["V7", "V8"]
@@ -66,7 +66,7 @@ class LinkedVerification:
 
 
 def _not_run(layer: str, why: str) -> LayerResult:
-    return LayerResult(layer, LAYER_NAMES.get(layer, layer), Verdict.NOT_RUN, f"검증 대기 — {why}", {}, executed=False, tool="")
+    return LayerResult(layer, LAYER_NAMES.get(layer, layer), Verdict.NOT_RUN, f"미검증 — {why}", {}, executed=False, tool="")
 
 
 def load_verification_file(path: str | Path) -> Dict[str, Any]:
@@ -121,7 +121,7 @@ def link_verification(candidate_files: Dict[str, str], verification_path: Option
                 results[lr.layer] = lr
                 provided.append(lr.layer)
             if not want_digest:
-                notes.append("검증 결과 파일에 candidate_sha256 이 없어 이 후보에 대한 결과인지 대조하지 못했다 (A 가 해시를 넣어 주면 자동 대조됨)")
+                notes.append("검증 결과 파일에 candidate_sha256 이 없어 이 후보의 결과인지 대조 불가 (결과 파일에 해시가 있으면 자동 대조)")
 
     # 로컬 계산 가능 계층
     if baseline_plan and candidate_plan:
@@ -156,9 +156,9 @@ def link_verification(candidate_files: Dict[str, str], verification_path: Option
         if name in results:
             layers.append(results[name])
         else:
-            why = {"V1": "A 의 Trivy 재스캔 결과 없음", "V2": "A 의 Trivy 전후 비교 결과 없음", "V3": "A 의 terraform validate 결과 없음",
-                   "V4": "A 의 terraform plan 결과 없음", "V5": "원본/후보 plan JSON 없음", "V6": "후보 plan JSON 또는 intent 없음",
-                   "V7": "배포 후 실측 없음", "V8": "통신 확인 없음"}.get(name, "결과 없음")
+            why = {"V1": "Trivy 재검사 결과 없음", "V2": "Trivy 수정 전·후 비교 결과 없음", "V3": "terraform validate 결과 없음",
+                   "V4": "terraform plan 결과 없음", "V5": "원본/후보 plan JSON 없음", "V6": "후보 plan JSON 또는 요구사항(intent) 없음",
+                   "V7": "실제 AWS 검사 측정 없음", "V8": "통신 시험 없음"}.get(name, "결과 없음")
             layers.append(_not_run(name, why))
     # 파일에 있지만 이번 phase 에 없는 계층(예: V7)도 보존
     for name, lr in results.items():

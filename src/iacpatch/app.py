@@ -9,11 +9,13 @@
     python -m iacpatch.app --selfcheck               # 루트·exe 여부·도구·설치 상태 검사만 찍고 끝 (진단용, 문제 있으면 종료 코드 1)
     python -m iacpatch.app --update [--check]        # GitHub Release dev-latest 의 새 빌드를 옆 폴더에 받기 (화면의 '새 빌드 받기' 와 같음)
 
-화면(iacpatch/web): 4주차(위험도 기준표·상한 강제) · 5주차(패치→검증→PR 미리보기) · 실험 8단계 · 리포트 · 도구.
+화면(iacpatch/web): 사용자 작업 순서 6단계 — 요구사항 확인 → 현재 설정의 문제 → 수정 후보 비교 → 검증 결과 → 사람의 판단 → 적용 후 확인. 설정 화면에 도구 설치·기록 목록·실험 재현.
 
 exe: packaging/build_exe.ps1 (팀 PC) 또는 GitHub Actions build-exe 워크플로가 만든 IaCPatch.exe 를 저장소 루트에 두고 더블클릭.
 exe 는 실행기일 뿐이고 저장소 폴더(policy/, scenarios/, experiments/, tools/)가 옆에 있어야 한다.
-하지 않는 것: LLM API 호출, Claude Code 자동 호출, AWS 접속, git push, terraform apply (D-5, D-11).
+하지 않는 것: LLM API 호출, Claude Code 자동 호출, git push, 사람 확인 없는 terraform apply / destroy (D-5, D-11).
+AWS 는 실제 AWS 검사(시험 환경)에서만 쓴다: 읽기(describe·콘솔 출력)·접속 시험, 그리고 사람이 확인 창에서 plan 을 보고 [실행] 을 누른
+시험 환경 apply / destroy (testbed_ops.py, D-19). 운영 환경을 바꾸는 기능은 없다.
 """
 from __future__ import annotations
 
@@ -36,6 +38,7 @@ if not __package__ and not getattr(sys, "frozen", False):
         sys.path.insert(0, _src)
 
 from iacpatch.config import package_root  # noqa: E402
+from iacpatch.tools.runner import no_console_window  # noqa: E402
 
 
 def find_root() -> Path:
@@ -96,7 +99,7 @@ def tool_status() -> dict:
         binp = str(exe) if exe.exists() else os.environ.get(key, name)
         try:
             args = [binp, "--version"] if name == "trivy" else [binp, "version"]
-            out = subprocess.run(args, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=30)
+            out = subprocess.run(args, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=30, **no_console_window())
             ver = (out.stdout or out.stderr).strip().splitlines()[0] if (out.stdout or out.stderr).strip() else "?"
             st[name] = {"bin": binp, "ok": out.returncode == 0, "version": ver}
         except (OSError, subprocess.TimeoutExpired):
@@ -186,7 +189,8 @@ def selfcheck() -> List[str]:
     checks = [("iacpatch.config", "Settings", "tf_template_dir"), ("iacpatch.report_html", "summarize", None), ("iacpatch.fuzz.runner", "run_variants", None),
               ("iacpatch.fingerprint", "code_digest", None), ("iacpatch.tools.terraform", "TerraformAdapter", "restore_provider_template"),
               ("iacpatch.review.local_verify", "run_local_verification", None), ("iacpatch.web.server", "serve", None),
-              ("iacpatch.rubric_demo", "labeled_matrix", None)]
+              ("iacpatch.rubric_demo", "labeled_matrix", None), ("iacpatch.proof.cards", "build_cards", None),
+              ("iacpatch.web.proof_api", "proof_view", None), ("iacpatch.measure", "run_measure", None)]
     import importlib
     for mod, name, attr in checks:
         try:
@@ -198,7 +202,7 @@ def selfcheck() -> List[str]:
             problems.append(f"{mod}.{name}{'.' + attr if attr else ''} 없음 ({type(e).__name__}: {e}) — "
                             + ("exe 에 이 모듈이 안 들어갔다 (packaging/build_exe.ps1 의 PYTHONPATH·--collect-submodules)" if FROZEN else "옛 파일이 남아 있음"))
     for rel in ("scripts/fuzz_scanner.py", "scripts/oracle_fuzz.py", "scripts/run_candidate_set.py", "tests/unit/test_fuzz.py", "policy/risk_rubric.json",
-                "tests/fixtures/plan-pairs/README.md", "src/iacpatch/web/static/index.html"):
+                "tests/fixtures/plan-pairs/README.md", "src/iacpatch/web/static/index.html", "scenarios/arch/webapp-3tier-testbed/security_groups.tf"):
         if not (ROOT / rel).exists():
             problems.append(f"{rel} 없음")
     problems += _frozen_bundle_gaps()
@@ -323,7 +327,8 @@ def run_all(log: Callable[[str], None], progress: Callable[[int, int], None], re
             log(f"\n================ {title}"); lf.write(f"\n================ {title}\n")
             if argv is None:
                 continue
-            p = subprocess.Popen(argv, cwd=str(ROOT), env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace")
+            p = subprocess.Popen(argv, cwd=str(ROOT), env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace",
+                                 **no_console_window())
             assert p.stdout is not None
             for line in p.stdout:
                 line = line.rstrip("\n")
@@ -350,10 +355,73 @@ def run_all(log: Callable[[str], None], progress: Callable[[int, int], None], re
 TITLE = "AI가 생성한 테라폼 보안 패치의 실효성 검증 자동화 구현"
 
 
+WINDOW_TITLE = "IaCPatch — Terraform 수정 후보 검증"
+
+
+def _find_edge() -> Optional[str]:
+    if os.name != "nt":
+        return None
+    for base in (os.environ.get("ProgramFiles(x86)"), os.environ.get("ProgramFiles"), os.environ.get("LOCALAPPDATA")):
+        if base:
+            p = Path(base) / "Microsoft" / "Edge" / "Application" / "msedge.exe"
+            if p.exists():
+                return str(p)
+    return None
+
+
 def gui(port: Optional[int] = None, open_browser: bool = True) -> int:
-    """브라우저 화면: 로컬 웹 서버를 띄우고 기본 브라우저를 연다. 화면이 닫히면(heartbeat 끊김) 스스로 끝난다."""
-    from iacpatch.web.server import serve
-    return serve(port=port, open_browser=open_browser)
+    """화면을 자체 창으로 연다 (브라우저 주소창·탭 없음).
+
+    1) pywebview 가 있으면 프로그램 자체 창 (Windows: Edge WebView2). 창을 닫으면 프로그램이 끝난다.
+    2) 없으면 Edge 앱 창(--app, 주소창 없음). 3) 그것도 없으면 기본 브라우저.
+    화면 내용은 같은 로컬 화면(127.0.0.1, 이 PC 밖으로 나가지 않음)이다.
+    """
+    from iacpatch.web import server as srv
+    if not open_browser:
+        return srv.serve(port=port, open_browser=False)
+    port = port or srv.pick_port()
+    url = f"http://127.0.0.1:{port}/"
+    try:
+        import webview  # pywebview
+    except Exception:
+        webview = None
+    if webview is not None:
+        th = threading.Thread(target=srv.serve, kwargs={"port": port, "open_browser": False, "idle_exit": False}, daemon=True)
+        th.start()
+        srv.wait_ready(port)
+        try:
+            # 화면 크기가 PC 마다 달라서(노트북 배율 125~150% 면 1600x960 창이 화면보다 크다) 최대화로 연다.
+            # 어두운 3D 화면이 뜨기 전 흰 화면이 번쩍이지 않게 배경색도 맞춘다. 옛 pywebview 에 없는 인자는 빼고 다시 연다.
+            # text_select=True: 화면 글자를 드래그로 골라 복사할 수 있게 (pywebview 기본값은 선택 막음)
+            base = dict(width=1600, height=960, min_size=(1100, 680))
+            for extra in (dict(maximized=True, background_color="#04070D", text_select=True), dict(maximized=True, background_color="#04070D"),
+                          dict(background_color="#04070D", text_select=True), dict(background_color="#04070D"), {}):
+                try:
+                    webview.create_window(WINDOW_TITLE, url, **base, **extra)
+                    break
+                except TypeError:
+                    continue
+            webview.start()                      # 창이 닫힐 때까지 여기서 멈춘다
+        except Exception as e:                   # 창 엔진(WebView2)이 없으면 아래 Edge 앱 창으로
+            print(f"자체 창을 열 수 없음: {e}", flush=True)
+            webview = None
+        if webview is not None:
+            srv.request_quit()
+            th.join(timeout=5)
+            return 0
+        edge = _find_edge()
+        if edge:
+            subprocess.Popen([edge, f"--app={url}", "--window-size=1600,960", "--start-maximized"])
+        else:
+            webbrowser.open(url)
+        th.join()
+        return 0
+    edge = _find_edge()
+    if edge:
+        def _open_edge(u: str) -> None:
+            subprocess.Popen([edge, f"--app={u}", "--window-size=1600,960", "--start-maximized"])
+        return srv.serve(port=port, open_browser=False, ready=_open_edge)
+    return srv.serve(port=port, open_browser=True)
 
 
 def console(report_only: bool, open_browser: bool, fresh: bool = False, report_out: Optional[Path] = None) -> int:

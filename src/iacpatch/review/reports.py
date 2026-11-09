@@ -1,7 +1,7 @@
 """C 3주차 — 로컬 검토 리포트(review.md)와 PR 본문 초안(pr_body.md). 템플릿 + 입력 데이터만으로 만든다.
 
 이 문서들은 "입력과 확인된 결과를 정리한 리포트" 다. 모델의 분석 결과가 아니며, 그렇게 부르지 않는다.
-검증 결과가 없는 계층은 '검증 대기' 로 눈에 띄게 표시한다.
+검증 결과가 없는 단계는 '미검증' 으로 눈에 띄게 표시한다.
 """
 from __future__ import annotations
 
@@ -10,15 +10,15 @@ from typing import Any, Dict, List, Optional
 from ..models import Finding, PatchCandidate, PolicyResult, ReviewLevel, RiskDecision, ValidityReport, Verdict
 
 _ICON = {"PASS": "✅", "WARN": "⚠️", "FAIL": "❌", "UNKNOWN": "❓", "SKIPPED": "⏭️", "ERROR": "💥", "NOT_RUN": "⏳"}
-_KO = {"PASS": "통과", "WARN": "통과(주의)", "FAIL": "실패", "UNKNOWN": "판정 불가", "SKIPPED": "미실행(도구 없음)", "ERROR": "오류", "NOT_RUN": "검증 대기"}
+_KO = {"PASS": "통과", "WARN": "통과(경고)", "FAIL": "실패", "UNKNOWN": "판정 불가", "SKIPPED": "미실행(도구 없음)", "ERROR": "오류", "NOT_RUN": "미검증"}
 _LEVEL_KO = {
-    ReviewLevel.PENDING: "검증 대기 — 검토 수준을 아직 정할 수 없음",
+    ReviewLevel.PENDING: "미검증 — 검토 수준 결정 불가",
     ReviewLevel.LIGHT_REVIEW: "경량 검토 — 사람 1인 확인 후 진행 (자동 반영 아님)",
-    ReviewLevel.FULL_REVIEW: "정식 검토 — 승인자가 diff·검증·위험도 근거를 읽고 판단",
+    ReviewLevel.FULL_REVIEW: "정식 검토 — 승인자가 diff·검증·위험도 근거 검토 후 판단",
     ReviewLevel.REPORT_ONLY: "리포트만 — 패치 반영 금지",
     ReviewLevel.BLOCKED: "차단 — 후보 폐기",
 }
-_ORIGIN_KO = {"mock": "mock fixture (사람이 미리 작성한 고정 응답 — LLM 출력 아님)", "manual": "수동 입력 (사람이 준비한 파일 — 프로그램이 생성하지 않음)",
+_ORIGIN_KO = {"mock": "mock fixture (사전 작성한 고정 응답 — LLM 출력 아님)", "manual": "수동 입력 (사람이 준비한 파일 — 프로그램 생성 아님)",
               "rule_based": "규칙 기반 생성기 (리터럴 CIDR 치환 코드 — LLM 아님, 비교 실험의 기준선)", "llm": "LLM 응답", "seeded": "seeded 예제"}
 
 
@@ -30,14 +30,14 @@ def _pending_banner(validity: ValidityReport) -> List[str]:
     pending = [l.layer for l in validity.layers if l.verdict in (Verdict.NOT_RUN, Verdict.SKIPPED, Verdict.UNKNOWN, Verdict.ERROR)]
     fails = [l.layer for l in validity.layers if l.verdict == Verdict.FAIL]
     if fails:
-        return [f"> ❌ **검증 실패: {', '.join(fails)}** — 이 후보는 반영하면 안 된다.", ""]
+        return [f"> ❌ **검증 실패: {', '.join(fails)}** — 반영 불가 후보.", ""]
     if pending:
-        return [f"> ⏳ **검증 대기: {', '.join(pending)}** — 아직 검증되지 않은 계층이 있다. 이 리포트가 만들어졌다는 것은 패치가 검증됐다는 뜻이 **아니다**.", ""]
-    return ["> ✅ 필수 검증 계층 결과가 모두 있다 (결과 출처는 아래 표 참조). 최종 판단은 사람이 한다.", ""]
+        return [f"> ⏳ **미검증: {', '.join(pending)}** — 검증 결과가 없는 단계 존재. 리포트 생성은 패치 검증 완료를 의미하지 **않음**.", ""]
+    return ["> ✅ 필수 검증 단계 결과 확보 (결과 출처는 아래 표 참조). 최종 판단은 사람이 수행.", ""]
 
 
 def layer_table(validity: ValidityReport) -> List[str]:
-    rows = ["| 계층 | 내용 | 상태 | 요약 | 결과 출처 |", "|---|---|---|---|---|"]
+    rows = ["| 단계 | 내용 | 상태 | 요약 | 결과 출처 |", "|---|---|---|---|---|"]
     for l in validity.layers:
         src = str(l.details.get("result_source", "") or ("-" if l.verdict == Verdict.NOT_RUN else ""))
         summ = (l.summary or "").replace("|", "\\|").replace("\n", " ")
@@ -51,7 +51,7 @@ def _risk_rows(risk: Optional[RiskDecision]) -> List[str]:
     if risk is None:
         return ["_(위험도 판정 없음)_"]
     rows = [f"- 위험도: **{risk.risk_level.value}** (점수 {risk.score}) — 기준표: {risk.rubric_version}",
-            "- 위험도는 '틀렸을 때 얼마나 터지나' 이며, 검증 통과 여부와 별개다. 위험도 LOW 가 자동 반영을 뜻하지 않는다.", "",
+            "- 위험도는 변경 실패 시 영향 범위의 척도이며 검증 통과 여부와 별개. 위험도 LOW 가 자동 반영을 의미하지 않음.", "",
             "| 항목 | 값 | 점수 | 근거 종류 | 비고 |", "|---|---|---|---|---|"]
     for f in risk.factors:
         rows.append(f"| {f.get('factor')} | {str(f.get('value'))[:110]} | {f.get('points')} | {f.get('basis', '')} | {f.get('note', '')} |")
@@ -66,7 +66,7 @@ def render_review(ctx: Dict[str, Any]) -> str:
     c: PatchCandidate = ctx["candidate"]
     validity: ValidityReport = ctx["validity"]
     L: List[str] = []
-    L.append(f"# 로컬 검토 리포트 — {ctx['scenario']} ({ctx['run_id']})")
+    L.append(f"# 로컬 검토 리포트 — {ctx.get('display') or ctx['scenario']} ({ctx['run_id']})")
     L.append("")
     L.append("_이 문서는 입력(Trivy 결과·원본·수정 후보)과 확인된 검증 결과를 템플릿으로 정리한 것이다. 모델이 분석한 결과가 아니다._")
     L.append("")
@@ -149,21 +149,21 @@ def render_pr_body(ctx: Dict[str, Any], diff_text: str) -> str:
     validity: ValidityReport = ctx["validity"]
     risk: Optional[RiskDecision] = ctx.get("risk")
     L: List[str] = []
-    L.append(f"## [초안] {f.rule_id} on `{f.resource}` — {ctx['scenario']}")
+    L.append(f"## [초안] {f.rule_id} 수정 — `{f.resource}` ({ctx.get('display') or ctx['scenario']})")
     L.append("")
-    L.append("_이 본문은 로컬에서 생성한 초안이다. 실제 PR 게시·병합·apply 는 사람이 한다._")
+    L.append("> 로컬에서 생성한 PR 초안. PR 게시·병합·terraform apply 는 사람이 수행.")
     L.append("")
     L.extend(_pending_banner(validity))
     L.append(f"- 검토 수준: **{ctx['level'].value}** — {_LEVEL_KO[ctx['level']]}")
-    L.append(f"- 위험도: **{risk.risk_level.value if risk else '-'}**" + (f" (점수 {risk.score}, {risk.rubric_version})" if risk else ""))
+    L.append(f"- 위험도: **{risk.risk_level.value if risk else '-'}**" + (f" (점수 {risk.score}, 기준표 {risk.rubric_version})" if risk else ""))
     L.append(f"- 후보 출처: **{c.origin}** — {_ORIGIN_KO.get(c.origin, c.origin)}" + (f"; {c.provenance}" if c.provenance else ""))
     L.append("")
     L.append("### 수정 대상")
     L.append("")
     L.append(f"- `{f.filename}:{f.start_line}` `{f.resource}` — {f.title} ({f.severity})")
-    L.append(f"- 수정 이유: {c.rationale.strip() or '_미기재 — 사람이 채울 것_'}")
+    L.append(f"- 수정 근거: {c.rationale.strip() or '_미기재 — 사람이 작성 필요_'}")
     L.append("")
-    L.append("### 검증 상태")
+    L.append("### 검증 결과")
     L.append("")
     L.extend(layer_table(validity))
     L.append("")
@@ -173,7 +173,7 @@ def render_pr_body(ctx: Dict[str, Any], diff_text: str) -> str:
     L.append(diff_text.rstrip())
     L.append("```")
     L.append("")
-    L.append("### 승인 전 확인 (사람)")
+    L.append("### 승인 전 확인 항목 (사람)")
     L.append("")
     for item in ctx.get("human_checks", []):
         L.append(f"- [ ] {item}")

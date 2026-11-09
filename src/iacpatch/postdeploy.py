@@ -112,7 +112,11 @@ def v8_connectivity(checks_spec: Optional[Dict[str, Any]], intent, execute: bool
     판정:
       - expect=open 인 검사가 하나라도 실패 → FAIL (필요한 통신이 막힘)
       - expect=closed 이고 source_class=unapproved 인 검사가 성공(open) → FAIL (금지 통신이 뚫림)
-      - 보호 서비스마다 unapproved vantage 의 closed 검사가 없으면 → UNKNOWN (금지 통신 실패를 확인하지 못함)
+      - expect=closed 는 timeout(응답 없음 = 보안 그룹이 조용히 버림)만 통과로 센다.
+        refused 는 패킷이 서버까지 갔다는 뜻이라 보안 그룹이 막았다는 증거가 아니다 → INCONCLUSIVE.
+        사람이 적은 observed='closed' 도 timeout 인지 refused 인지 모르므로 INCONCLUSIVE. 오류도 INCONCLUSIVE.
+      - unapproved closed 검사 중 INCONCLUSIVE 가 있으면 → UNKNOWN
+      - 보호 서비스마다 unapproved vantage 의 closed 검사(timeout)가 없으면 → UNKNOWN (금지 통신 실패를 확인하지 못함)
       - vantage != local 인 검사는 이 러너가 실행하지 않는다 (NOT_RUN) → 그 서비스는 UNKNOWN
     """
     if not checks_spec:
@@ -145,29 +149,40 @@ def v8_connectivity(checks_spec: Optional[Dict[str, Any]], intent, execute: bool
         else:
             probe = _tcp_probe(str(c.get("host")), int(c.get("port")), float(c.get("timeout_s", 5)))
             entry["probe"] = probe
-        is_open = probe["result"] == "open"
+        res = str(probe["result"])
+        is_open = res == "open"
         if expect == "open":
             entry["outcome"] = "PASS" if is_open else "FAIL"
             if not is_open:
-                fails.append(f"{label}: expected open, got {probe['result']} (required access broken?)")
+                fails.append(f"{label}: expected open, got {res} (required access broken?)")
         else:
             if sclass != "unapproved":
                 entry["outcome"] = "INCONCLUSIVE"
                 entry["note"] = "closed-check from an approved source does not prove that unapproved sources are blocked"
+            elif is_open:
+                entry["outcome"] = "FAIL"
+                fails.append(f"{label}: expected closed from unapproved source, but connection succeeded")
+            elif res == "timeout":
+                entry["outcome"] = "PASS"
+                covered_unapproved[svc] = True
             else:
-                entry["outcome"] = "FAIL" if is_open else "PASS"
-                if is_open:
-                    fails.append(f"{label}: expected closed from unapproved source, but connection succeeded")
-                else:
-                    covered_unapproved[svc] = True
+                entry["outcome"] = "INCONCLUSIVE"
+                entry["note"] = ("refused: the packet reached the host (no listener) - not evidence that a security group blocked it" if res == "refused"
+                                 else "observed 'closed' does not say timeout or refused - record which one" if res == "closed"
+                                 else f"probe error ({res})")
         results.append(entry)
     missing = [g.service.label or g.service.id for g in intent.guarded_services if not covered_unapproved.get(g.service.label or g.service.id)]
     details = {"results": results, "unapproved_closed_coverage": covered_unapproved, "services_without_unapproved_check": missing}
     if fails:
         return LayerResult("V8", "connectivity (allowed succeeds / forbidden fails)", Verdict.FAIL, "; ".join(fails), details, True, "socket")
+    inconclusive = [r.get("label", "?") for r in results if r.get("outcome") == "INCONCLUSIVE" and str(r.get("source_class", "approved")) == "unapproved"]
+    details["inconclusive_unapproved"] = inconclusive
+    if inconclusive:
+        return LayerResult("V8", "connectivity (allowed succeeds / forbidden fails)", Verdict.UNKNOWN,
+                           f"forbidden checks that did not time out (refused/error cannot prove a security group block): {inconclusive}", details, True, "socket")
     if missing:
         return LayerResult("V8", "connectivity (allowed succeeds / forbidden fails)", Verdict.UNKNOWN,
-                           f"allowed checks passed, but no 'closed' check from an unapproved vantage for: {missing}", details, True, "socket")
+                           f"allowed checks passed, but no timed-out 'closed' check from an unapproved vantage for: {missing}", details, True, "socket")
     return LayerResult("V8", "connectivity (allowed succeeds / forbidden fails)", Verdict.PASS, "allowed connections succeed; forbidden connections fail (from the given vantages)", details, True, "socket")
 
 

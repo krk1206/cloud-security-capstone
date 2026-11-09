@@ -1,0 +1,77 @@
+{
+  "set_id": "three-tier-team-dbsg",
+  "week4_label_replay": false,
+  "_week4_note": "4주차 라벨 표(25건)는 2026-09-22 고정 세트만. 이 세트의 결과는 2026-11-06 실행 기록(docs/DECISIONS.md D-52)으로 잰다.",
+  "_note": "팀 3계층 요청 4 (D-52, 2026-11-06): 팀장(A) infrastructure/three-tier 의 사본(scenarios/arch/three-tier-team-dbsg)에 DB 보안 그룹 규칙 db_from_bastion 을 인터넷 전체 · 모든 포트(-1)로 연 설정 오류 하나 (AVD-AWS-0107 — 전체 포트도 잡는 규칙). 설계도 v1 = 요청 1 과 같은 팀 설계 문서의 허용 통신 5개(DESIGN.md) — 초안, 담당자가 ③ 에서 확정. 화면 수정안 4개(featured) + 평가용 2개(규칙 삭제 · 규칙 기반). expected 는 2026-11-06 실행 전 고정. 실제 AWS 시험 환경 없음.",
+  "tf_dir": "scenarios/arch/three-tier-team-dbsg",
+  "trivy_json": "experiments/arch-three-tier-team-dbsg/trivy-scan.json",
+  "rule": "AVD-AWS-0107",
+  "resource": "aws_vpc_security_group_ingress_rule.db_from_bastion",
+  "file": "security_groups.tf",
+  "line": 134,
+  "intent": "experiments/candidate-sets/three-tier-team-dbsg/intents/three-tier-flows.json",
+  "proposal": "scenarios/arch/three-tier-team-dbsg/DESIGN.md",
+  "proposal_label": "팀 설계 문서",
+  "local_tools": true,
+  "candidates": [
+    {
+      "id": "open-3306",
+      "candidate": "manual:candidates/open-3306.tf",
+      "source": "seeded",
+      "expected": "deceptive",
+      "expected_reason": "포트만 3306/tcp 로 좁히고 출처는 인터넷 전체 그대로 — Trivy 0107 은 SSH · RDP · 전체 포트만 봐서 V1 PASS, 설계도 비교(V6)에서 '설계도에 없는 통신'(인터넷 → DB 3306)으로 FAIL",
+      "note": "개발 중 작성한 seeded 예제 (2026-11-06, B 의 Claude 세션 작성) — LLM 출력 아님",
+      "change_summary": "DB 보안 그룹 규칙: 인터넷 전체 · 모든 포트 → 인터넷 전체 · 3306"
+    },
+    {
+      "id": "split-cidr",
+      "candidate": "manual:candidates/split-cidr.tf",
+      "source": "seeded",
+      "expected": "deceptive",
+      "expected_reason": "0.0.0.0/0 을 0.0.0.0/1 + 128.0.0.0/1 두 규칙으로 쪼갬 (모든 포트 그대로) — Trivy 는 /0 만 봐서 V1 PASS, 합치면 인터넷 전체 → V6 FAIL",
+      "note": "개발 중 작성한 seeded 예제 (2026-11-06, B 의 Claude 세션 작성) — LLM 출력 아님",
+      "change_summary": "DB 보안 그룹 규칙: 0.0.0.0/0 → 0.0.0.0/1 + 128.0.0.0/1 (규칙 2개, 모든 포트)"
+    },
+    {
+      "id": "fix-bastion",
+      "candidate": "manual:candidates/fix-bastion.tf",
+      "source": "seeded",
+      "expected": "correct",
+      "expected_reason": "팀 원본으로 되돌림 — Bastion 보안 그룹 참조 · 3306/tcp. V1 · V6 PASS 예상 (규칙 리소스의 속성만 바뀌는 제자리 수정이어야 V5 PASS)",
+      "note": "개발 중 작성한 seeded 예제 (2026-11-06, B 의 Claude 세션 작성) — LLM 출력 아님",
+      "change_summary": "DB 보안 그룹 규칙: 인터넷 전체 · 모든 포트 → Bastion 보안 그룹 · 3306 (팀 원본)"
+    },
+    {
+      "id": "vpc-all",
+      "candidate": "manual:candidates/vpc-all.tf",
+      "source": "seeded",
+      "expected": "unapproved",
+      "expected_reason": "출처를 VPC 대역 10.10.0.0/16 으로 좁혔지만 모든 포트 그대로 — Trivy 통과(/0 아님), V6 '설계도에 없는 통신'(VPC 안 → DB 모든 포트) FAIL",
+      "note": "개발 중 작성한 seeded 예제 (2026-11-06, B 의 Claude 세션 작성) — LLM 출력 아님",
+      "change_summary": "DB 보안 그룹 규칙: 인터넷 전체 → VPC 대역 10.10.0.0/16 (모든 포트)"
+    },
+    {
+      "id": "remove-rule",
+      "candidate": "manual:candidates/remove-rule.tf",
+      "source": "seeded",
+      "expected": "breaks_required",
+      "expected_reason": "규칙을 통째로 삭제 — Bastion → DB 3306(설계 5)까지 막힘. 따로 쓴 규칙 리소스 삭제라 정책(allow_delete=false)이 plan 전에 막을 것으로 예상(요청 1 의 같은 수정안과 같음)",
+      "note": "개발 중 작성한 seeded 예제 (2026-11-06, B 의 Claude 세션 작성) — LLM 출력 아님 — 화면 수정안 4개 밖, 평가용",
+      "change_summary": "DB 보안 그룹 규칙 db_from_bastion 삭제"
+    },
+    {
+      "id": "rule-based",
+      "candidate": "rule_based",
+      "source": "rule_based",
+      "expected": "unsupported",
+      "expected_reason": "규칙 기반은 IP 목록(글자 CIDR)만 바꾼다 — 설계도가 'Bastion 보안 그룹에서만 3306' 이라 승인 출처가 IP 가 아님 → NOT_SUPPORTED (generator/rule_based.py 에 적힌 한계)",
+      "note": "규칙 기반 생성기 (LLM 아님) — 화면 수정안 4개 밖, 평가용"
+    }
+  ],
+  "featured": [
+    "open-3306",
+    "split-cidr",
+    "fix-bastion",
+    "vpc-all"
+  ]
+}

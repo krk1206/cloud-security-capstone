@@ -1,0 +1,90 @@
+{
+  "kind": "topology",
+  "intent_version": "1",
+  "intent_id": "three-tier-team-dbsg-design",
+  "status": "active",
+  "source": "proposal",
+  "target_dir": "scenarios/arch/three-tier-team-dbsg",
+  "vpc_cidr": "10.10.0.0/16",
+  "description": "v1: 팀 설계 문서(docs/architecture/three-tier-design.md 1.5 · 1.6 · 2.1절, 발췌 = scenarios/arch/three-tier-team-dbsg/DESIGN.md)의 허용 통신 5개를 옮긴 설계도 초안 — 요청 1 과 같은 설계 문서. 담당자가 문서와 맞는지 확인하고 확정해야 기준이 된다 (D-52)",
+  "tiers": [
+    {
+      "id": "alb",
+      "label": "로드밸런서 (ALB)",
+      "security_group": "aws_security_group.alb"
+    },
+    {
+      "id": "web",
+      "label": "웹 서버 (ASG)",
+      "security_group": "aws_security_group.web"
+    },
+    {
+      "id": "bastion",
+      "label": "점프 서버 (Bastion)",
+      "security_group": "aws_security_group.bastion"
+    },
+    {
+      "id": "db",
+      "label": "데이터베이스 (MySQL)",
+      "security_group": "aws_security_group.db"
+    }
+  ],
+  "external": [
+    {
+      "id": "internet",
+      "label": "사용자(인터넷)",
+      "cidrs_v4": [
+        "0.0.0.0/0"
+      ]
+    },
+    {
+      "id": "admin",
+      "label": "운영자",
+      "cidrs_v4": [
+        "203.0.113.10/32"
+      ]
+    }
+  ],
+  "flows": [
+    {
+      "id": "internet-alb-80",
+      "from": "internet",
+      "to": "alb",
+      "protocol": "tcp",
+      "port": 80,
+      "label": "설계 1: 인터넷 → ALB (HTTP)"
+    },
+    {
+      "id": "alb-web-80",
+      "from": "alb",
+      "to": "web",
+      "protocol": "tcp",
+      "port": 80,
+      "label": "설계 2: ALB → 웹 서버"
+    },
+    {
+      "id": "admin-bastion-22",
+      "from": "admin",
+      "to": "bastion",
+      "protocol": "tcp",
+      "port": 22,
+      "label": "설계 3: Bastion SSH 는 운영자 IP/32 만"
+    },
+    {
+      "id": "web-db-3306",
+      "from": "web",
+      "to": "db",
+      "protocol": "tcp",
+      "port": 3306,
+      "label": "설계 4: 웹 서버 → DB"
+    },
+    {
+      "id": "bastion-db-3306",
+      "from": "bastion",
+      "to": "db",
+      "protocol": "tcp",
+      "port": 3306,
+      "label": "설계 5: Bastion → DB"
+    }
+  ]
+}

@@ -1,0 +1,126 @@
+name: IaCPatch AI fix (Claude Code, 구독 토큰)
+
+# 이 파일은 사람이 GitHub 웹에서 .github/workflows/iacpatch-ai-fix.yml 로 올린다 (AI 는 .github/ 를 고치지 않는다 — CLAUDE.md).
+# 사람이 Actions 화면에서 'Run workflow' 를 눌렀을 때만 돈다 (push · PR 로 자동 실행 안 함).
+# 하는 일: Claude Code(구독 토큰)에게 Trivy 지적 수정안을 받아 IaCPatch 배포 전 검사(V1~V6)를 돌리고, 막히면 막힌 이유
+#          (무엇 · 왜 · 어떻게)를 붙여 최대 3번 다시 요청한다. 앱의 'AI 에게 고치게 하기' 와 같은 코드 (src/iacpatch/llmfix.py, D-27).
+# 하지 않는 것: terraform apply · AWS 접속(자격증명 없음, 오프라인 plan) · PR 자동 생성 · 병합 · API 키(종량 과금) 사용.
+# AI 는 도구 없이(--tools "") 빈 임시 폴더에서 글만 만든다. 요청문 · 응답 원문 · 검사 기록은 아티팩트로 올린다.
+# 필요한 것: 저장소 Secret CLAUDE_CODE_OAUTH_TOKEN (PC 에서 `claude setup-token` 으로 만든 값, Pro · Max 구독). docs/actions/README.md 참고.
+
+on:
+  workflow_dispatch:
+    inputs:
+      set:
+        description: '후보 세트 (설계도 + Trivy 지적 1건)'
+        default: 'arch-3tier-sg'
+      context:
+        description: 'AI 에게 주는 정보 (trivy = Trivy 결과만, design = Trivy 결과 + 고객 설계도)'
+        type: choice
+        options: [trivy, design]
+        default: trivy
+      max_attempts:
+        description: '최대 시도 (1~3)'
+        default: '3'
+      claude_version:
+        description: 'Claude Code 버전 (npm). 첫 실행 로그의 버전으로 고정해 두는 것을 권장'
+        default: 'latest'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: iacpatch-ai-fix
+  cancel-in-progress: false
+
+env:
+  PYTHONIOENCODING: utf-8
+  TRIVY_SKIP_VERSION_CHECK: 'true'
+
+jobs:
+  ai-fix:
+    name: AI fix → V1~V6 → retry (max 3)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.16.1
+          terraform_wrapper: false
+      - name: Install Trivy 0.74.0 (iacpatch-verify.yml 과 같은 판)
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.74.0
+          trivy --version
+          terraform version
+      - name: Install Claude Code
+        env:
+          CLAUDE_VERSION: ${{ inputs.claude_version }}
+        run: |
+          case "$CLAUDE_VERSION" in latest|[0-9]*) ;; *) echo "::error::claude_version 형식이 아님"; exit 1;; esac
+          npm install -g "@anthropic-ai/claude-code@${CLAUDE_VERSION}"
+          claude --version
+      - name: Check secret (값은 출력하지 않음)
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          if [ -z "$CLAUDE_CODE_OAUTH_TOKEN" ]; then echo "::error::Secret CLAUDE_CODE_OAUTH_TOKEN 없음 — docs/actions/README.md 1~2번"; exit 1; fi
+          echo "토큰 있음 (값은 출력하지 않음)"
+      - name: AI fix → V1~V6 → retry with reasons
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/tools/plugin-cache
+          TRIVY_SKIP_CHECK_UPDATE: '1'
+          SET: ${{ inputs.set }}
+          CTX: ${{ inputs.context }}
+          N: ${{ inputs.max_attempts }}
+        # 종료 코드 = 결과 (src/iacpatch/llmfix.py EXIT_CODES): 0 검증 통과 · 1 수정안 부적합(최대 시도 · 같은 수정안 반복) · 2 AI 오류 · 3 실행 오류 · 4 검증 불가.
+        # 이 단계가 0 이 아니어도 아래 요약 · 아티팩트 · 판정 단계는 돈다(always). 작업(job)의 성공 · 실패는 마지막 '판정' 단계가 정한다.
+        id: aifix
+        continue-on-error: true
+        run: |
+          mkdir -p tools/plugin-cache
+          set +e
+          PYTHONPATH=src python -m iacpatch.llmfix --set "$SET" --context "$CTX" --max-attempts "$N" --summary ai_summary.md --status-file ai_status.txt
+          RC=$?
+          set -e
+          echo "rc=$RC" >> "$GITHUB_OUTPUT"
+          echo "status=$(cat ai_status.txt 2>/dev/null || echo UNKNOWN)" >> "$GITHUB_OUTPUT"
+          exit $RC
+      - name: Job summary
+        if: always()
+        run: |
+          if [ -f ai_summary.md ]; then cat ai_summary.md >> "$GITHUB_STEP_SUMMARY"; else echo "요약 없음 — 위 단계 로그 확인" >> "$GITHUB_STEP_SUMMARY"; fi
+      - name: Upload records (요청문 · 응답 원문 · 검사 기록)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: iacpatch-ai-fix-${{ github.run_id }}
+          path: |
+            data/llm_runs/
+            data/reviews/
+            ai_summary.md
+          retention-days: 30
+          if-no-files-found: warn
+      # 판정 (D-36, 2026-11-02): 'AI 가 끝내 통과하지 못함' 을 성공 체크로 표시하지 않는다. 종류별로 다른 메시지 — 환경 문제를 코드 수정으로 풀게 하지 않기 위해.
+      - name: 판정 — 검증 통과만 성공
+        if: always()
+        env:
+          RC: ${{ steps.aifix.outputs.rc }}
+          ST: ${{ steps.aifix.outputs.status }}
+        run: |
+          echo "AI 수정 결과: ${ST:-UNKNOWN} (종료 코드 ${RC:-?})"
+          case "${ST}" in
+            PASSED)      echo "::notice::배포 전 검사 통과 — 사람이 변경 내용 · 검증 표를 검토한 뒤 PR (자동 PR · 병합 없음)"; exit 0 ;;
+            GAVE_UP|REPEATED) echo "::error::수정안 부적합 — AI 가 최대 시도 안에 통과하지 못함 (원본 그대로). 사람이 고친 파일을 같은 검사에 넣는다 (⑤ 고친 파일 올리기)"; exit 1 ;;
+            AI_ERROR)    echo "::error::AI 오류 — Claude Code 설치 · 토큰(Secret) · 시간 초과 확인 후 다시 실행"; exit 2 ;;
+            TOOL_ERROR)  echo "::error::실행 오류 — Trivy · Terraform · provider 내려받기 · 입력 문제. 코드가 아니라 환경을 고친 뒤 다시 실행 (AI 재요청 안 함)"; exit 3 ;;
+            UNDECIDABLE) echo "::error::검증 불가 — 판정할 수 없는 값 · 미지원 구성. 사람 검토 (AI 재요청 안 함)"; exit 4 ;;
+            *)           echo "::error::결과 상태를 읽지 못함 (status=${ST:-없음}, rc=${RC:-없음}) — 위 단계 로그 · 아티팩트 확인"; exit 5 ;;
+          esac

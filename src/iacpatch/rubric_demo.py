@@ -64,7 +64,6 @@ FACTOR_KO: Dict[str, str] = {
     "replace_forcing_attribute_changed": "교체 유발 속성 변경 의심",
     "new_resource_blocks": "새 resource 블록 수 (텍스트 근거)",
     "resource_blocks_touched": "바뀐 resource 블록 수 (텍스트 근거)",
-    "non_resource_block_changed": "resource 가 아닌 블록 변경",
 }
 HARD_KO: Dict[str, str] = {
     "iam_resource_touched": "IAM 리소스 변경",
@@ -304,7 +303,7 @@ def _compact_factors(factors: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         if key in seen:
             continue
         seen.add(key)
-        short = "무조건 HIGH" if "hard" in note else ("최소 MEDIUM" if "floor" in note else "")
+        short = "항상 HIGH (고정 규칙)" if "hard" in note else ("최소 MEDIUM" if "floor" in note else "")
         out.append({"factor": name, "label": FACTOR_KO.get(name, HARD_KO.get(name, name)), "points": pts, "note": short})
     if undetermined:
         out.append({"factor": "undetermined", "label": FACTOR_KO["undetermined"], "points": 0, "note": "텍스트 근거"})

@@ -101,7 +101,7 @@ class PostdeployReviewTests(unittest.TestCase):
             spec.write_text(json.dumps({"checks": [
                 {"label": "ok-open", "service_label": "ssh", "host": "127.0.0.1", "port": l.port, "expect": "open", "vantage": "local", "source_class": "approved", "timeout_s": 3},
                 {"label": "ssh-closed", "service_label": "ssh", "host": "x", "port": 22, "expect": "closed", "vantage": "remote", "source_class": "unapproved", "observed": "timeout"},
-                {"label": "rdp-closed", "service_label": "rdp", "host": "x", "port": 3389, "expect": "closed", "vantage": "remote", "source_class": "unapproved", "observed": "refused"},
+                {"label": "rdp-closed", "service_label": "rdp", "host": "x", "port": 3389, "expect": "closed", "vantage": "remote", "source_class": "unapproved", "observed": "timeout"},   # refused 는 막힘의 증거가 아니다
             ]}), encoding="utf-8")
             out = run_postdeploy(self.settings, intent, ["sg-aaa"], str(spec), execute=True, review_id=str(res.run_dir), cli=ok)
         self.assertIn("post_deploy=VERIFIED", out)

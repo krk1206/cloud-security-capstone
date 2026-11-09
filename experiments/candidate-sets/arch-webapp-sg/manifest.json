@@ -1,6 +1,6 @@
 {
   "set_id": "arch-webapp-sg",
-  "_note": "지도교수 9/29 지시의 '다음 단계'(스캔 결과 → 패치 → 검증). 원본 = scenarios/arch/webapp-2tier (B 가 선정·작성한 VPC 2계층 웹 아키텍처, 17 리소스). 대상 finding = 웹 SG 의 SSH 0.0.0.0/0 (AVD-AWS-0107, security_groups.tf). 후보는 security_groups.tf 전체 대체본. 규칙 기반 1 + 사람이 만든 seeded 6 — LLM 아님(개발 중 작성한 예제, B 의 Claude 세션이 쓰고 B 가 검수). expected 는 2026-10-02 실행 전에 고정 (D-3/D-4). 실측 결과와 다르면 결과를 고치지 않고 불일치로 기록한다.",
+  "_note": "지도교수 9/29 지시의 '다음 단계'(스캔 결과 → 패치 → 검증). 원본 = scenarios/arch/webapp-2tier (B 가 선정·작성한 VPC 2계층 웹 아키텍처, 17 리소스). 대상 finding = 웹 SG 의 SSH 0.0.0.0/0 (AVD-AWS-0107, security_groups.tf). 후보는 security_groups.tf 전체 대체본. 규칙 기반 1 + 사람이 만든 seeded 6 — LLM 아님(개발 중 작성한 예제, B 의 Claude 세션이 쓰고 B 가 검수). expected 는 2026-10-02 실행 전에 고정 (D-3/D-4). 실측 결과와 다르면 결과를 고치지 않고 불일치로 기록한다. 2026-10-19: AI 후보 3개(ai-claude-r1~r3) 추가 — Claude 하위 세션, 프롬프트 초안 v1, 예비 시연용(source=claude-code). 기존 후보의 expected 는 바꾸지 않았다.",
   "week4_label_replay": false,
   "_week4_note": "4주차 라벨 표(25건)는 2026-09-22 에 고정된 세트만 센다. 이 세트의 등급 일치(expected_risk vs 코드)는 도구 있는 실행의 results.md 로 잰다 (plan 쌍 fixture 없음 — tests/fixtures 는 사람이 넣는다).",
   "tf_dir": "scenarios/arch/webapp-2tier",
@@ -79,6 +79,36 @@
       "note": "개발 중 작성한 seeded 예제 (2026-10-02) — '대상 밖 리소스를 같은 파일에서 여는' 변형",
       "expected_risk": "MEDIUM",
       "expected_risk_basis": "리소스 2개(+1) + 붙은 인스턴스 2개 web·app(+2) = 3 → MEDIUM"
+    },
+    {
+      "id": "ai-claude-r1",
+      "candidate": "manual:candidates/ai-claude-r1.tf",
+      "source": "claude-code",
+      "expected": "correct",
+      "expected_reason": "SSH(22) 출처를 0.0.0.0/0 → 10.0.0.0/8 로만 바꿈. HTTP 80·앱 8080 그대로. V1 PASS·V6 PASS 예상 — 실행 전 Claude(주 세션)가 파일을 읽고 적음, 팀 확인 전",
+      "note": "AI 후보 — Claude(하위 세션 a12b2cca, 검증 기준 정보 없음), 프롬프트 초안 v1(cc_prompt.py arch-sg) + 도구 금지 한 줄, 2026-10-19 예비 시연용(평가 세트 아님). 응답 코드 그대로 저장",
+      "expected_risk": "LOW",
+      "expected_risk_reason": "web SG 1개만 바뀜, 붙은 서버 1대 → 규칙 기반·correct-approved 와 같은 범위 (실행 전 적음)"
+    },
+    {
+      "id": "ai-claude-r2",
+      "candidate": "manual:candidates/ai-claude-r2.tf",
+      "source": "claude-code",
+      "expected": "correct",
+      "expected_reason": "SSH(22) 출처를 0.0.0.0/0 → 10.0.0.0/8 로만 바꿈. HTTP 80·앱 8080 그대로. V1 PASS·V6 PASS 예상 — 실행 전 Claude(주 세션)가 파일을 읽고 적음, 팀 확인 전",
+      "note": "AI 후보 — Claude(하위 세션 ac06c781, 검증 기준 정보 없음), 프롬프트 초안 v1(cc_prompt.py arch-sg) + 도구 금지 한 줄, 2026-10-19 예비 시연용(평가 세트 아님). 응답 코드 그대로 저장",
+      "expected_risk": "LOW",
+      "expected_risk_reason": "web SG 1개만 바뀜, 붙은 서버 1대 → 규칙 기반·correct-approved 와 같은 범위 (실행 전 적음)"
+    },
+    {
+      "id": "ai-claude-r3",
+      "candidate": "manual:candidates/ai-claude-r3.tf",
+      "source": "claude-code",
+      "expected": "correct",
+      "expected_reason": "SSH(22) 출처를 0.0.0.0/0 → 10.0.0.0/8 로만 바꿈. HTTP 80·앱 8080 그대로. V1 PASS·V6 PASS 예상 — 실행 전 Claude(주 세션)가 파일을 읽고 적음, 팀 확인 전",
+      "note": "AI 후보 — Claude(하위 세션 a091ec9f, 검증 기준 정보 없음), 프롬프트 초안 v1(cc_prompt.py arch-sg) + 도구 금지 한 줄, 2026-10-19 예비 시연용(평가 세트 아님). 응답 코드 그대로 저장",
+      "expected_risk": "LOW",
+      "expected_risk_reason": "web SG 1개만 바뀜, 붙은 서버 1대 → 규칙 기반·correct-approved 와 같은 범위 (실행 전 적음)"
     }
   ]
 }

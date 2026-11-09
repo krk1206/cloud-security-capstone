@@ -49,19 +49,19 @@ def _norm_rule(r: str) -> str:
 def load_trivy_report(path: str | Path) -> Dict[str, Any]:
     p = Path(path)
     if not p.exists():
-        raise TrivyInputError(f"Trivy JSON 파일이 없다: {p}")
+        raise TrivyInputError(f"Trivy JSON 파일 없음: {p}")
     try:
         text = p.read_text(encoding="utf-8")
     except OSError as e:
-        raise TrivyInputError(f"Trivy JSON 을 읽을 수 없다: {p}: {e}")
+        raise TrivyInputError(f"Trivy JSON 읽기 실패: {p}: {e}")
     try:
         data = json.loads(text)
     except json.JSONDecodeError as e:
-        raise TrivyInputError(f"Trivy JSON 이 올바른 JSON 이 아니다 ({p}): {e}")
+        raise TrivyInputError(f"Trivy JSON 형식 오류 — 올바른 JSON 아님 ({p}): {e}")
     if not isinstance(data, dict) or "Results" not in data:
-        raise TrivyInputError(f"Trivy JSON 형식이 아니다 (Results 키 없음): {p}")
+        raise TrivyInputError(f"Trivy JSON 형식 아님 (Results 키 없음): {p}")
     if not isinstance(data.get("Results"), list):
-        raise TrivyInputError(f"Trivy JSON 의 Results 가 리스트가 아니다: {p}")
+        raise TrivyInputError(f"Trivy JSON 의 Results 가 리스트 아님: {p}")
     return data
 
 
@@ -149,7 +149,7 @@ def check_source_consistency(report: Dict[str, Any], finding: Finding, tf_dir: s
     src = files.get(finding.filename)
     if src is None:
         chk.ok = False
-        chk.notes.append(f"finding 이 가리키는 파일 {finding.filename} 이 원본 디렉터리에 없다")
+        chk.notes.append(f"finding 이 가리키는 파일 {finding.filename} 이 원본 디렉터리에 없음")
         return chk
     src_lines = src.splitlines()
     if not lines:

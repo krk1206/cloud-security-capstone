@@ -1,0 +1,58 @@
+#!/bin/bash
+# iacpatch 시험 환경 서버 준비. 인터넷에 나갈 수 없으므로 AMI 에 들어 있는 python3 만 쓴다.
+mkdir -p /opt/iacpatch /srv/www
+cat > /opt/iacpatch/probe.py <<'PYEOF'
+${probe_py}
+PYEOF
+cat > /opt/iacpatch/listen.py <<'PYEOF'
+${listen_py}
+PYEOF
+cat > /opt/iacpatch/probe.cfg.json <<'CFGEOF'
+${probe_cfg}
+CFGEOF
+echo "iacpatch testbed: ${role}" > /srv/www/index.html
+
+%{ if http_port > 0 ~}
+cat > /etc/systemd/system/iacpatch-http.service <<'UNIT'
+[Unit]
+Description=iacpatch testbed http (${role})
+Wants=network-online.target
+After=network-online.target
+[Service]
+ExecStart=/usr/bin/python3 -m http.server ${http_port} --directory /srv/www
+Restart=always
+[Install]
+WantedBy=multi-user.target
+UNIT
+%{ endif ~}
+%{ if probe ~}
+cat > /etc/systemd/system/iacpatch-probe.service <<'UNIT'
+[Unit]
+Description=iacpatch testbed probe (${role})
+Wants=network-online.target
+After=network-online.target
+[Service]
+ExecStart=/usr/bin/python3 /opt/iacpatch/probe.py /opt/iacpatch/probe.cfg.json
+Restart=always
+RestartSec=5
+[Install]
+WantedBy=multi-user.target
+UNIT
+%{ endif ~}
+%{ if listen_port > 0 ~}
+cat > /etc/systemd/system/iacpatch-listen.service <<'UNIT'
+[Unit]
+Description=iacpatch testbed stand-in listener (${role})
+Wants=network-online.target
+After=network-online.target
+[Service]
+ExecStart=/usr/bin/python3 /opt/iacpatch/listen.py ${listen_port} ${role}-standin
+Restart=always
+[Install]
+WantedBy=multi-user.target
+UNIT
+%{ endif ~}
+systemctl daemon-reload
+for u in iacpatch-http iacpatch-probe iacpatch-listen; do
+  if [ -f /etc/systemd/system/$u.service ]; then systemctl enable --now $u.service; fi
+done
