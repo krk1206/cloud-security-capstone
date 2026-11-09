@@ -191,7 +191,10 @@ def score_risk_text(rubric: Dict[str, Any], change: HclChange, target_type: Opti
         factors.append({"factor": "hcl_unparsable", "value": change.unparsable, "points": 0, "note": "블록 구조를 읽지 못해 근거 부족", "basis": "text"})
 
     types = change.resource_types()
-    iam_touched = any(t.startswith(iam_prefixes) for t in types)
+    # IAM 정책을 data "aws_iam_policy_document" 로 쓴 경우도 IAM 변경이다 (D-6 'IAM 은 반드시 사람 승인').
+    # 2026-11-10: 팀 3계층 요청 6 에서 오프라인 plan 은 정책 JSON 이 '적용 후 결정' 이라 바뀐 리소스 0개로 보고, 텍스트 근거는 data 블록을 리소스로 세지 않아 IAM floor 가 빠졌다 (LOW 로 표시)
+    iam_data = [h for h in change.non_resource_blocks_changed if h.startswith("data ") and any(f'"{p}' in h for p in iam_prefixes)]
+    iam_touched = any(t.startswith(iam_prefixes) for t in types) or bool(iam_data)
     if hard.get("iam_resource_touched") and iam_touched:
         hard_hit.append("iam_resource_touched")
     def _rtype(addr: str) -> str:

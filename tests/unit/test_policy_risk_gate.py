@@ -47,6 +47,17 @@ class PolicyValidatorTests(unittest.TestCase):
         self.assertFalse(r.ok)
         self.assertTrue(any("forbidden_tokens" in v for v in r.violations))
 
+    def test_forbidden_token_counted_not_just_present(self):
+        # 2026-11-10: 원본에 같은 토큰이 이미 있으면(정당한 무시 주석 등) 새로 넣은 것을 못 잡던 것
+        pol = dict(POLICY, forbidden_tokens=list(POLICY.get("forbidden_tokens") or []) + ["trivy:ignore"])
+        base_main = "#trivy:ignore:AWS-0104\n" + BASE_MAIN
+        base = dict(BASELINE, **{"main.tf": base_main})
+        same = validate_candidate(cand({"main.tf": base_main.replace("0.0.0.0/0\"]\n  }\n\n  egress", "10.0.0.0/8\"]\n  }\n\n  egress")}), base, pol)
+        self.assertTrue(same.ok, same.violations)                       # 원래 있던 주석은 그대로 → 통과
+        hidden = validate_candidate(cand({"main.tf": base_main + "\n#trivy:ignore:AVD-AWS-0107\n"}), base, pol)
+        self.assertFalse(hidden.ok)                                      # 하나 더 넣음 → 차단
+        self.assertTrue(any("trivy:ignore" in v for v in hidden.violations))
+
     def test_terraform_block_change_detected(self):
         base = {"main.tf": 'terraform {\n  required_version = ">= 1.5"\n}\nresource "aws_security_group" "a" {\n  name = "a"\n}\n'}
         changed = base["main.tf"].replace(">= 1.5", ">= 1.0")
@@ -110,6 +121,28 @@ class RiskTests(unittest.TestCase):
         r = score_risk(RUBRIC, details, world, {"added_lines": 1, "removed_lines": 1, "files": 1})
         self.assertGreaterEqual(r.score, 1)
         self.assertTrue(any(f["factor"] == "attachment_points" and f["points"] >= 1 for f in r.factors))
+
+
+class TextRiskIamDataSourceTests(unittest.TestCase):
+    """2026-11-10: IAM 정책을 data "aws_iam_policy_document" 로 쓴 코드의 변경도 IAM floor(최소 MEDIUM) 대상이다 (D-6)."""
+    ORIG = 'data "aws_iam_policy_document" "web" {\n  statement {\n    actions   = ["s3:*"]\n    resources = ["*"]\n  }\n}\n'
+    NEW = 'data "aws_iam_policy_document" "web" {\n  statement {\n    actions   = ["s3:GetObject"]\n    resources = ["arn:aws:s3:::assets/*"]\n  }\n}\n'
+
+    def test_policy_document_change_gets_iam_floor(self):
+        from iacpatch.review.risk_text import diff_hcl, score_risk_text
+        ch = diff_hcl({"iam.tf": self.ORIG}, {"iam.tf": self.NEW})
+        self.assertEqual(ch.resource_types(), [])                      # 리소스 블록은 안 바뀜 — data 블록만
+        self.assertTrue(any("aws_iam_policy_document" in h for h in ch.non_resource_blocks_changed))
+        d = score_risk_text(RUBRIC, ch, "aws_iam_role_policy")
+        self.assertEqual(d.risk_level, RiskLevel.MEDIUM)
+        self.assertTrue(any(f["factor"] == "iam_resource_touched" for f in d.factors))
+
+    def test_non_iam_data_block_has_no_iam_floor(self):
+        from iacpatch.review.risk_text import diff_hcl, score_risk_text
+        o = 'data "aws_ami" "al2" {\n  most_recent = true\n}\n'
+        n = 'data "aws_ami" "al2" {\n  most_recent = false\n}\n'
+        d = score_risk_text(RUBRIC, diff_hcl({"x.tf": o}, {"x.tf": n}), "aws_security_group")
+        self.assertFalse(any(f["factor"] == "iam_resource_touched" for f in d.factors))
 
 
 class GateTests(unittest.TestCase):

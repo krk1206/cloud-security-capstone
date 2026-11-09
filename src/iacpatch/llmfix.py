@@ -195,22 +195,81 @@ def _src_text(node: Dict[str, Any]) -> str:
     return f"{node.get('label') or node.get('id')} (보안 그룹 {node.get('security_group')})"
 
 
+_RULE_TYPES = ("aws_vpc_security_group_ingress_rule", "aws_security_group_rule")
+
+
+def _rule_target(original: str, resource: str) -> tuple:
+    """따로 쓴 규칙 리소스(aws_vpc_security_group_ingress_rule 등)면 (붙는 보안 그룹 주소, from_port, to_port).
+    아니면 (None, None, None). 원본 파일 글자만 읽는다 (plan 없음)."""
+    rtype, _, name = resource.partition(".")
+    if rtype not in _RULE_TYPES or not name:
+        return None, None, None
+    m = re.search(r'resource\s+"' + re.escape(rtype) + r'"\s+"' + re.escape(name) + r'"\s*\{(.*?)\n\}', original, re.S)
+    if not m:
+        return None, None, None
+    body = m.group(1)
+    sg = re.search(r'security_group_id\s*=\s*(aws_security_group\.[A-Za-z0-9_-]+)\.id', body)
+    ports = [re.search(k + r'\s*=\s*(\d+)', body) for k in ("from_port", "to_port")]
+    fp, tp = (int(p.group(1)) if p else None for p in ports)
+    return (sg.group(1) if sg else None), fp, tp
+
+
+def _flow_in_ports(fl: Dict[str, Any], fp: Optional[int], tp: Optional[int]) -> bool:
+    if fp is None or tp is None:
+        return True
+    lo = fl.get("port") if fl.get("port") is not None else fl.get("from_port")
+    hi = fl.get("port") if fl.get("port") is not None else fl.get("to_port")
+    try:
+        return int(lo) <= tp and int(hi) >= fp
+    except (TypeError, ValueError):
+        return True
+
+
 def approved_sources(task: FixTask) -> str:
-    """지목 리소스(보안 그룹)로 들어오도록 설계도가 허용한 통신 — 원래 요청문(cc_prompt TEMPLATE)의 '허용돼야 하는 출처' 줄."""
+    """지목 리소스(보안 그룹)로 들어오도록 설계도가 허용한 통신 — 원래 요청문(cc_prompt TEMPLATE)의 '허용돼야 하는 출처' 줄.
+    지목 리소스가 따로 쓴 규칙 리소스면, 그 규칙이 붙는 보안 그룹과 포트로 설계도의 계층 · 통신을 찾는다 (2026-11-10:
+    팀 3계층의 aws_vpc_security_group_ingress_rule.bastion_ssh_in 에 '설계도에 이 리소스가 없음' 이 나가던 것을 고침)."""
     if not task.design:
         return "정해진 목록 없음 (고객 설계도가 아직 없음) — 꼭 필요한 출처만"
     d = task.design or {}
     nodes = _labels(d)
-    tier = next((t for t in d.get("tiers") or [] if t.get("security_group") == task.resource), None)
+    sg, fp, tp = _rule_target(task.original or "", task.resource)
+    key = sg or task.resource
+    tier = next((t for t in d.get("tiers") or [] if t.get("security_group") == key), None)
     if not tier:
         return "설계도에 이 리소스가 없음"
     rows = [f"{_src_text(nodes.get(str(fl.get('from')), {'id': fl.get('from')}))} → 포트 {fl.get('port') or str(fl.get('from_port')) + '-' + str(fl.get('to_port'))}"
-            for fl in d.get("flows") or [] if str(fl.get("to")) == str(tier.get("id"))]
+            for fl in d.get("flows") or [] if str(fl.get("to")) == str(tier.get("id")) and (sg is None or _flow_in_ports(fl, fp, tp))]
     return "; ".join(rows) or "없음"
+
+
+def is_iam(task: FixTask) -> bool:
+    return str((task.design or {}).get("kind") or "") == "iam"
+
+
+def approved_permissions(task: FixTask) -> str:
+    """IAM 설계도(kind=iam)의 허용 권한 — cc_prompt.py TEMPLATE_IAM 의 '허용돼야 하는 권한' 줄과 같은 정보 (2026-11-10:
+    IAM 세트에도 보안 그룹용 '출처' 줄이 나가 '설계도에 이 리소스가 없음' 이 전달되던 것을 고침)."""
+    rows = []
+    for p in (task.design or {}).get("approved_permissions") or []:
+        acts = ", ".join(str(a) for a in p.get("actions") or [])
+        res = ", ".join(str(r) for r in p.get("resources") or [])
+        rows.append(f"{acts} (리소스: {res})")
+    return "; ".join(rows) or "없음"
+
+
+def access_line(task: FixTask) -> str:
+    if is_iam(task):
+        roles = ", ".join((task.design or {}).get("targets", {}).get("roles") or []) or "지목 리소스"
+        return f"- 이 역할({roles})에 허용돼야 하는 권한: {approved_permissions(task)}  (그 외 어떤 액션 · 리소스도 허용하면 안 된다)\n"
+    return f"- 이 리소스에 허용돼야 하는 출처: {approved_sources(task)}  (그 외 출처는 허용하면 안 된다)\n"
 
 
 def design_text(task: FixTask) -> str:
     d = task.design or {}
+    if is_iam(task):
+        req = [f"- {r.get('label', '')}: {r.get('action')} (리소스: {r.get('resource')})" for r in d.get("required_permissions") or []]
+        return "꼭 있어야 하는 권한 (빠지면 서비스가 멈춘다):\n" + "\n".join(req) + f"\n허용 권한 (이 밖의 권한은 없어야 한다): {approved_permissions(task)}"
     nodes = _labels(d)
     tiers = [f"- {t.get('label')}: 보안 그룹 {t.get('security_group')}" for t in d.get("tiers") or []]
     flows = [f"- {_src_text(nodes.get(str(f.get('from')), {'id': f.get('from')}))} → {nodes.get(str(f.get('to')), {}).get('label', f.get('to'))} "
@@ -226,7 +285,7 @@ def build_prompt(task: FixTask, context: str = "trivy", prev: Optional[Dict[str,
     """1번째: 기존 Claude Code 요청문(scripts/cc_prompt.py TEMPLATE)과 같은 문장 (+ 설계도). 2번째부터: 앞 시도가 막힌 이유 + 앞 시도 파일."""
     base = (f"다음 Terraform 파일에서 Trivy 가 아래 설정 오류를 보고했다. 파일을 고쳐서 전체 내용을 돌려줘.\n\n"
             f"- 파일: {task.filename}  (내용은 아래)\n- 룰: {task.rule} — {task.title}\n- 지목 리소스: {task.resource}  ({task.line} 번째 줄)\n"
-            f"- 이 리소스에 허용돼야 하는 출처: {approved_sources(task)}  (그 외 출처는 허용하면 안 된다)\n"
+            + access_line(task) +
             f"- 다른 리소스나 파일은 만들지 말고, 이 파일의 수정본 전체만 코드 블록 하나로 출력해줘.\n")
     if context == "design" and task.design:
         base += f"\n고객 설계도 (이 구조를 지켜야 한다):\n{design_text(task)}\n"

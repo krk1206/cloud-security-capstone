@@ -125,8 +125,9 @@ def validate_candidate(candidate: PatchCandidate, baseline_files: Dict[str, str]
             check(f"file_size:{rel}", False, f"{len(content.encode('utf-8'))} bytes > {max_bytes}")
             continue
         base = baseline_files.get(rel, "")
-        # 금지 토큰: 새로 도입된 것만
-        introduced = [t for t in forbidden if t in content and t not in base]
+        # 금지 토큰: 새로 도입된 것만 — 원본에 이미 있던 개수보다 늘었으면 도입 (2026-11-10: 원본에 같은 토큰이 하나라도
+        # 있으면 새로 넣은 것을 못 잡던 것을 고침. 예: 원본에 '#trivy:ignore:AWS-0104' 가 있는 파일에 '#trivy:ignore:AVD-AWS-0107' 추가)
+        introduced = [t for t in forbidden if content.count(t) > base.count(t)]
         check(f"forbidden_tokens:{rel}", not introduced, f"introduced {introduced}" if introduced else "")
         # terraform/provider 블록 불변
         bblocks = {h: _norm(b) for h, b in extract_top_level_blocks(base) if h.split()[0] in forbidden_blocks}

@@ -85,6 +85,28 @@ class PromptAndCallTests(LlmFixBase):
         self.assertIn("고객 설계도", llmfix.build_prompt(task, "design"))
         self.assertNotIn("고객 설계도 (이 구조를", llmfix.build_prompt(task, "trivy"))
 
+    def test_rule_resource_gets_design_sources(self):
+        # 2026-11-10: 팀 3계층(따로 쓴 규칙 리소스)에서 '설계도에 이 리소스가 없음' 이 나가 AI 가 규칙 삭제 · 엉뚱한 주소를 냈다
+        task = llmfix.load_task(ROOT, "three-tier-team-sg")
+        line = llmfix.approved_sources(task)
+        self.assertNotIn("설계도에 이 리소스가 없음", line)
+        self.assertIn("203.0.113.10/32", line)
+        self.assertIn("포트 22", line)
+        self.assertNotIn("3306", line)                       # 같은 계층의 다른 포트 통신은 넣지 않는다
+        self.assertIn("203.0.113.10/32", llmfix.build_prompt(task, "trivy"))
+
+    def test_iam_set_gets_approved_permissions(self):
+        # 2026-11-10: IAM 세트에도 보안 그룹용 '출처' 줄(설계도에 이 리소스가 없음)이 나가 AI 가 권한을 지우거나 Deny 로 바꿨다
+        task = llmfix.load_task(ROOT, "three-tier-team-iam")
+        p = llmfix.build_prompt(task, "trivy")
+        self.assertNotIn("설계도에 이 리소스가 없음", p)
+        self.assertNotIn("허용돼야 하는 출처", p)
+        self.assertIn("허용돼야 하는 권한", p)
+        self.assertIn("s3:GetObject", p)
+        self.assertIn("s3:ListBucket", p)
+        self.assertIn("aws_iam_role.web", p)
+        self.assertIn("꼭 있어야 하는 권한", llmfix.build_prompt(task, "design"))
+
     def test_extract_exactly_one_block(self):
         self.assertEqual(llmfix.extract_file("앞말\n```hcl\na = 1\n```\n뒷말")[0], "a = 1\n")
         self.assertIsNotNone(llmfix.extract_file("```hcl\na\n```\n```hcl\nb\n```")[1])
