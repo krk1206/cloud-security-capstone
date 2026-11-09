@@ -1,0 +1,72 @@
+........................s....................s....................s.........................................................................................................sssssssss.................................sssssss............................................F.............................................F..................................F.......................................................................s..........................................................................s.......................................................................................................................
+======================================================================
+FAIL: test_refused_is_not_proof_of_block (test_postdeploy.V8Tests.test_refused_is_not_proof_of_block)
+닫힌 포트(refused)는 패킷이 서버까지 갔다는 뜻 — 보안 그룹이 막았다는 증거가 아니므로 통과로 세지 않는다.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "D:\a\cloud-security-capstone\cloud-security-capstone\tests\unit\test_postdeploy.py", line 165, in test_refused_is_not_proof_of_block
+    self.assertEqual(outs["ssh from unapproved"], "INCONCLUSIVE")
+AssertionError: 'PASS' != 'INCONCLUSIVE'
+- PASS
++ INCONCLUSIVE
+
+
+======================================================================
+FAIL: test_cards_from_minimal_record (test_proof.CardsTest.test_cards_from_minimal_record)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "D:\a\cloud-security-capstone\cloud-security-capstone\tests\unit\test_proof.py", line 695, in test_cards_from_minimal_record
+    self.assertTrue(cmd.startswith("trivy config <기록>"), cmd)
+AssertionError: False is not true : trivy config C:\Users\RUNNER~1\AppData\Local\Temp\tmp94leobia\20261023-000000-test\local_verify
+
+======================================================================
+FAIL: test_candidate_deployed (test_proof.TempEnvCardTest.test_candidate_deployed)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "D:\a\cloud-security-capstone\cloud-security-capstone\tests\unit\test_proof.py", line 550, in test_candidate_deployed
+    self.assertEqual((c["verdict"], c["verdict_ko"]), ("PASS", "반영 확인"))
+AssertionError: Tuples differ: ('FAIL', '반영 미확인') != ('PASS', '반영 확인')
+
+First differing element 0:
+'FAIL'
+'PASS'
+
+- ('FAIL', '반영 미확인')
+?   ^ ^^       -
+
++ ('PASS', '반영 확인')
+?   ^ ^^
+
+
+----------------------------------------------------------------------
+Ran 613 tests in 61.030s
+
+FAILED (failures=3, skipped=21)
+recovery for review 20261109-174310-95adf0 → D:\a\cloud-security-capstone\cloud-security-capstone\infrastructure\sg-baseline
+step 1: restore pre-patch files (from run record) into the Terraform directory
+   - D:\a\cloud-security-capstone\cloud-security-capstone\infrastructure\sg-baseline\main.tf
+   - D:\a\cloud-security-capstone\cloud-security-capstone\infrastructure\sg-baseline\outputs.tf
+   - D:\a\cloud-security-capstone\cloud-security-capstone\infrastructure\sg-baseline\provider.tf
+   - D:\a\cloud-security-capstone\cloud-security-capstone\infrastructure\sg-baseline\variables.tf
+step 2: git commit as a revert (human)  →  step 3: terraform plan  →  step 4: terraform apply (human-approved)
+step 5: terraform plan -detailed-exitcode must report NO changes, and describe-security-groups is recorded → RECOVERED
+preview only (--execute not given). Nothing was changed.
+PR preparation for review 20261109-174311-8fd934 (decision=LIGHT_REVIEW)
+  branch : iacpatch/pr-t-20261109-174311-8fd934
+  title  : [iacpatch] pr-t: AVD-AWS-0107 on aws_security_group.vulnerable_ssh
+  files  : main.tf -> infrastructure/sg-baseline/
+  body   : C:\Users\runneradmin\AppData\Local\Temp\iacpatch-pr-review-mupxdch3\20261109-174311-8fd934\pr_body_final.md
+  note   : 예제 폴더(실험 재료)를 고치는 시연용 PR — 병합하지 않는다 (본문 맨 위에 적음)
+  script : C:\Users\runneradmin\AppData\Local\Temp\iacpatch-pr-review-mupxdch3\20261109-174311-8fd934\pr_commands.sh
+preview only. Review pr_body.md, then either run the script above yourself or re-run with --execute.
+refusing to create a PR: review record not found: D:\a\cloud-security-capstone\cloud-security-capstone\data\reviews\no-such-review
+PR preparation for review 20261109-174311-b47a65 (decision=LIGHT_REVIEW)
+  branch : iacpatch/pr-t-20261109-174311-b47a65
+  title  : [iacpatch] pr-t: AVD-AWS-0107 on aws_security_group.vulnerable_ssh
+  files  : main.tf -> infrastructure/sg-baseline/
+  body   : C:\Users\runneradmin\AppData\Local\Temp\iacpatch-pr-review-7pe2j3lt\20261109-174311-b47a65\pr_body_final.md
+  note   : 예제 폴더(실험 재료)를 고치는 시연용 PR — 병합하지 않는다 (본문 맨 위에 적음)
+  script : C:\Users\runneradmin\AppData\Local\Temp\iacpatch-pr-review-7pe2j3lt\20261109-174311-b47a65\pr_commands.sh
+preview only. Review pr_body.md, then either run the script above yourself or re-run with --execute.
+refusing to create a PR: review level is 'PENDING' (검증 미완(NOT_RUN/UNKNOWN 남음)); only LIGHT_REVIEW / FULL_REVIEW may become PRs. state=REVIEW_REQUIRED verification=PENDING review_level=PENDING
+refusing to create a PR: review level is 'BLOCKED' (정책 위반 또는 검증 FAIL); only LIGHT_REVIEW / FULL_REVIEW may become PRs. state=VALIDATION_FAILED verification=FAILED review_level=BLOCKED
