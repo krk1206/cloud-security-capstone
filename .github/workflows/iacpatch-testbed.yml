@@ -57,7 +57,11 @@ jobs:
     name: Testbed apply → V7·V8 → destroy
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    # 봇(①)이 만든 패치 PR 은 ① 이 workflow_dispatch 로 이미 부르므로 pull_request 이벤트로는 돌지 않는다 (중복 실행 방지).
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.pull_request.head.repo.full_name == github.repository &&
+       github.event.pull_request.user.login != 'github-actions[bot]')
     env:
       TARGET_DIR: ${{ inputs.target_dir || 'infrastructure/sg-baseline' }}
       INTENT_OVERRIDE: ${{ inputs.intent }}
@@ -179,26 +183,23 @@ jobs:
           [ "$RUN" = "$prev" ] && RUN=""
           echo "run=$RUN" >> "$GITHUB_OUTPUT"
 
-      - name: 3) 패치 파일로 plan — 교체·삭제가 있으면 차단
+      # 차단 기준은 "패치 대상" 만: module.sg.* (끌어온 sg-baseline) 와 aws_security_group* 리소스에 삭제·교체가 있으면 BLOCKED.
+      # 시험 환경 자체 리소스(EC2·서브넷 등)의 교체는 패치의 잘못이 아니므로 testbed_churn 으로 기록만 한다.
+      # 교체가 있으면 어떤 속성이 교체를 강제했는지(replace_paths) 반드시 출력한다.
+      - name: 3) 패치 파일로 plan — 패치 대상에 교체·삭제가 있으면 차단
         if: steps.paths.outputs.skip == ''
         id: plan_patch
         run: |
           set -euo pipefail
           rm -f "$TARGET_DIR"/*.tf && cp work/patch/*.tf "$TARGET_DIR"/
           cd "${{ steps.paths.outputs.testbed }}"
-          terraform plan -no-color -var "run_id=$RUN_TAG" -out patch.tfplan | tail -n 20
+          echo "::group::terraform plan (패치 파일, 전체 출력)"
+          terraform plan -no-color -var "run_id=$RUN_TAG" -out patch.tfplan | tee ../../work/patch-plan.txt
+          echo "::endgroup::"
           terraform show -json patch.tfplan > ../../work/patch-plan.json
           cd - >/dev/null
-          python - <<'EOF' >> "$GITHUB_OUTPUT"
-          import json
-          d = json.load(open("work/patch-plan.json"))
-          bad = [c["address"] for c in d.get("resource_changes", []) if "delete" in (c.get("change") or {}).get("actions", [])]
-          upd = [c["address"] for c in d.get("resource_changes", []) if (c.get("change") or {}).get("actions") == ["update"]]
-          print("plan_check=" + ("BLOCKED" if bad else "OK"))
-          print("destructive=" + ",".join(bad))
-          print("updated=" + ",".join(upd))
-          EOF
-          tail -n 3 "$GITHUB_OUTPUT"
+          python scripts/ci_plan_guard_testbed.py work/patch-plan.json >> "$GITHUB_OUTPUT"
+          tail -n 5 "$GITHUB_OUTPUT"
 
       - name: 4) 패치 apply
         if: steps.paths.outputs.skip == '' && steps.plan_patch.outputs.plan_check == 'OK'
@@ -249,18 +250,33 @@ jobs:
       - name: 8) 결과 댓글 · 요약
         if: always() && steps.paths.outputs.skip == ''
         run: |
-          set -uo pipefail
+          set +e
+          mkdir -p work
           B="${{ steps.before.outputs.run }}"; A="${{ steps.after.outputs.run }}"
-          ARGS="--target-dir $TARGET_DIR --plan-check ${{ steps.plan_patch.outputs.plan_check || 'SKIPPED' }} --destroyed ${{ steps.leftover.outputs.state || 'unknown' }}"
-          T="apply_base=${{ steps.apply_base.outputs.seconds || 0 }},apply_patch=${{ steps.apply_patch.outputs.seconds || 0 }},destroy=${{ steps.destroy.outputs.seconds || 0 }}"
-          [ -n "$B" ] && ARGS="$ARGS --before data/runs/$B"
-          [ -n "$A" ] && ARGS="$ARGS --after data/runs/$A"
-          python scripts/ci_postdeploy_comment.py $ARGS --timings "$T" > work/comment.md || echo "댓글 생성 실패" > work/comment.md
-          if [ "${{ steps.plan_patch.outputs.plan_check }}" = "BLOCKED" ]; then
-            printf '\n> ❌ 패치 plan 에 교체·삭제가 포함돼 apply 하지 않았다: `%s`\n' "${{ steps.plan_patch.outputs.destructive }}" >> work/comment.md
+          if [ "${{ steps.apply_base.conclusion }}" != "success" ]; then
+            # apply 전에 끊김(자격증명·init·apply 실패) — 어디서 끊겼는지만 적는다
+            {
+              echo "## iacpatch 임시 시험 환경 — apply 전에 중단됨"
+              echo
+              echo "- 원본 apply: ${{ steps.apply_base.conclusion || 'skipped' }} · AWS 자격증명·init 단계 로그를 확인 (Actions run ${{ github.run_id }})"
+              echo "- AWS 에 만든 리소스 없음 → 정리할 것 없음"
+            } > work/comment.md
+          else
+            ARGS="--target-dir $TARGET_DIR --plan-check ${{ steps.plan_patch.outputs.plan_check || 'SKIPPED' }} --destroyed ${{ steps.leftover.outputs.state || 'unknown' }}"
+            T="apply_base=${{ steps.apply_base.outputs.seconds || 0 }},apply_patch=${{ steps.apply_patch.outputs.seconds || 0 }},destroy=${{ steps.destroy.outputs.seconds || 0 }}"
+            [ -n "$B" ] && ARGS="$ARGS --before data/runs/$B"
+            [ -n "$A" ] && ARGS="$ARGS --after data/runs/$A"
+            python scripts/ci_postdeploy_comment.py $ARGS --timings "$T" > work/comment.md || echo "댓글 생성 실패 (artifact 의 기록 참조)" > work/comment.md
+            if [ "${{ steps.plan_patch.outputs.plan_check }}" = "BLOCKED" ]; then
+              printf '\n> ❌ 패치 대상에 교체·삭제가 포함돼 apply 하지 않았다: `%s`\n' "${{ steps.plan_patch.outputs.destructive }}" >> work/comment.md
+            fi
+            if [ -n "${{ steps.plan_patch.outputs.testbed_churn }}" ]; then
+              printf '\n> ⚠️ 시험 환경 자체 리소스 교체(차단 안 함): `%s` — 이유: `%s`\n' "${{ steps.plan_patch.outputs.testbed_churn }}" "${{ steps.plan_patch.outputs.replace_why }}" >> work/comment.md
+            fi
           fi
           cat work/comment.md >> "$GITHUB_STEP_SUMMARY"
-          if [ -n "$PR_NUMBER" ]; then gh pr comment "$PR_NUMBER" --body-file work/comment.md; fi
+          if [ -n "$PR_NUMBER" ]; then gh pr comment "$PR_NUMBER" --body-file work/comment.md || echo "::warning::PR 댓글 실패"; fi
+          exit 0
 
       - name: Upload records
         if: always() && steps.paths.outputs.skip == ''
@@ -271,6 +287,7 @@ jobs:
             data/runs/
             work/v8-checks.json
             work/patch-plan.json
+            work/patch-plan.txt
             work/comment.md
           if-no-files-found: ignore
           retention-days: 30
@@ -280,8 +297,16 @@ jobs:
         run: |
           set -uo pipefail
           A="${{ steps.after.outputs.run }}"
-          [ "${{ steps.leftover.outputs.state }}" = "clean" ] || { echo "::error::임시 환경 정리 안 됨"; exit 1; }
-          [ "${{ steps.plan_patch.outputs.plan_check }}" = "OK" ] || { echo "::error::패치 plan 차단 또는 미실행"; exit 1; }
+          # 원본 apply 가 아예 안 돌았으면 AWS 에 만든 게 없다 → '정리' 는 통과, 그 전 단계 실패만 보고
+          if [ "${{ steps.apply_base.conclusion }}" != "success" ]; then
+            echo "::error::원본 apply 전에 중단됨 (${{ steps.apply_base.conclusion || 'skipped' }}) — 자격증명·init 로그 확인. AWS 리소스는 만들어지지 않음"; exit 1
+          fi
+          [ "${{ steps.leftover.outputs.state }}" = "clean" ] || { echo "::error::임시 환경 정리 안 됨 — 7) 스텝의 정리 명령 참조"; exit 1; }
+          case "${{ steps.plan_patch.outputs.plan_check }}" in
+            OK) ;;
+            BLOCKED) echo "::error::패치 plan 차단: 패치 대상에 교체·삭제 — ${{ steps.plan_patch.outputs.destructive }}"; exit 1 ;;
+            *)  echo "::error::패치 plan 미실행 (plan 단계 실패)"; exit 1 ;;
+          esac
           [ -n "$A" ] || { echo "::error::패치 후 측정 기록 없음"; exit 1; }
           python - "$A" <<'EOF'
           import json, sys

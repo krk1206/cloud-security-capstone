@@ -137,4 +137,10 @@ resource "aws_instance" "target" {
   EOF
 
   tags = { Name = "${local.prefix}-target" }
+
+  # 한 실행 안에서 "원본 apply → 패치 plan" 사이에 AL2023 최신 AMI 가 바뀌면 plan 이 이 서버를 '교체' 로 잡는다.
+  # 이 서버는 V8 의 과녁일 뿐 패치 대상이 아니므로 AMI·user_data 변화로 다시 만들지 않는다.
+  lifecycle {
+    ignore_changes = [ami, user_data]
+  }
 }

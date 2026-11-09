@@ -23,16 +23,13 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Install Trivy
+      # 버전 고정 (README·iacpatch-patch.yml 과 동일 0.74.0). apt 최신판을 받으면 실행마다 버전이 달라져 결과 재현이 안 된다.
+      - name: Install Trivy (버전 고정)
+        env:
+          TRIVY_VERSION: 0.74.0
         run: |
-          sudo apt-get update
-          sudo apt-get install -y wget gnupg
-          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key \
-            | gpg --dearmor | sudo tee /usr/share/keyrings/trivy.gpg > /dev/null
-          echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb generic main" \
-            | sudo tee /etc/apt/sources.list.d/trivy.list
-          sudo apt-get update
-          sudo apt-get install -y trivy
+          curl -sSL -o /tmp/trivy.deb "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.deb"
+          sudo dpkg -i /tmp/trivy.deb
           trivy --version
 
       - name: Scan (human readable, report only)
