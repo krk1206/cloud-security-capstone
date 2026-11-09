@@ -1,0 +1,312 @@
+# 워크플로 ③ 상시 환경 반영 잡 — main 에 병합된 sg-baseline 을 사람 승인 뒤 상시 환경에 반영하고 V7 · V8 로 확인한다.
+#
+# 흐름 (팀 결정 2026-10-20 의 마지막 칸):
+#   main 에 병합(push) → [사람 승인: Environment "sandbox" 의 승인자] → 반영 전 측정(V7 · V8)
+#   → plan (교체 · 삭제가 있으면 차단) → apply → 반영 후 측정 → 비교
+#   → 반영 전에 PASS 였던 검사가 FAIL 이 되면 직전 반영본으로 되돌리고 다시 측정 → 결과를 병합된 PR 에 댓글.
+# 상태(state)는 S3 (Variables TFSTATE_BUCKET), AWS 역할은 OIDC (Variables AWS_ROLE_DEPLOY). 둘 다 deploy/bootstrap 이 만든다.
+# 무인 apply 없음: 이 잡은 Environment 승인자가 [Approve and deploy] 를 눌러야 시작된다.
+# 상시 환경을 지우려면: Actions → IaCPatch Deploy → Run workflow → action = destroy (이것도 승인 필요).
+name: IaCPatch Deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'infrastructure/sg-baseline/**'
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'deploy = main 을 상시 환경에 반영 · destroy = 상시 환경 전부 삭제'
+        type: choice
+        options: [deploy, destroy]
+        default: deploy
+
+permissions:
+  id-token: write        # OIDC → AWS 역할 (액세스 키 없음)
+  contents: read
+  pull-requests: write   # 병합된 PR 에 결과 댓글
+
+# 상시 환경은 하나다. 진행 중인 반영을 끊지 않고 뒤에 줄 세운다.
+concurrency:
+  group: iacpatch-live
+  cancel-in-progress: false
+
+env:
+  TERRAFORM_VERSION: 1.16.1
+  AWS_PROVIDER_VERSION: 5.100.0
+  TF_IN_AUTOMATION: "true"
+  TF_INPUT: "0"
+  PYTHONPATH: src
+  TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/tools/plugin-cache
+  GH_TOKEN: ${{ github.token }}
+  LIVE_DIR: deploy/sg-baseline-live
+  TARGET_DIR: infrastructure/sg-baseline
+  INTENT: policy/intent/sg-baseline.json
+  STATE_KEY: live/sg-baseline.tfstate
+  MARKER_KEY: live/sg-baseline.deployed-commit
+  ACTION: ${{ inputs.action || 'deploy' }}
+
+jobs:
+  deploy:
+    name: 승인 → 상시 환경 반영 → V7·V8
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: sandbox   # 승인자(Required reviewers)가 승인해야 시작된다. OIDC sub = repo:<저장소>:environment:sandbox
+    steps:
+      - name: Checkout (main)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.sha }}
+
+      - name: 준비물 확인 (Variables)
+        id: pre
+        run: |
+          set -euo pipefail
+          miss=""
+          [ -n "${{ vars.AWS_ROLE_DEPLOY }}" ] || miss="$miss AWS_ROLE_DEPLOY"
+          [ -n "${{ vars.TFSTATE_BUCKET }}" ]  || miss="$miss TFSTATE_BUCKET"
+          if [ -n "$miss" ]; then
+            echo "skip=Variables 에 없음:$miss — deploy/bootstrap 을 사람이 apply 한 뒤 출력값을 넣는다" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Skip notice
+        if: steps.pre.outputs.skip != ''
+        run: |
+          echo "::notice::${{ steps.pre.outputs.skip }}"
+          echo "## iacpatch 상시 환경 반영 — 건너뜀" >> "$GITHUB_STEP_SUMMARY"
+          echo "${{ steps.pre.outputs.skip }}" >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/setup-python@v5
+        if: steps.pre.outputs.skip == ''
+        with:
+          python-version: '3.12'
+
+      - name: Setup Terraform (버전 고정)
+        if: steps.pre.outputs.skip == ''
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: false
+
+      - name: Cache Terraform providers
+        if: steps.pre.outputs.skip == ''
+        uses: actions/cache@v4
+        with:
+          path: tools/plugin-cache
+          key: tfplugins-${{ runner.os }}-aws-${{ env.AWS_PROVIDER_VERSION }}
+
+      - name: AWS 자격증명 (OIDC — 키 없음)
+        if: steps.pre.outputs.skip == ''
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_DEPLOY }}
+          aws-region: ${{ vars.AWS_REGION || 'ap-northeast-2' }}
+          role-session-name: iacpatch-deploy-${{ github.run_id }}
+
+      - name: terraform init (S3 상태)
+        if: steps.pre.outputs.skip == ''
+        run: |
+          set -euo pipefail
+          mkdir -p tools/plugin-cache
+          terraform -chdir="$LIVE_DIR" init -no-color \
+            -backend-config="bucket=${{ vars.TFSTATE_BUCKET }}" \
+            -backend-config="key=$STATE_KEY" \
+            -backend-config="region=${{ vars.AWS_REGION || 'ap-northeast-2' }}" \
+            -backend-config="encrypt=true" \
+            -backend-config="use_lockfile=true"
+
+      # 지금 상시 환경에 무엇이 떠 있나: 리소스가 있으면 공인 IP · SG ID, 그리고 직전에 반영한 커밋.
+      - name: 지금 상태 읽기
+        if: steps.pre.outputs.skip == ''
+        id: cur
+        run: |
+          set -uo pipefail
+          N=$(terraform -chdir="$LIVE_DIR" state list 2>/dev/null | wc -l)
+          echo "resources=$N" >> "$GITHUB_OUTPUT"
+          if [ "$N" -gt 0 ]; then
+            echo "host=$(terraform -chdir="$LIVE_DIR" output -raw target_public_ip 2>/dev/null || true)" >> "$GITHUB_OUTPUT"
+            echo "sg_id=$(terraform -chdir="$LIVE_DIR" output -raw sg_id 2>/dev/null || true)"         >> "$GITHUB_OUTPUT"
+          fi
+          PREV=$(aws s3 cp "s3://${{ vars.TFSTATE_BUCKET }}/$MARKER_KEY" - 2>/dev/null | tr -d '[:space:]' || true)
+          echo "prev_commit=$PREV" >> "$GITHUB_OUTPUT"
+          echo "리소스 $N 개, 직전 반영 커밋: ${PREV:-없음}, 이번 커밋: $GITHUB_SHA, 동작: $ACTION"
+
+      # ---------------- destroy (수동 실행, 승인 필요) ----------------
+      - name: 상시 환경 삭제 (action=destroy)
+        if: steps.pre.outputs.skip == '' && env.ACTION == 'destroy'
+        timeout-minutes: 20
+        run: |
+          set -euo pipefail
+          terraform -chdir="$LIVE_DIR" destroy -auto-approve -no-color | tail -n 15
+          aws s3 rm "s3://${{ vars.TFSTATE_BUCKET }}/$MARKER_KEY" || true
+          V=$(aws ec2 describe-vpcs --filters "Name=tag:iacpatch,Values=live" --query 'length(Vpcs)' --output text)
+          I=$(aws ec2 describe-instances --filters "Name=tag:iacpatch,Values=live" "Name=instance-state-name,Values=pending,running,stopping,stopped" --query 'length(Reservations[].Instances[])' --output text)
+          echo "## iacpatch 상시 환경 삭제" >> "$GITHUB_STEP_SUMMARY"
+          echo "남은 VPC: $V, 남은 인스턴스: $I" | tee -a "$GITHUB_STEP_SUMMARY"
+          [ "$V" = "0" ] && [ "$I" = "0" ] || { echo "::error::상시 환경 리소스가 남아 있음 — 사람이 확인"; exit 1; }
+
+      # ---------------- deploy ----------------
+      - name: 1) 반영 전 측정 (V7 · V8) — 이미 떠 있을 때만
+        if: steps.pre.outputs.skip == '' && env.ACTION == 'deploy' && steps.cur.outputs.host != ''
+        id: before
+        run: |
+          set -uo pipefail
+          mkdir -p data/runs work
+          python scripts/ci_v8_checks.py --host "${{ steps.cur.outputs.host }}" --intent-id sg-baseline --out work/v8-before.json
+          prev=$(ls -1 data/runs 2>/dev/null | grep -v README | sort | tail -n1 || true)
+          python -m iacpatch postdeploy --intent "$INTENT" --tf-dir "$LIVE_DIR" \
+            --sg-ids "${{ steps.cur.outputs.sg_id }}" --v8-checks work/v8-before.json --execute || true
+          RUN=$(ls -1 data/runs | grep -v README | sort | tail -n1)
+          [ "$RUN" = "$prev" ] && RUN=""
+          echo "run=$RUN" >> "$GITHUB_OUTPUT"
+
+      - name: 2) plan — 교체 · 삭제가 있으면 차단
+        if: steps.pre.outputs.skip == '' && env.ACTION == 'deploy'
+        id: plan
+        run: |
+          set -euo pipefail
+          mkdir -p work
+          terraform -chdir="$LIVE_DIR" plan -no-color -out live.tfplan | tail -n 25
+          terraform -chdir="$LIVE_DIR" show -json live.tfplan > work/live-plan.json
+          python - <<'EOF' >> "$GITHUB_OUTPUT"
+          import json
+          d = json.load(open("work/live-plan.json"))
+          ch = d.get("resource_changes", [])
+          bad = [c["address"] for c in ch if "delete" in (c.get("change") or {}).get("actions", [])]
+          n = sum(1 for c in ch if (c.get("change") or {}).get("actions") not in (["no-op"], ["read"]))
+          print("plan_check=" + ("BLOCKED" if bad else "OK"))
+          print("destructive=" + ",".join(bad))
+          print("changes=" + str(n))
+          EOF
+          tail -n 3 "$GITHUB_OUTPUT"
+
+      - name: 3) apply
+        if: steps.pre.outputs.skip == '' && env.ACTION == 'deploy' && steps.plan.outputs.plan_check == 'OK'
+        id: apply
+        timeout-minutes: 20
+        run: |
+          set -euo pipefail
+          t0=$(date +%s)
+          terraform -chdir="$LIVE_DIR" apply -auto-approve -no-color live.tfplan | tail -n 15
+          echo "seconds=$(( $(date +%s) - t0 ))" >> "$GITHUB_OUTPUT"
+          echo "host=$(terraform -chdir="$LIVE_DIR" output -raw target_public_ip)" >> "$GITHUB_OUTPUT"
+          echo "sg_id=$(terraform -chdir="$LIVE_DIR" output -raw sg_id)"           >> "$GITHUB_OUTPUT"
+
+      - name: 웹 서버 응답 대기 (최대 4분)
+        if: steps.pre.outputs.skip == '' && env.ACTION == 'deploy' && steps.apply.outcome == 'success'
+        run: |
+          H="${{ steps.apply.outputs.host }}"
+          for i in $(seq 1 48); do
+            if timeout 5 bash -c "exec 3<>/dev/tcp/$H/80" 2>/dev/null; then echo "80 열림 ($((i*5))s)"; exit 0; fi
+            sleep 5
+          done
+          echo "::warning::$H:80 이 4분 안에 열리지 않음 — V8 의 open 검사가 FAIL 로 나올 수 있다"
+
+      - name: 4) 반영 후 측정 (V7 · V8)
+        if: steps.pre.outputs.skip == '' && env.ACTION == 'deploy' && steps.apply.outcome == 'success'
+        id: after
+        run: |
+          set -uo pipefail
+          sleep 10   # SG 변경 전파
+          mkdir -p data/runs work
+          python scripts/ci_v8_checks.py --host "${{ steps.apply.outputs.host }}" --intent-id sg-baseline --out work/v8-after.json
+          prev=$(ls -1 data/runs 2>/dev/null | grep -v README | sort | tail -n1 || true)
+          python -m iacpatch postdeploy --intent "$INTENT" --tf-dir "$LIVE_DIR" \
+            --sg-ids "${{ steps.apply.outputs.sg_id }}" --v8-checks work/v8-after.json --execute || true
+          RUN=$(ls -1 data/runs | grep -v README | sort | tail -n1)
+          [ "$RUN" = "$prev" ] && RUN=""
+          echo "run=$RUN" >> "$GITHUB_OUTPUT"
+
+      - name: 5) 반영 전/후 비교
+        if: steps.pre.outputs.skip == '' && env.ACTION == 'deploy' && steps.apply.outcome == 'success'
+        id: cmp
+        run: |
+          set -euo pipefail
+          B="${{ steps.before.outputs.run }}"; A="${{ steps.after.outputs.run }}"
+          ARGS=""
+          [ -n "$B" ] && ARGS="$ARGS --before data/runs/$B"
+          [ -n "$A" ] && ARGS="$ARGS --after data/runs/$A"
+          python scripts/ci_live_compare.py $ARGS --plan-check OK --commit "$GITHUB_SHA" \
+            --prev-commit "${{ steps.cur.outputs.prev_commit }}" --md work/comment.md --github-output "$GITHUB_OUTPUT"
+
+      # 나빠졌으면(반영 전 PASS → 반영 후 FAIL) 직전 반영본의 sg-baseline 으로 되돌린다. 직전 반영본이 없으면(처음 반영) 되돌릴 곳이 없다.
+      - name: 6) 되돌리기 (나빠졌을 때만)
+        if: steps.pre.outputs.skip == '' && env.ACTION == 'deploy' && steps.cmp.outputs.regression == 'true' && steps.cur.outputs.prev_commit != ''
+        id: rollback
+        timeout-minutes: 20
+        run: |
+          set -euo pipefail
+          PREV="${{ steps.cur.outputs.prev_commit }}"
+          git cat-file -e "$PREV^{commit}"
+          git checkout "$PREV" -- "$TARGET_DIR"
+          terraform -chdir="$LIVE_DIR" plan -no-color -out rollback.tfplan | tail -n 15
+          terraform -chdir="$LIVE_DIR" show -json rollback.tfplan > work/rollback-plan.json
+          if python -c 'import json,sys; d=json.load(open("work/rollback-plan.json")); sys.exit(1 if any("delete" in (c.get("change") or {}).get("actions", []) for c in d.get("resource_changes", [])) else 0)'; then
+            terraform -chdir="$LIVE_DIR" apply -auto-approve -no-color rollback.tfplan | tail -n 10
+          else
+            echo "::error::되돌리기 plan 에 교체 · 삭제가 있어 apply 하지 않음 — 사람이 직접 복구"; exit 1
+          fi
+          git checkout "$GITHUB_SHA" -- "$TARGET_DIR"
+          sleep 10
+          H=$(terraform -chdir="$LIVE_DIR" output -raw target_public_ip); SG=$(terraform -chdir="$LIVE_DIR" output -raw sg_id)
+          python scripts/ci_v8_checks.py --host "$H" --intent-id sg-baseline --out work/v8-rollback.json
+          prev=$(ls -1 data/runs | grep -v README | sort | tail -n1)
+          python -m iacpatch postdeploy --intent "$INTENT" --tf-dir "$LIVE_DIR" --sg-ids "$SG" --v8-checks work/v8-rollback.json --execute || true
+          RUN=$(ls -1 data/runs | grep -v README | sort | tail -n1)
+          [ "$RUN" = "$prev" ] && RUN=""
+          echo "run=$RUN" >> "$GITHUB_OUTPUT"
+          B="${{ steps.before.outputs.run }}"; A="${{ steps.after.outputs.run }}"
+          python scripts/ci_live_compare.py --before "data/runs/$B" --after "data/runs/$A" ${RUN:+--rollback "data/runs/$RUN"} \
+            --plan-check OK --commit "$GITHUB_SHA" --prev-commit "$PREV" --md work/comment.md
+
+      # 나빠지지 않았으면 이번 커밋을 '직전 반영본' 으로 기록한다 (다음 되돌리기의 기준).
+      - name: 7) 반영 커밋 기록
+        if: steps.pre.outputs.skip == '' && env.ACTION == 'deploy' && steps.apply.outcome == 'success' && steps.cmp.outputs.regression == 'false'
+        run: |
+          echo "$GITHUB_SHA" | aws s3 cp - "s3://${{ vars.TFSTATE_BUCKET }}/$MARKER_KEY"
+
+      - name: 8) 결과 댓글 · 요약
+        if: always() && steps.pre.outputs.skip == '' && env.ACTION == 'deploy'
+        run: |
+          set -uo pipefail
+          mkdir -p work
+          if [ ! -s work/comment.md ]; then
+            {
+              echo "## iacpatch 상시 환경 반영 (워크플로 ③)"
+              echo
+              echo "- plan 검사: **${{ steps.plan.outputs.plan_check || '실행 안 됨' }}**"
+              [ "${{ steps.plan.outputs.plan_check }}" = "BLOCKED" ] && echo "- plan 에 교체 · 삭제가 있어 apply 하지 않았다: \`${{ steps.plan.outputs.destructive }}\`"
+              echo "- 자세한 기록은 이 실행의 artifact 에 있다."
+            } > work/comment.md
+          fi
+          cat work/comment.md >> "$GITHUB_STEP_SUMMARY"
+          PR=$(gh api "repos/${{ github.repository }}/commits/$GITHUB_SHA/pulls" --jq '.[0].number' 2>/dev/null || true)
+          if [ -n "$PR" ] && [ "$PR" != "null" ]; then gh pr comment "$PR" --body-file work/comment.md; else echo "연결된 PR 없음 — 요약에만 남김"; fi
+
+      - name: Upload records
+        if: always() && steps.pre.outputs.skip == ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: iacpatch-deploy-${{ github.run_id }}
+          path: |
+            data/runs/
+            work/
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: 9) 판정 (VERIFIED 가 아니면 실패)
+        if: always() && steps.pre.outputs.skip == '' && env.ACTION == 'deploy'
+        run: |
+          set -uo pipefail
+          [ "${{ steps.plan.outputs.plan_check }}" = "OK" ] || { echo "::error::plan 차단 또는 미실행"; exit 1; }
+          S="${{ steps.cmp.outputs.status }}"
+          case "$S" in
+            VERIFIED)   echo "반영 후 V7 · V8 모두 PASS" ;;
+            REGRESSION) echo "::error::반영 후 나빠짐 — 직전 반영본으로 되돌림 (되돌리기 단계 결과 확인)"; exit 1 ;;
+            NOT_CLEAN)  echo "::error::나빠진 것은 없지만 FAIL 이 남아 있음 (아직 고쳐지지 않은 설정 오류)"; exit 1 ;;
+            *)          echo "::error::반영 후 측정 기록 없음"; exit 1 ;;
+          esac
