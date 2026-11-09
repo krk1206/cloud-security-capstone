@@ -40,23 +40,36 @@ function newProjectHtml() {
 // 11차 (D-47, B "쓸데없는 기능 · 내용 다 빼고 프로젝트만"): 준비 상태 한 줄 + 프로젝트 카드만. 설명 글 · 네 묶음 · 안내 카드는 뺐다
 // 16차 (D-52): 맨 위 = 고객 요청함 (가상 고객의 요청이 시간이 지나면 하나씩 도착 — 최근 것이 위). 그 아래 다른 예제 · 내 프로젝트
 // 17차 (D-53): 예제 카드의 숫자 칸 · 폴더 경로는 뺐다 (내 프로젝트 카드는 점검 상태를 보여야 해서 그대로)
-registerTodo(1, () => {
-  const v = S.inbox;
-  if (!v) return "";
-  const un = v.items.filter((i) => i.unread);
-  if (un.length) { const o = un[un.length - 1]; return `안 읽은 고객 요청 ${un.length}건 — 먼저 온 요청 ${o.seq} 부터 [열기 ▶] 를 누르세요.`; }
-  return "고객 요청을 골라 [열기 ▶] 를 누르세요.";
-});
+registerTodo(1, () => "프로젝트를 선택하세요. 가상 고객 요청은 아래 요청함에서 별도로 볼 수 있습니다.");
 register(1, () => {
-  const mine = (S.projects || []).filter((p) => p.kind === "user"), ex = (S.projects || []).filter((p) => p.kind !== "user" && !isInboxCase(p.id));
+  const all = S.projects || [];
+  const mine = all.filter((p) => p.kind === "user");
+  const ex = all.filter((p) => p.kind !== "user");
+  // Prefer in-scope SG cases for a short briefing, without hiding other projects.
+  const ranked = ex.map((p, i) => ({p, i, score:
+    (p.id === S.pid ? 100 : 0) + (p.fix_scope !== "out_of_policy" ? 10 : 0) +
+    (/three-tier-team$/.test(p.id) ? 30 : 0) + (p.testbed ? 20 : 0)
+  })).sort((a,b) => b.score - a.score || a.i - b.i).map((x) => x.p);
+  const main = ranked.slice(0, 4), more = ranked.slice(4);
   const npOpen = S.npOpen || !!(S.np && (S.np.info || S.np.path));
-  $("#mbody").innerHTML = `${readyHtml()}
-    <section class="ibox" id="ibox" aria-label="고객 요청함">${inboxHtml()}</section>
-    <div class="msec-row"><h2 class="msec">다른 예제 <small>AWS 시험 환경에서 잰 기록이 있는 예제</small></h2>
-      <button type="button" class="mbtn ${npOpen ? "on" : ""}" data-act="np-open">${npOpen ? "폴더 연결 닫기 ▴" : "내 Terraform 폴더 연결 ▾"}</button></div>
+  $("#mbody").innerHTML = `
+    <section class="rf-hero" aria-label="프로그램 소개">
+      <div><span class="rf-eyebrow">TERRAFORM PATCH VERIFICATION</span>
+        <h2>수정된 코드, 검증한 뒤 승인하세요.</h2>
+        <p>스캐너의 경고가 사라졌는지뿐 아니라, 허용 통신 기준과 변경 범위를 함께 확인합니다.</p></div>
+      <div class="rf-flow" aria-label="검토 흐름"><b>현황</b><span>→</span><b>수정</b><span>→</span><b>검증</b><span>→</span><b>승인</b></div>
+    </section>
+    ${readyHtml()}
+    <div class="rf-section-title"><div><h2>검토할 프로젝트</h2><p>예제 데이터와 실제 연결 프로젝트를 구분해 선택하세요.</p></div>
+      <button type="button" class="mbtn ${npOpen ? "on" : ""}" data-act="np-open">${npOpen ? "폴더 연결 닫기" : "＋ 내 Terraform 연결"}</button></div>
     ${npOpen ? newProjectHtml() : ""}
-    ${ex.length ? `<div class="pgrid">${ex.map(projCard).join("")}</div>` : ""}
-    ${mine.length ? `<h2 class="msec">내 프로젝트 <small>${mine.length}</small></h2><div class="pgrid">${mine.map(projCard).join("")}</div>` : ""}`;
+    ${mine.length ? `<div class="pgrid">${mine.map(projCard).join("")}</div><div class="rf-section-title"><h2>예제 프로젝트 <small>가상 시나리오 · 실제 운영 고객 아님</small></h2></div>` : ""}
+    ${main.length ? `<div class="pgrid">${main.map(projCard).join("")}</div>` : `<div class="mempty">표시할 예제가 없습니다. Terraform 폴더를 연결하거나 아래 요청함을 확인하세요.</div>`}
+    ${more.length ? `<details class="rf-fold"><summary>전체 예제 더 보기 <small>추가 ${more.length}개 · IAM / 정책 범위 밖 사례 포함</small></summary><div class="pgrid">${more.map(projCard).join("")}</div></details>` : ""}
+    <details class="rf-fold"><summary>가상 고객 요청함 <small>시연용 요청 목록 · 실제 고객 요청 아님</small></summary>
+      <section class="ibox" id="ibox" aria-label="고객 요청함">${inboxHtml()}</section>
+    </details>
+    <p class="rf-footer">배포 전 검증과 실제 AWS 통신 시험은 서로 다른 단계입니다. 미검증은 통과가 아니며, 승인 · PR 생성 · AWS 변경은 기존 확인 절차를 따릅니다.</p>`;
 });
 
 // ------------------------------------------------------------------ ② 현재 인프라 — 코드의 리소스 전부를 AWS 구성도처럼 (D-33)

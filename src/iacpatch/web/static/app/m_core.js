@@ -21,23 +21,23 @@ export const api = {
 // 8단계 — 사용자의 질문 (V 번호는 '자세히' 에만)
 // 7차 (D-35, B 11-02 "청중 · 사용자가 쓰기 쉽게"): 단계마다 '할 일' 한 줄(todo)을 머리말에 크게, 설명(sub)은 '이 화면 안내' 첫 칸으로.
 // 왼쪽 메뉴는 8단계 그대로 두고 보기 · 고치기 · 확인 · 결정 네 묶음으로 나눠 보인다 (grp)
-export const GROUPS = { see: "보기", fix: "고치기", check: "확인", decide: "결정" };
+export const GROUPS = { see: "01 · 현황", fix: "02 · 수정", check: "03 · 검증", decide: "04 · 승인" };
 export const STEPS = [
-  { n: 1, short: "시작", grp: null, q: "AI가 수정한 클라우드 인프라, 그대로 적용해도 될까요?", sub: "프로젝트를 고르면 현재 인프라부터 차례로 확인합니다.",
-    todo: "고객 요청함에서 요청을 골라 [열기 ▶] 를 누르세요 (고객 요청 → 설계도 확정 → 수정 → 승인 → PR). 내 Terraform 폴더도 연결할 수 있습니다." },
-  { n: 2, short: "현재 인프라", grp: "see", q: "내 인프라가 지금 어떻게 구성되어 있지?", sub: "Terraform 코드의 리소스 전부를 AWS 구성도처럼 — VPC · 서브넷 · 로드밸런서 · 서버 · DB · S3 · IAM, 보안 그룹 허용(포트)은 선으로.",
+  { n: 1, short: "프로젝트", grp: null, q: "프로젝트 선택", sub: "프로젝트를 고르면 현재 인프라부터 차례로 확인합니다.",
+    todo: "검토할 프로젝트를 여세요. 내 Terraform 폴더도 연결할 수 있습니다." },
+  { n: 2, short: "현재 인프라", grp: "see", q: "현재 인프라", sub: "Terraform 코드의 리소스 전부를 AWS 구성도처럼 — VPC · 서브넷 · 로드밸런서 · 서버 · DB · S3 · IAM, 보안 그룹 허용(포트)은 선으로.",
     todo: "그림에서 빨간 선(위험한 허용)을 찾아보세요. 상자 · 선을 누르면 설명이 나옵니다." },
-  { n: 3, short: "원하는 구조", grp: "see", q: "우리 회사가 원하는 구조는 이거다", sub: "설계도 = 고객이 허용하는 통신. 처음엔 프로그램이 자동으로 만들고(지금 코드에서 위험한 통신만 막음), 오른쪽 목록에서 통신마다 허용 · 막기를 고르면 왼쪽 설계도 그림이 바뀝니다.",
+  { n: 3, short: "원하는 구조", grp: "see", q: "허용 통신 기준", sub: "설계도 = 고객이 허용하는 통신. 처음엔 프로그램이 자동으로 만들고(지금 코드에서 위험한 통신만 막음), 오른쪽 목록에서 통신마다 허용 · 막기를 고르면 왼쪽 설계도 그림이 바뀝니다.",
     todo: "오른쪽 목록에서 통신마다 허용 · 막기를 고르세요. 왼쪽 그림이 바로 바뀌고, 저장하면 검사 기준이 됩니다." },
-  { n: 4, short: "보안 문제", grp: "see", q: "어떤 보안 문제가 있지?", sub: "Trivy(알려진 설정 오류) + 자체 보안 그룹 검사 + 고객 설계 위반을 한 목록으로.",
+  { n: 4, short: "보안 문제", grp: "see", q: "보안 문제", sub: "Trivy(알려진 설정 오류) + 자체 보안 그룹 검사 + 고객 설계 위반을 한 목록으로.",
     todo: "문제를 하나 누르세요. 고칠 수 있는 문제면 '이 문제 고치기' 버튼이 나옵니다." },
-  { n: 5, short: "수정안", grp: "fix", q: "어떤 수정 방법이 더 안전하지?", sub: "수정안 번호를 누르면 그림이 '그 수정안을 적용한 뒤' 모습으로 바뀝니다. 설계도와 다른 곳만 빨강 ✕. AI · 내가 고친 파일도 같은 검사.",
+  { n: 5, short: "수정안", grp: "fix", q: "수정안 비교", sub: "수정안 번호를 누르면 그림이 '그 수정안을 적용한 뒤' 모습으로 바뀝니다. 설계도와 다른 곳만 빨강 ✕. AI · 내가 고친 파일도 같은 검사.",
     todo: "'AI 에게 고치게 하기' 를 누르거나, 팀 평가용 수정안을 하나 골라 설계도와 비교하세요." },
-  { n: 6, short: "적용 판단", grp: "check", q: "이 수정 코드를 적용해도 될까?", sub: "배포 전에 코드만으로 확인하는 다섯 가지 질문의 답.",
+  { n: 6, short: "배포 전 검증", grp: "check", q: "배포 전 검증", sub: "배포 전에 코드만으로 확인하는 다섯 가지 질문의 답.",
     todo: "다섯 질문의 답을 보세요. 빨간 답이나 '검사 못 함' 이 있으면 승인할 수 없습니다." },
-  { n: 7, short: "AWS 시험 환경", grp: "check", q: "AWS 시험 환경에 반영하면 제대로 작동할까?", sub: "사람이 승인한 뒤 AWS 시험 환경(샌드박스)에 반영해서 설정과 연결을 잽니다 — 운영 환경이 아닙니다.",
+  { n: 7, short: "AWS 시험 환경", grp: "check", q: "AWS 시험 환경", sub: "사람이 승인한 뒤 AWS 시험 환경(샌드박스)에 반영해서 설정과 연결을 잽니다 — 운영 환경이 아닙니다.",
     todo: "'다음 할 일' 칸의 버튼을 순서대로 누르세요 (원본 반영 → 측정 → 수정안 반영 → 측정 → 삭제). 반영 · 삭제는 확인 창에서 plan 을 보고 사람이 실행합니다." },
-  { n: 8, short: "최종 결정", grp: "decide", q: "최종적으로 무엇을 결정해야 하지?", sub: "해결된 것 · 남은 것 · 새로 생긴 것 · 확인 못 한 것을 보고 결정합니다. 승인하면 PR 을 만듭니다.",
+  { n: 8, short: "승인 및 PR", grp: "decide", q: "승인 및 PR", sub: "해결된 것 · 남은 것 · 새로 생긴 것 · 확인 못 한 것을 보고 결정합니다. 승인하면 PR 을 만듭니다.",
     todo: "승인 · 수정 요청 · 재생성 · 폐기 중 하나를 고르고 이유와 함께 기록하세요." },
 ];
 
@@ -134,7 +134,7 @@ export function render() {
   // 이전 · 다음은 모든 화면에서 같은 자리(머리말 오른쪽)에 둔다
   const nav = S.pid ? `<div class="mh-nav">${prev ? `<button type="button" class="mbtn" data-go="${prev.n}" ${S.run ? "disabled" : ""}>◀ ${esc(prev.short)}</button>` : ""}
       ${next ? `<button type="button" class="mbtn primary" data-go="${next.n}" ${canGo(next.n) && !S.run ? "" : "disabled"} title="${esc(canGo(next.n) ? next.q : lockReason(next.n))}">다음 ▶ ${esc(next.short)}</button>` : ""}</div>` : "";
-  const q = st.n === 3 && caseMode() === "iam" ? "우리 회사가 허용하는 권한은 이거다" : st.q;       // 15차: 권한 요청의 ③ = IAM 요구사항
+  const q = st.n === 3 && caseMode() === "iam" ? "허용 권한 기준" : st.q;       // 15차: 권한 요청의 ③ = IAM 요구사항
   $("#mhead").innerHTML = `<div class="mh-q"><span class="mh-n">${st.n}</span><div><h1>${esc(q)}</h1>
       <p class="mh-todo"><b>할 일</b><span>${esc(todoNow(st))}</span></p></div></div>
     <div class="mh-r"><div class="mh-tags">${p ? `<span class="mh-proj"><i>프로젝트</i>${esc(p.name)}</span>` : ""}${S.design && S.design.exists && S.step >= 3 ? `<span class="mh-ver ${designConf().cls}" title="${esc(designConf().title)}">원하는 구조 v${esc(designVersion())}${S.design.auto ? " · 자동" : ""} · ${esc(designConf().word)}</span>` : ""}${iamTag()}</div>${nav}</div>`;

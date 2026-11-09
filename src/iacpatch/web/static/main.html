@@ -3,16 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>IaCPatch</title>
+<title>IaCPatch — 보안 패치 검증</title>
 <link rel="stylesheet" href="/static/app/app.css">
 <link rel="stylesheet" href="/static/app/main.css">
+<link rel="stylesheet" href="/static/app/refined.css">
 </head>
 <body class="m">
 <nav id="mside" aria-label="진행 단계">
-  <div class="mbrand"><svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><rect x="2" y="2" width="28" height="28" rx="7"/><path d="M9 17l5 5 9-11"/></svg><div><b>IaCPatch</b><span>클라우드 인프라 수정 검증</span></div></div>
+  <div class="mbrand"><svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><rect x="2" y="2" width="28" height="28" rx="7"/><path d="M9 17l5 5 9-11"/></svg><div><b>IaCPatch</b><span>Terraform 보안 패치 검증</span></div></div>
   <button type="button" id="mproj" class="mproj" data-go="1"><span>프로젝트</span><b>고르기</b></button>
   <ol id="msteps"></ol>
   <div class="mside-foot">
+    <p class="rf-side-note">AI는 수정안을 제안합니다.<br>검증 결과를 확인하고 사람이 승인합니다.</p>
     <div class="mside-help">
       <button type="button" data-act="glossary">용어 풀이</button>
       <button type="button" data-act="big" id="mbig">크게 보기</button>
