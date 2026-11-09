@@ -1,0 +1,292 @@
+# 워크플로 ② 임시 시험 환경 잡 — 패치를 격리된 임시 VPC 에 실제로 올려 V7(실제 AWS 설정)·V8(통신) 을 재고 반드시 지운다.
+#
+# 흐름 (팀 결정 2026-10-20):
+#   원본(base_ref) apply → 패치 전 측정(V7·V8, FAIL 이 정답) → 패치 파일로 plan → 교체·삭제가 있으면 차단
+#   → 없으면 패치 apply → 패치 후 측정(V7·V8, PASS 여야 함) → terraform destroy (항상) → 남은 리소스 0 확인 → PR 댓글.
+# 사람 승인은 이 단계에 없다 (격리 + 계정 가드레일). 상시 환경(sandbox Environment, 워크플로 ③) 은 건드리지 않는다.
+# 누가 부르나: ① 패치 잡이 패치 PR 을 만든 뒤 `gh workflow run` 으로 (봇이 만든 PR 은 pull_request 이벤트가 안 나므로),
+#            또는 사람이 infrastructure/sg-baseline 을 고친 PR, 또는 수동 실행.
+name: IaCPatch Testbed
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_dir:
+        description: '검증 대상 Terraform 폴더'
+        required: true
+        default: 'infrastructure/sg-baseline'
+      intent:
+        description: 'intent 파일 (비우면 policy/intent/<폴더이름>.json)'
+        required: false
+        default: ''
+      base_ref:
+        description: '원본(패치 전) 코드가 있는 브랜치 — "전" 측정에 쓴다'
+        required: false
+        default: 'main'
+      pr_number:
+        description: '결과 댓글을 달 PR 번호 (비우면 댓글 없음)'
+        required: false
+        default: ''
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'infrastructure/sg-baseline/**'
+
+permissions:
+  id-token: write        # OIDC → AWS 역할 (액세스 키 없음)
+  contents: read
+  pull-requests: write   # 결과 댓글
+
+# 임시 환경은 한 번에 하나만. 진행 중인 apply 를 끊지 않고 뒤에 줄 세운다.
+concurrency:
+  group: iacpatch-testbed
+  cancel-in-progress: false
+
+env:
+  TERRAFORM_VERSION: 1.16.1
+  AWS_PROVIDER_VERSION: 5.100.0
+  TF_IN_AUTOMATION: "true"
+  TF_INPUT: "0"
+  PYTHONPATH: src
+  TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/tools/plugin-cache
+  GH_TOKEN: ${{ github.token }}
+  RUN_TAG: tb${{ github.run_id }}
+
+jobs:
+  testbed:
+    name: Testbed apply → V7·V8 → destroy
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    env:
+      TARGET_DIR: ${{ inputs.target_dir || 'infrastructure/sg-baseline' }}
+      INTENT_OVERRIDE: ${{ inputs.intent }}
+      BASE_REF: ${{ inputs.base_ref || github.event.pull_request.base.ref || 'main' }}
+      PR_NUMBER: ${{ inputs.pr_number || github.event.pull_request.number }}
+    steps:
+      - name: Checkout (패치 코드)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Resolve paths (testbed · intent)
+        id: paths
+        run: |
+          set -euo pipefail
+          name=$(basename "$TARGET_DIR")
+          TESTBED="infrastructure/${name}-testbed"
+          INTENT="${INTENT_OVERRIDE:-policy/intent/${name}.json}"
+          echo "testbed=$TESTBED" >> "$GITHUB_OUTPUT"
+          echo "intent=$INTENT"   >> "$GITHUB_OUTPUT"
+          echo "name=$name"       >> "$GITHUB_OUTPUT"
+          if [ ! -d "$TESTBED" ]; then echo "skip=시험 환경 정의 없음 ($TESTBED) — 범위 밖" >> "$GITHUB_OUTPUT"; exit 0; fi
+          if [ ! -f "$INTENT" ];  then echo "skip=intent 없음 ($INTENT) — 범위 밖" >> "$GITHUB_OUTPUT"; exit 0; fi
+          if [ -z "${{ vars.AWS_ROLE_TESTBED }}" ]; then echo "skip=Variables 에 AWS_ROLE_TESTBED 가 없음 — AWS 역할 설정 전" >> "$GITHUB_OUTPUT"; exit 0; fi
+          echo "skip=" >> "$GITHUB_OUTPUT"
+          echo "testbed=$TESTBED intent=$INTENT base=$BASE_REF pr=${PR_NUMBER:-없음}"
+
+      - name: Skip notice
+        if: steps.paths.outputs.skip != ''
+        run: |
+          echo "::notice::${{ steps.paths.outputs.skip }}"
+          echo "## iacpatch 임시 시험 환경 — 건너뜀" >> "$GITHUB_STEP_SUMMARY"
+          echo "${{ steps.paths.outputs.skip }}" >> "$GITHUB_STEP_SUMMARY"
+          if [ -n "$PR_NUMBER" ]; then gh pr comment "$PR_NUMBER" --body "## iacpatch 임시 시험 환경 — 건너뜀"$'\n\n'"${{ steps.paths.outputs.skip }}"; fi
+
+      - uses: actions/setup-python@v5
+        if: steps.paths.outputs.skip == ''
+        with:
+          python-version: '3.12'
+
+      - name: Setup Terraform (버전 고정)
+        if: steps.paths.outputs.skip == ''
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: false
+
+      - name: Cache Terraform providers
+        if: steps.paths.outputs.skip == ''
+        uses: actions/cache@v4
+        with:
+          path: tools/plugin-cache
+          key: tfplugins-${{ runner.os }}-aws-${{ env.AWS_PROVIDER_VERSION }}
+
+      - name: AWS 자격증명 (OIDC — 키 없음)
+        if: steps.paths.outputs.skip == ''
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_TESTBED }}
+          aws-region: ${{ vars.AWS_REGION || 'ap-northeast-2' }}
+          role-session-name: iacpatch-testbed-${{ github.run_id }}
+
+      # "전" 측정용 원본 코드: base_ref 의 대상 폴더 *.tf 를 work/base 에, 지금(패치) 것을 work/patch 에 둔다.
+      - name: Snapshot base / patch Terraform files
+        if: steps.paths.outputs.skip == ''
+        run: |
+          set -euo pipefail
+          mkdir -p work/base work/patch work/basetree
+          cp "$TARGET_DIR"/*.tf work/patch/
+          git fetch -q origin "$BASE_REF"
+          git archive "origin/$BASE_REF" "$TARGET_DIR" | tar -x -C work/basetree
+          cp work/basetree/"$TARGET_DIR"/*.tf work/base/
+          echo "base *.tf:";  ls work/base/*.tf
+          echo "patch *.tf:"; ls work/patch/*.tf
+          echo "diff (base → patch):"; diff -ru work/base work/patch || true
+
+      - name: terraform init (testbed)
+        if: steps.paths.outputs.skip == ''
+        run: |
+          mkdir -p tools/plugin-cache
+          cd "${{ steps.paths.outputs.testbed }}" && terraform init -no-color
+
+      - name: 1) 원본 apply
+        if: steps.paths.outputs.skip == ''
+        id: apply_base
+        timeout-minutes: 15
+        run: |
+          set -euo pipefail
+          rm -f "$TARGET_DIR"/*.tf && cp work/base/*.tf "$TARGET_DIR"/
+          cd "${{ steps.paths.outputs.testbed }}"
+          t0=$(date +%s)
+          terraform apply -auto-approve -no-color -var "run_id=$RUN_TAG" | tail -n 25
+          echo "seconds=$(( $(date +%s) - t0 ))" >> "$GITHUB_OUTPUT"
+          echo "sg_id=$(terraform output -raw sg_id)"           >> "$GITHUB_OUTPUT"
+          echo "host=$(terraform output -raw target_public_ip)" >> "$GITHUB_OUTPUT"
+
+      - name: 웹 서버 뜰 때까지 대기 (최대 4분)
+        if: steps.paths.outputs.skip == ''
+        run: |
+          H="${{ steps.apply_base.outputs.host }}"
+          for i in $(seq 1 48); do
+            if timeout 5 bash -c "exec 3<>/dev/tcp/$H/80" 2>/dev/null; then echo "80 열림 ($((i*5))s)"; exit 0; fi
+            sleep 5
+          done
+          echo "::warning::$H:80 이 4분 안에 열리지 않음 — V8 의 open 검사가 FAIL 로 나올 수 있다"
+
+      - name: 2) 패치 전 측정 (V7·V8)
+        if: steps.paths.outputs.skip == ''
+        id: before
+        run: |
+          set -uo pipefail
+          mkdir -p data/runs
+          python scripts/ci_v8_checks.py --host "${{ steps.apply_base.outputs.host }}" --intent-id "${{ steps.paths.outputs.name }}" --out work/v8-checks.json
+          prev=$(ls -1 data/runs 2>/dev/null | grep -v README | sort | tail -n1 || true)
+          python -m iacpatch postdeploy --intent "${{ steps.paths.outputs.intent }}" --tf-dir "${{ steps.paths.outputs.testbed }}" \
+            --sg-ids "${{ steps.apply_base.outputs.sg_id }}" --v8-checks work/v8-checks.json --execute || true
+          RUN=$(ls -1 data/runs | grep -v README | sort | tail -n1)
+          [ "$RUN" = "$prev" ] && RUN=""
+          echo "run=$RUN" >> "$GITHUB_OUTPUT"
+
+      - name: 3) 패치 파일로 plan — 교체·삭제가 있으면 차단
+        if: steps.paths.outputs.skip == ''
+        id: plan_patch
+        run: |
+          set -euo pipefail
+          rm -f "$TARGET_DIR"/*.tf && cp work/patch/*.tf "$TARGET_DIR"/
+          cd "${{ steps.paths.outputs.testbed }}"
+          terraform plan -no-color -var "run_id=$RUN_TAG" -out patch.tfplan | tail -n 20
+          terraform show -json patch.tfplan > ../../work/patch-plan.json
+          cd - >/dev/null
+          python - <<'EOF' >> "$GITHUB_OUTPUT"
+          import json
+          d = json.load(open("work/patch-plan.json"))
+          bad = [c["address"] for c in d.get("resource_changes", []) if "delete" in (c.get("change") or {}).get("actions", [])]
+          upd = [c["address"] for c in d.get("resource_changes", []) if (c.get("change") or {}).get("actions") == ["update"]]
+          print("plan_check=" + ("BLOCKED" if bad else "OK"))
+          print("destructive=" + ",".join(bad))
+          print("updated=" + ",".join(upd))
+          EOF
+          tail -n 3 "$GITHUB_OUTPUT"
+
+      - name: 4) 패치 apply
+        if: steps.paths.outputs.skip == '' && steps.plan_patch.outputs.plan_check == 'OK'
+        id: apply_patch
+        timeout-minutes: 15
+        run: |
+          set -euo pipefail
+          cd "${{ steps.paths.outputs.testbed }}"
+          t0=$(date +%s)
+          terraform apply -auto-approve -no-color patch.tfplan | tail -n 15
+          echo "seconds=$(( $(date +%s) - t0 ))" >> "$GITHUB_OUTPUT"
+
+      - name: 5) 패치 후 측정 (V7·V8)
+        if: steps.paths.outputs.skip == '' && steps.plan_patch.outputs.plan_check == 'OK'
+        id: after
+        run: |
+          set -uo pipefail
+          sleep 10   # SG 변경 전파
+          prev=$(ls -1 data/runs | grep -v README | sort | tail -n1)
+          python -m iacpatch postdeploy --intent "${{ steps.paths.outputs.intent }}" --tf-dir "${{ steps.paths.outputs.testbed }}" \
+            --sg-ids "${{ steps.apply_base.outputs.sg_id }}" --v8-checks work/v8-checks.json --execute || true
+          RUN=$(ls -1 data/runs | grep -v README | sort | tail -n1)
+          [ "$RUN" = "$prev" ] && RUN=""
+          echo "run=$RUN" >> "$GITHUB_OUTPUT"
+
+      # ---- 여기부터는 위가 어떻게 끝났든 항상 돈다 ----
+      - name: 6) terraform destroy (항상)
+        if: always() && steps.paths.outputs.skip == '' && steps.apply_base.conclusion != 'skipped'
+        id: destroy
+        timeout-minutes: 15
+        run: |
+          set -uo pipefail
+          cd "${{ steps.paths.outputs.testbed }}"
+          t0=$(date +%s)
+          terraform destroy -auto-approve -no-color -var "run_id=$RUN_TAG" | tail -n 10 || echo "::error::destroy 실패 — 아래 '남은 리소스' 확인"
+          echo "seconds=$(( $(date +%s) - t0 ))" >> "$GITHUB_OUTPUT"
+
+      - name: 7) 남은 리소스 확인 (태그 iacpatch-run=${{ env.RUN_TAG }})
+        if: always() && steps.paths.outputs.skip == '' && steps.apply_base.conclusion != 'skipped'
+        id: leftover
+        run: |
+          set -uo pipefail
+          V=$(aws ec2 describe-vpcs --filters "Name=tag:iacpatch-run,Values=$RUN_TAG" --query 'length(Vpcs)' --output text 2>/dev/null || echo "?")
+          I=$(aws ec2 describe-instances --filters "Name=tag:iacpatch-run,Values=$RUN_TAG" "Name=instance-state-name,Values=pending,running,stopping,stopped" --query 'length(Reservations[].Instances[])' --output text 2>/dev/null || echo "?")
+          echo "남은 VPC: $V, 남은 인스턴스: $I"
+          if [ "$V" = "0" ] && [ "$I" = "0" ]; then echo "state=clean" >> "$GITHUB_OUTPUT"; else echo "state=leftover" >> "$GITHUB_OUTPUT"; echo "::error::임시 환경에 리소스가 남아 있음 (VPC $V, 인스턴스 $I) — 사람이 정리: aws ec2 describe-vpcs --filters Name=tag:iacpatch-run,Values=$RUN_TAG"; fi
+
+      - name: 8) 결과 댓글 · 요약
+        if: always() && steps.paths.outputs.skip == ''
+        run: |
+          set -uo pipefail
+          B="${{ steps.before.outputs.run }}"; A="${{ steps.after.outputs.run }}"
+          ARGS="--target-dir $TARGET_DIR --plan-check ${{ steps.plan_patch.outputs.plan_check || 'SKIPPED' }} --destroyed ${{ steps.leftover.outputs.state || 'unknown' }}"
+          T="apply_base=${{ steps.apply_base.outputs.seconds || 0 }},apply_patch=${{ steps.apply_patch.outputs.seconds || 0 }},destroy=${{ steps.destroy.outputs.seconds || 0 }}"
+          [ -n "$B" ] && ARGS="$ARGS --before data/runs/$B"
+          [ -n "$A" ] && ARGS="$ARGS --after data/runs/$A"
+          python scripts/ci_postdeploy_comment.py $ARGS --timings "$T" > work/comment.md || echo "댓글 생성 실패" > work/comment.md
+          if [ "${{ steps.plan_patch.outputs.plan_check }}" = "BLOCKED" ]; then
+            printf '\n> ❌ 패치 plan 에 교체·삭제가 포함돼 apply 하지 않았다: `%s`\n' "${{ steps.plan_patch.outputs.destructive }}" >> work/comment.md
+          fi
+          cat work/comment.md >> "$GITHUB_STEP_SUMMARY"
+          if [ -n "$PR_NUMBER" ]; then gh pr comment "$PR_NUMBER" --body-file work/comment.md; fi
+
+      - name: Upload records
+        if: always() && steps.paths.outputs.skip == ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: iacpatch-testbed-${{ github.run_id }}
+          path: |
+            data/runs/
+            work/v8-checks.json
+            work/patch-plan.json
+            work/comment.md
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: 9) 판정 (패치 후 VERIFIED 가 아니면 실패)
+        if: always() && steps.paths.outputs.skip == ''
+        run: |
+          set -uo pipefail
+          A="${{ steps.after.outputs.run }}"
+          [ "${{ steps.leftover.outputs.state }}" = "clean" ] || { echo "::error::임시 환경 정리 안 됨"; exit 1; }
+          [ "${{ steps.plan_patch.outputs.plan_check }}" = "OK" ] || { echo "::error::패치 plan 차단 또는 미실행"; exit 1; }
+          [ -n "$A" ] || { echo "::error::패치 후 측정 기록 없음"; exit 1; }
+          python - "$A" <<'EOF'
+          import json, sys
+          rep = json.load(open(f"data/runs/{sys.argv[1]}/verification_post.json"))
+          vs = {l["layer"]: l["verdict"] for l in rep["layers"]}
+          print("패치 후:", vs)
+          sys.exit(0 if all(v == "PASS" for v in vs.values()) else 1)
+          EOF

@@ -82,6 +82,7 @@ jobs:
           RC=0
           for d in $CHANGED; do
             [ -d "$d" ] || continue
+            case "$d" in *-testbed|*-testbed/*) echo "== skip: $d (시험 환경 폴더 — 결함을 일부러 포함, 게이트 제외)"; continue;; esac
             echo "== gate: $d"
             TFVARS=""
             [ -f "$d/terraform.tfvars.example" ] && TFVARS="--tf-vars $d/terraform.tfvars.example"

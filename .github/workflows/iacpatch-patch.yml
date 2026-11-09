@@ -35,6 +35,7 @@ on:
 permissions:
   contents: write        # 패치 브랜치 push
   pull-requests: write   # 댓글 · 패치 PR 생성
+  actions: write         # 패치 PR 을 만든 뒤 워크플로 ②(임시 시험 환경) 를 workflow_dispatch 로 부른다
   id-token: none         # 이 잡은 AWS 역할을 받지 않는다
 
 concurrency:
@@ -151,7 +152,18 @@ jobs:
             case "$ACTION" in
               CREATE_PR_AUTO|CREATE_PR_APPROVAL)
                 BASE_BRANCH="${PR_HEAD_REF:-main}"
-                if python -m iacpatch pr --run "$RUN" --execute --base "$BASE_BRANCH"; then CREATED=$((CREATED+1)); else echo "패치 PR 생성 실패 (기록은 artifact 에)"; fi
+                if python -m iacpatch pr --run "$RUN" --execute --base "$BASE_BRANCH"; then
+                  CREATED=$((CREATED+1))
+                  # 봇(GITHUB_TOKEN) 이 만든 PR 은 pull_request 이벤트를 내지 않는다 → 워크플로 ② 를 직접 부른다 (workflow_dispatch 는 허용됨).
+                  PATCH_BRANCH=$(python -c "import json;print(json.load(open('data/runs/$RUN/pr.json')).get('branch',''))")
+                  PATCH_PR=$(python -c "import json;print(json.load(open('data/runs/$RUN/pr.json')).get('number',''))")
+                  if [ -n "$PATCH_BRANCH" ] && [ -f .github/workflows/iacpatch-testbed.yml ]; then
+                    gh workflow run iacpatch-testbed.yml --ref "$PATCH_BRANCH" \
+                      -f target_dir="$d" -f intent="$intent" -f base_ref="$BASE_BRANCH" -f pr_number="$PATCH_PR" \
+                      && echo "워크플로 ② 호출: ref=$PATCH_BRANCH base=$BASE_BRANCH pr=#$PATCH_PR" \
+                      || echo "::warning::워크플로 ② 호출 실패 — Actions 탭에서 IaCPatch Testbed 를 수동 실행 (ref=$PATCH_BRANCH, base_ref=$BASE_BRANCH, pr_number=$PATCH_PR)"
+                  fi
+                else echo "패치 PR 생성 실패 (기록은 artifact 에)"; fi
                 git checkout -q "${{ github.event.pull_request.head.sha || github.sha }}" || true
                 ;;
               HOLD_FOR_HUMAN) HELD=$((HELD+1)) ;;
