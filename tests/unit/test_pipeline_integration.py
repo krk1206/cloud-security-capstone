@@ -33,20 +33,20 @@ class PipelineIntegrationTests(unittest.TestCase):
         return {l.layer: l for l in res.validity.layers}
 
     def test_correct_patch_creates_pr_candidate(self):
-        res = run_predeploy(settings("sg_baseline_ok"), "infrastructure/sg-baseline", INTENT, "it-ok")
+        res = run_predeploy(settings("sg_baseline_ok"), "scenarios/dev/sg-baseline-defect", INTENT, "it-ok")
         self.assertEqual(res.status, "DONE", res.note)
         self.assertEqual(res.validity.validity, Validity.PASS, res.validity.summary)
         self.assertEqual(res.gate.action, GateAction.CREATE_PR_AUTO)
         self.assertTrue((res.run_dir / "pr_body.md").exists())
         self.assertTrue((res.run_dir / "candidates" / "01" / "files" / "main.tf").exists())
         # 원본은 그대로
-        self.assertIn('cidr_blocks = ["0.0.0.0/0"]', (ROOT / "infrastructure" / "sg-baseline" / "main.tf").read_text())
+        self.assertIn('cidr_blocks = ["0.0.0.0/0"]', (ROOT / "scenarios" / "dev" / "sg-baseline-defect" / "main.tf").read_text())
         run = json.loads((res.run_dir / "run.json").read_text())
         self.assertEqual(run["candidate"]["prompt_version"], "sg_v1")
         self.assertNotIn("api_key", json.dumps(run).lower().replace("api_key\": \"<redacted>", ""))
 
     def test_cidr_split_passes_scanner_but_blocked_by_oracle(self):
-        res = run_predeploy(settings("sg_baseline_cidr_split"), "infrastructure/sg-baseline", INTENT, "it-split")
+        res = run_predeploy(settings("sg_baseline_cidr_split"), "scenarios/dev/sg-baseline-defect", INTENT, "it-split")
         L = self._layers(res)
         self.assertEqual(L["V1"].verdict, Verdict.PASS)   # 스캐너는 조용하다
         self.assertEqual(L["V2"].verdict, Verdict.PASS)
@@ -56,7 +56,7 @@ class PipelineIntegrationTests(unittest.TestCase):
         self.assertEqual(res.gate.risk_level.value, "LOW")  # 위험도가 낮아도 차단
 
     def test_external_prefix_list_is_held_not_approved(self):
-        res = run_predeploy(settings("sg_baseline_external_prefix_list"), "infrastructure/sg-baseline", INTENT, "it-pl")
+        res = run_predeploy(settings("sg_baseline_external_prefix_list"), "scenarios/dev/sg-baseline-defect", INTENT, "it-pl")
         L = self._layers(res)
         self.assertEqual(L["V1"].verdict, Verdict.PASS)
         self.assertEqual(L["V6"].verdict, Verdict.UNKNOWN)
@@ -75,17 +75,17 @@ class PipelineIntegrationTests(unittest.TestCase):
         self.assertEqual(res.gate.action, GateAction.BLOCK)
 
     def test_truncated_response_never_becomes_patch(self):
-        res = run_predeploy(settings("sg_baseline_truncated"), "infrastructure/sg-baseline", INTENT, "it-trunc")
+        res = run_predeploy(settings("sg_baseline_truncated"), "scenarios/dev/sg-baseline-defect", INTENT, "it-trunc")
         self.assertEqual(res.status, "GENERATION_FAILED")
         self.assertFalse((res.run_dir / "candidates" / "01" / "files").exists())
 
     def test_draft_intent_stops_before_generation(self):
-        res = run_predeploy(settings("sg_baseline_ok"), "infrastructure/sg-baseline", "policy/intent/sg-baseline.example.json", "it-draft")
+        res = run_predeploy(settings("sg_baseline_ok"), "scenarios/dev/sg-baseline-defect", "policy/intent/sg-baseline.example.json", "it-draft")
         self.assertEqual(res.status, "INSUFFICIENT_INFO")
         self.assertFalse((res.run_dir / "candidates").exists())
 
     def test_rule_based_baseline(self):
-        res = run_predeploy(settings("sg_baseline_ok"), "infrastructure/sg-baseline", INTENT, "it-rule", generator_kind="rule_based")
+        res = run_predeploy(settings("sg_baseline_ok"), "scenarios/dev/sg-baseline-defect", INTENT, "it-rule", generator_kind="rule_based")
         self.assertEqual(res.validity.validity, Validity.PASS, res.validity.summary)
         self.assertEqual(res.candidate.origin, "rule_based")
 

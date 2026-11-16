@@ -130,7 +130,7 @@ jobs:
             BASE="${{ github.event.pull_request.base.sha }}"
             git diff --name-only "$BASE"...HEAD -- '*.tf' \
               | xargs -r -n1 dirname | sort -u \
-              | grep -vE '^(tests|experiments)/' \
+              | grep -vE '^(tests|experiments)/|^scenarios/dev/sg-baseline-defect$' \
               | while read -r d; do [ -d "$d" ] && ls "$d"/*.tf >/dev/null 2>&1 && echo "$d"; done > targets.txt || true
           fi
           echo "대상 폴더:"; cat targets.txt || true

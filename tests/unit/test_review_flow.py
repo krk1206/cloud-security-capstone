@@ -1,6 +1,6 @@
 """B·C 3~4주차 로컬 검토 흐름 통합 테스트 — 외부 도구/API/AWS/네트워크 없이 실행된다.
 
-입력은 A 가 커밋한 실제 Trivy JSON(infrastructure/sg-baseline/baseline-scan.json)과 원본 Terraform 이고,
+입력은 A 가 커밋한 실제 Trivy JSON(scenarios/dev/sg-baseline-defect/baseline-scan.json)과 원본 Terraform 이고,
 후보는 mock fixture 또는 examples/bc/ 의 수동 예제다 (둘 다 사람이 만든 것; LLM 출력 아님).
 검증 결과 fixture(examples/bc/verification/*.json) 의 PASS 는 예제 값이며 실제 실행 결과가 아니다 — 리포트의 '결과 출처' 열로 구분된다.
 """
@@ -17,8 +17,8 @@ from iacpatch.models import ReviewLevel, ReviewState, Verdict
 from iacpatch.review.flow import ReviewOptions, run_review
 from iacpatch.review.inputs import FindingSelector, TrivyInputError, list_findings, load_trivy_report, select_findings
 
-TF_DIR = "infrastructure/sg-baseline"
-TRIVY = "infrastructure/sg-baseline/baseline-scan.json"
+TF_DIR = "scenarios/dev/sg-baseline-defect"
+TRIVY = "scenarios/dev/sg-baseline-defect/baseline-scan.json"
 EX = ROOT / "examples" / "bc"
 
 
