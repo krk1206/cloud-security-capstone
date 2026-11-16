@@ -4,11 +4,11 @@ resource "aws_security_group" "vulnerable_ssh" {
   vpc_id      = var.vpc_id
 
   ingress {
-    description = "SSH open to the world (intentional defect)"
+    description = "SSH from admin network (required by sg-baseline v1)"
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = ["10.0.0.0/8"]
   }
 
   egress {
