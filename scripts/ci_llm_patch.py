@@ -85,6 +85,20 @@ def main() -> int:
         "rule": f.rule_id, "resource": f.resource, "file": Path(f.filename).name, "line": int(f.start_line),
         "intent": str(intent_abs), "label": f"{f.rule_id} — {f.resource}", "candidates": []}, ensure_ascii=False, indent=2), encoding="utf-8")
 
+    # 설계도 확정 기록 (D-38): 앱에서는 담당자가 화면에서 설계도를 '확정' 해야 검사 통과를 '고객 요구 충족' 으로 본다.
+    # CI 가 쓰는 policy/intent/<이름>.json 은 저장소에 PR 검토를 거쳐 들어간 팀 결정값이므로, 그 파일을 임시 프로젝트의
+    # 설계도 v1 로 등록하고 확정 기록을 남긴다. 기록이 없으면 8개 관문을 다 통과해도 '초안' 으로 UNDECIDABLE 이 된다.
+    designs_dir = Path(tempfile.mkdtemp(prefix="iacpatch-ci-designs-"))
+    os.environ["IACPATCH_DESIGNS_DIR"] = str(designs_dir)
+    (designs_dir / pid).mkdir(parents=True)
+    shutil.copy2(intent_abs, designs_dir / pid / "v1.json")
+    from iacpatch.web import designs  # noqa: E402
+    conf = designs.confirm(set_id, 1, by="workflow ① (저장소 policy/intent — PR 검토를 거친 팀 결정값)",
+                           note=f"CI 기준 설계도 = {a.intent}")
+    if not conf.get("ok"):
+        print(f"::error::설계도 확정 기록 실패: {conf.get('errors')}"); return 3
+    print(f"설계도 확정 기록: {a.intent} (basis={conf.get('confirmation', {}).get('basis')})")
+ 
     st = llmfix.claude_status(refresh=True)
     print(f"claude: found={st.get('found')} version={st.get('version')} logged_in={st.get('logged_in')} auth={st.get('auth_method')} {st.get('note') or ''}")
     if not st.get("found"):
