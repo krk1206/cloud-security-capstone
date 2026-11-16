@@ -1,0 +1,295 @@
+........................s....................s....................s.........................................................................................................sssssssss.................................sssssss.........................F..................F..FFFFF.FF...................................F..................................F..............................................................F.FFF.F.EsFF.E.FE.FFFE..EEF.........................................................s...............................................E.......................................................................
+======================================================================
+ERROR: test_local_tools_not_used_when_verification_file_given (test_review_flow.ReviewFlowTests.test_local_tools_not_used_when_verification_file_given)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "D:\a\cloud-security-capstone\cloud-security-capstone\tests\unit\test_review_flow.py", line 328, in test_local_tools_not_used_when_verification_file_given
+    self.assertEqual(res.validity.layer("V1").verdict, Verdict.PASS)
+                     ^^^^^^^^^^^^^^^^^^
+AttributeError: 'NoneType' object has no attribute 'layer'
+
+======================================================================
+ERROR: test_missing_verification_stays_pending (test_review_flow.ReviewFlowTests.test_missing_verification_stays_pending)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "D:\a\cloud-security-capstone\cloud-security-capstone\tests\unit\test_review_flow.py", line 136, in test_missing_verification_stays_pending
+    self.assertEqual(res.validity.validity.value, "INCOMPLETE")
+                     ^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'NoneType' object has no attribute 'validity'
+
+======================================================================
+ERROR: test_partial_verification_file (test_review_flow.ReviewFlowTests.test_partial_verification_file)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "D:\a\cloud-security-capstone\cloud-security-capstone\tests\unit\test_review_flow.py", line 145, in test_partial_verification_file
+    L = {l.layer: l.verdict for l in res.validity.layers}
+                                     ^^^^^^^^^^^^^^^^^^^
+AttributeError: 'NoneType' object has no attribute 'layers'
+
+======================================================================
+ERROR: test_risk_low_for_cidr_only_change_and_text_basis_marked (test_review_flow.ReviewFlowTests.test_risk_low_for_cidr_only_change_and_text_basis_marked)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "D:\a\cloud-security-capstone\cloud-security-capstone\tests\unit\test_review_flow.py", line 229, in test_risk_low_for_cidr_only_change_and_text_basis_marked
+    self.assertEqual(res.risk.risk_level.value, "LOW")
+                     ^^^^^^^^^^^^^^^^^^^
+AttributeError: 'NoneType' object has no attribute 'risk_level'
+
+======================================================================
+ERROR: test_verification_all_pass_with_plans_gives_light_review (test_review_flow.ReviewFlowTests.test_verification_all_pass_with_plans_gives_light_review)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "D:\a\cloud-security-capstone\cloud-security-capstone\tests\unit\test_review_flow.py", line 167, in test_verification_all_pass_with_plans_gives_light_review
+    L = {l.layer: l.verdict for l in res.validity.layers}
+                                     ^^^^^^^^^^^^^^^^^^^
+AttributeError: 'NoneType' object has no attribute 'layers'
+
+======================================================================
+ERROR: test_verification_candidate_hash_mismatch_is_ignored (test_review_flow.ReviewFlowTests.test_verification_candidate_hash_mismatch_is_ignored)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "D:\a\cloud-security-capstone\cloud-security-capstone\tests\unit\test_review_flow.py", line 194, in test_verification_candidate_hash_mismatch_is_ignored
+    L = {l.layer: l.verdict for l in res.validity.layers}
+                                     ^^^^^^^^^^^^^^^^^^^
+AttributeError: 'NoneType' object has no attribute 'layers'
+
+======================================================================
+ERROR: test_review_candidate_and_diff_files_have_no_cr (test_textio.TextIoTests.test_review_candidate_and_diff_files_have_no_cr)
+검토 기록의 candidate/*.tf·original/*.tf·candidate.diff 는 어느 OS 에서나 LF 바이트여야 한다.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "D:\a\cloud-security-capstone\cloud-security-capstone\tests\unit\test_textio.py", line 36, in test_review_candidate_and_diff_files_have_no_cr
+    raw = (res.run_dir / rel).read_bytes()
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\hostedtoolcache\windows\Python\3.12.10\x64\Lib\pathlib.py", line 1019, in read_bytes
+    with self.open(mode='rb') as f:
+         ^^^^^^^^^^^^^^^^^^^^
+  File "C:\hostedtoolcache\windows\Python\3.12.10\x64\Lib\pathlib.py", line 1013, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\iacpatch-textio-l1t5b9c4\\20261116-150917-5ec8ca\\candidate\\main.tf'
+
+======================================================================
+FAIL: test_ok (test_policy_risk_gate.PolicyValidatorTests.test_ok)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "D:\a\cloud-security-capstone\cloud-security-capstone\tests\unit\test_policy_risk_gate.py", line 27, in test_ok
+    self.assertTrue(r.ok, r.violations)
+AssertionError: False is not true : ['diff_nonempty:main.tf: file content identical to baseline']
+
+======================================================================
+FAIL: test_refused_is_not_proof_of_block (test_postdeploy.V8Tests.test_refused_is_not_proof_of_block)
+닫힌 포트(refused)는 패킷이 서버까지 갔다는 뜻 — 보안 그룹이 막았다는 증거가 아니므로 통과로 세지 않는다.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "D:\a\cloud-security-capstone\cloud-security-capstone\tests\unit\test_postdeploy.py", line 165, in test_refused_is_not_proof_of_block
+    self.assertEqual(outs["ssh from unapproved"], "INCONCLUSIVE")
+AssertionError: 'PASS' != 'INCONCLUSIVE'
+- PASS
++ INCONCLUSIVE
+
+
+======================================================================
+FAIL: test_executed_pass_and_fail_paths (test_postdeploy_review.PostdeployReviewTests.test_executed_pass_and_fail_paths)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "D:\a\cloud-security-capstone\cloud-security-capstone\tests\unit\test_postdeploy_review.py", line 91, in test_executed_pass_and_fail_paths
+    res = self._record()
+          ^^^^^^^^^^^^^^
+  File "D:\a\cloud-security-capstone\cloud-security-capstone\tests\unit\test_postdeploy_review.py", line 72, in _record
+    self.assertEqual(res.state, ReviewState.REVIEW_REQUIRED, res.message)
+AssertionError: <ReviewState.INPUT_ERROR: 'INPUT_ERROR'> != <ReviewState.REVIEW_REQUIRED: 'REVIEW_REQUIRED'> : 스캔 결과와 원본 코드 불일치 (지목된 행 내용이 다름) — 재스캔 또는 같은 시점의 원본 사용 필요
+
+======================================================================
+FAIL: test_pending_record_is_refused (test_postdeploy_review.PostdeployReviewTests.test_pending_record_is_refused)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "D:\a\cloud-security-capstone\cloud-security-capstone\tests\unit\test_postdeploy_review.py", line 135, in test_pending_record_is_refused
+    res = self._record(level_ok=False)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\a\cloud-security-capstone\cloud-security-capstone\tests\unit\test_postdeploy_review.py", line 72, in _record
+    self.assertEqual(res.state, ReviewState.REVIEW_REQUIRED, res.message)
+AssertionError: <ReviewState.INPUT_ERROR: 'INPUT_ERROR'> != <ReviewState.REVIEW_REQUIRED: 'REVIEW_REQUIRED'> : 스캔 결과와 원본 코드 불일치 (지목된 행 내용이 다름) — 재스캔 또는 같은 시점의 원본 사용 필요
+
+======================================================================
+FAIL: test_preview_records_unverified (test_postdeploy_review.PostdeployReviewTests.test_preview_records_unverified)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "D:\a\cloud-security-capstone\cloud-security-capstone\tests\unit\test_postdeploy_review.py", line 80, in test_preview_records_unverified
+    res = self._record()
+          ^^^^^^^^^^^^^^
+  File "D:\a\cloud-security-capstone\cloud-security-capstone\tests\unit\test_postdeploy_review.py", line 72, in _record
+    self.assertEqual(res.state, ReviewState.REVIEW_REQUIRED, res.message)
+AssertionError: <ReviewState.INPUT_ERROR: 'INPUT_ERROR'> != <ReviewState.REVIEW_REQUIRED: 'REVIEW_REQUIRED'> : 스캔 결과와 원본 코드 불일치 (지목된 행 내용이 다름) — 재스캔 또는 같은 시점의 원본 사용 필요
+
+======================================================================
+FAIL: test_recover_preview_from_review_original (test_postdeploy_review.PostdeployReviewTests.test_recover_preview_from_review_original)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "D:\a\cloud-security-capstone\cloud-security-capstone\tests\unit\test_postdeploy_review.py", line 126, in test_recover_preview_from_review_original
+    res = self._record()
+          ^^^^^^^^^^^^^^
+  File "D:\a\cloud-security-capstone\cloud-security-capstone\tests\unit\test_postdeploy_review.py", line 72, in _record
+    self.assertEqual(res.state, ReviewState.REVIEW_REQUIRED, res.message)
+AssertionError: <ReviewState.INPUT_ERROR: 'INPUT_ERROR'> != <ReviewState.REVIEW_REQUIRED: 'REVIEW_REQUIRED'> : 스캔 결과와 원본 코드 불일치 (지목된 행 내용이 다름) — 재스캔 또는 같은 시점의 원본 사용 필요
+
+======================================================================
+FAIL: test_light_review_record_prepares_pr_preview (test_pr_from_review.PrFromReviewTests.test_light_review_record_prepares_pr_preview)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "D:\a\cloud-security-capstone\cloud-security-capstone\tests\unit\test_pr_from_review.py", line 59, in test_light_review_record_prepares_pr_preview
+    res = self._light_review_record()
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\a\cloud-security-capstone\cloud-security-capstone\tests\unit\test_pr_from_review.py", line 54, in _light_review_record
+    self.assertEqual(res.state, ReviewState.REVIEW_REQUIRED, res.message)
+AssertionError: <ReviewState.INPUT_ERROR: 'INPUT_ERROR'> != <ReviewState.REVIEW_REQUIRED: 'REVIEW_REQUIRED'> : 스캔 결과와 원본 코드 불일치 (지목된 행 내용이 다름) — 재스캔 또는 같은 시점의 원본 사용 필요
+
+======================================================================
+FAIL: test_old_record_without_tf_dir_needs_override (test_pr_from_review.PrFromReviewTests.test_old_record_without_tf_dir_needs_override)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "D:\a\cloud-security-capstone\cloud-security-capstone\tests\unit\test_pr_from_review.py", line 91, in test_old_record_without_tf_dir_needs_override
+    res = self._light_review_record()
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\a\cloud-security-capstone\cloud-security-capstone\tests\unit\test_pr_from_review.py", line 54, in _light_review_record
+    self.assertEqual(res.state, ReviewState.REVIEW_REQUIRED, res.message)
+AssertionError: <ReviewState.INPUT_ERROR: 'INPUT_ERROR'> != <ReviewState.REVIEW_REQUIRED: 'REVIEW_REQUIRED'> : 스캔 결과와 원본 코드 불일치 (지목된 행 내용이 다름) — 재스캔 또는 같은 시점의 원본 사용 필요
+
+======================================================================
+FAIL: test_pending_and_blocked_records_are_refused (test_pr_from_review.PrFromReviewTests.test_pending_and_blocked_records_are_refused)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "D:\a\cloud-security-capstone\cloud-security-capstone\tests\unit\test_pr_from_review.py", line 81, in test_pending_and_blocked_records_are_refused
+    self.assertEqual(pending.level, ReviewLevel.PENDING)
+AssertionError: None != <ReviewLevel.PENDING: 'PENDING'>
+
+======================================================================
+FAIL: test_cards_from_minimal_record (test_proof.CardsTest.test_cards_from_minimal_record)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "D:\a\cloud-security-capstone\cloud-security-capstone\tests\unit\test_proof.py", line 695, in test_cards_from_minimal_record
+    self.assertTrue(cmd.startswith("trivy config <기록>"), cmd)
+AssertionError: False is not true : trivy config C:\Users\RUNNER~1\AppData\Local\Temp\tmpe7frrgf0\20261023-000000-test\local_verify
+
+======================================================================
+FAIL: test_candidate_deployed (test_proof.TempEnvCardTest.test_candidate_deployed)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "D:\a\cloud-security-capstone\cloud-security-capstone\tests\unit\test_proof.py", line 550, in test_candidate_deployed
+    self.assertEqual((c["verdict"], c["verdict_ko"]), ("PASS", "반영 확인"))
+AssertionError: Tuples differ: ('FAIL', '반영 미확인') != ('PASS', '반영 확인')
+
+First differing element 0:
+'FAIL'
+'PASS'
+
+- ('FAIL', '반영 미확인')
+?   ^ ^^       -
+
++ ('PASS', '반영 확인')
+?   ^ ^^
+
+
+======================================================================
+FAIL: test_metrics_over_review_records (test_review_flow.MetricsTests.test_metrics_over_review_records)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "D:\a\cloud-security-capstone\cloud-security-capstone\tests\unit\test_review_flow.py", line 392, in test_metrics_over_review_records
+    self.assertEqual(summ["by_origin"], {"mock": 2})
+AssertionError: {'-': 2} != {'mock': 2}
+- {'-': 2}
++ {'mock': 2}
+
+======================================================================
+FAIL: test_broken_verification_file_does_not_crash (test_review_flow.ReviewFlowTests.test_broken_verification_file_does_not_crash)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "D:\a\cloud-security-capstone\cloud-security-capstone\tests\unit\test_review_flow.py", line 200, in test_broken_verification_file_does_not_crash
+    self.assertEqual(res.state, ReviewState.REVIEW_REQUIRED)
+AssertionError: <ReviewState.INPUT_ERROR: 'INPUT_ERROR'> != <ReviewState.REVIEW_REQUIRED: 'REVIEW_REQUIRED'>
+
+======================================================================
+FAIL: test_candidate_missing_empty_identical_unreadable (test_review_flow.ReviewFlowTests.test_candidate_missing_empty_identical_unreadable)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "D:\a\cloud-security-capstone\cloud-security-capstone\tests\unit\test_review_flow.py", line 111, in test_candidate_missing_empty_identical_unreadable
+    self.assertEqual(run_review(self.settings, self._opt(f"manual:{self.out / 'nope.tf'}")).state, ReviewState.CANDIDATE_INVALID)
+AssertionError: <ReviewState.INPUT_ERROR: 'INPUT_ERROR'> != <ReviewState.CANDIDATE_INVALID: 'CANDIDATE_INVALID'>
+
+======================================================================
+FAIL: test_duplicate_findings_are_not_auto_picked (test_review_flow.ReviewFlowTests.test_duplicate_findings_are_not_auto_picked)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "D:\a\cloud-security-capstone\cloud-security-capstone\tests\unit\test_review_flow.py", line 85, in test_duplicate_findings_are_not_auto_picked
+    self.assertEqual(res2.state, ReviewState.REVIEW_REQUIRED, res2.message)
+AssertionError: <ReviewState.INPUT_ERROR: 'INPUT_ERROR'> != <ReviewState.REVIEW_REQUIRED: 'REVIEW_REQUIRED'> : 스캔 결과와 원본 코드 불일치 (지목된 행 내용이 다름) — 재스캔 또는 같은 시점의 원본 사용 필요
+
+======================================================================
+FAIL: test_info_insufficient_and_policy_block (test_review_flow.ReviewFlowTests.test_info_insufficient_and_policy_block)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "D:\a\cloud-security-capstone\cloud-security-capstone\tests\unit\test_review_flow.py", line 127, in test_info_insufficient_and_policy_block
+    self.assertEqual(run_review(self.settings, self._opt("mock:sg_baseline_insufficient")).state, ReviewState.INFO_INSUFFICIENT)
+AssertionError: <ReviewState.INPUT_ERROR: 'INPUT_ERROR'> != <ReviewState.INFO_INSUFFICIENT: 'INFO_INSUFFICIENT'>
+
+======================================================================
+FAIL: test_local_tools_without_tools_records_not_run (test_review_flow.ReviewFlowTests.test_local_tools_without_tools_records_not_run)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "D:\a\cloud-security-capstone\cloud-security-capstone\tests\unit\test_review_flow.py", line 284, in test_local_tools_without_tools_records_not_run
+    self.assertEqual(res.state, ReviewState.REVIEW_REQUIRED, res.message)
+AssertionError: <ReviewState.INPUT_ERROR: 'INPUT_ERROR'> != <ReviewState.REVIEW_REQUIRED: 'REVIEW_REQUIRED'> : 스캔 결과와 원본 코드 불일치 (지목된 행 내용이 다름) — 재스캔 또는 같은 시점의 원본 사용 필요
+
+======================================================================
+FAIL: test_manual_dir_json_and_tf_forms (test_review_flow.ReviewFlowTests.test_manual_dir_json_and_tf_forms)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "D:\a\cloud-security-capstone\cloud-security-capstone\tests\unit\test_review_flow.py", line 64, in test_manual_dir_json_and_tf_forms
+    self.assertEqual(res.state, ReviewState.REVIEW_REQUIRED, f"{cand}: {res.message}")
+AssertionError: <ReviewState.INPUT_ERROR: 'INPUT_ERROR'> != <ReviewState.REVIEW_REQUIRED: 'REVIEW_REQUIRED'> : manual:D:\a\cloud-security-capstone\cloud-security-capstone\examples\bc\manual_candidate_ok: 스캔 결과와 원본 코드 불일치 (지목된 행 내용이 다름) — 재스캔 또는 같은 시점의 원본 사용 필요
+
+======================================================================
+FAIL: test_normal_mock_creates_records_and_reports (test_review_flow.ReviewFlowTests.test_normal_mock_creates_records_and_reports)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "D:\a\cloud-security-capstone\cloud-security-capstone\tests\unit\test_review_flow.py", line 44, in test_normal_mock_creates_records_and_reports
+    self.assertEqual(res.state, ReviewState.REVIEW_REQUIRED, res.message)
+AssertionError: <ReviewState.INPUT_ERROR: 'INPUT_ERROR'> != <ReviewState.REVIEW_REQUIRED: 'REVIEW_REQUIRED'> : 스캔 결과와 원본 코드 불일치 (지목된 행 내용이 다름) — 재스캔 또는 같은 시점의 원본 사용 필요
+
+======================================================================
+FAIL: test_repeated_runs_keep_previous_records (test_review_flow.ReviewFlowTests.test_repeated_runs_keep_previous_records)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "D:\a\cloud-security-capstone\cloud-security-capstone\tests\unit\test_review_flow.py", line 238, in test_repeated_runs_keep_previous_records
+    self.assertTrue((a.run_dir / "review.md").exists() and (b.run_dir / "review.md").exists())
+AssertionError: False is not true
+
+======================================================================
+FAIL: test_risk_deleted_resource_is_hard_high (test_review_flow.ReviewFlowTests.test_risk_deleted_resource_is_hard_high)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "D:\a\cloud-security-capstone\cloud-security-capstone\tests\unit\test_review_flow.py", line 221, in test_risk_deleted_resource_is_hard_high
+    self.assertEqual(res.state, ReviewState.POLICY_BLOCKED, res.message)
+AssertionError: <ReviewState.INPUT_ERROR: 'INPUT_ERROR'> != <ReviewState.POLICY_BLOCKED: 'POLICY_BLOCKED'> : 스캔 결과와 원본 코드 불일치 (지목된 행 내용이 다름) — 재스캔 또는 같은 시점의 원본 사용 필요
+
+======================================================================
+FAIL: test_risk_insufficient_basis (test_review_flow.ReviewFlowTests.test_risk_insufficient_basis)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "D:\a\cloud-security-capstone\cloud-security-capstone\tests\unit\test_review_flow.py", line 214, in test_risk_insufficient_basis
+    self.assertEqual(res.state, ReviewState.POLICY_BLOCKED, res.message)
+AssertionError: <ReviewState.INPUT_ERROR: 'INPUT_ERROR'> != <ReviewState.POLICY_BLOCKED: 'POLICY_BLOCKED'> : 스캔 결과와 원본 코드 불일치 (지목된 행 내용이 다름) — 재스캔 또는 같은 시점의 원본 사용 필요
+
+======================================================================
+FAIL: test_verification_failure_blocks (test_review_flow.ReviewFlowTests.test_verification_failure_blocks)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "D:\a\cloud-security-capstone\cloud-security-capstone\tests\unit\test_review_flow.py", line 156, in test_verification_failure_blocks
+    self.assertEqual(res.state, ReviewState.VALIDATION_FAILED)
+AssertionError: <ReviewState.INPUT_ERROR: 'INPUT_ERROR'> != <ReviewState.VALIDATION_FAILED: 'VALIDATION_FAILED'>
+
+----------------------------------------------------------------------
+Ran 613 tests in 48.054s
+
+FAILED (failures=23, errors=7, skipped=21)
+refusing to create a PR: review record not found: D:\a\cloud-security-capstone\cloud-security-capstone\data\reviews\no-such-review
