@@ -200,6 +200,8 @@ def approved_sources(task: FixTask) -> str:
     if not task.design:
         return "정해진 목록 없음 (고객 설계도가 아직 없음) — 꼭 필요한 출처만"
     d = task.design or {}
+    if d.get("guarded_services") is not None or d.get("required_access") is not None:
+        return _sg_intent_sources(d, task.resource)       # 보안 그룹 요구사항 형식 (policy/intent/*.json — V6 sg_oracle 이 읽는 것과 같은 파일)
     nodes = _labels(d)
     tier = next((t for t in d.get("tiers") or [] if t.get("security_group") == task.resource), None)
     if not tier:
@@ -208,6 +210,24 @@ def approved_sources(task: FixTask) -> str:
             for fl in d.get("flows") or [] if str(fl.get("to")) == str(tier.get("id"))]
     return "; ".join(rows) or "없음"
 
+def _sg_intent_sources(d: Dict[str, Any], resource: str) -> str:
+    """보안 그룹 요구사항 형식(guarded_services · required_access)에서 '허용돼야 하는 출처' 문장.
+    이 형식은 리소스별이 아니라 폴더 전체 기준이라, targets.security_groups 에 지목 리소스가 없으면 그 사실을 적는다.
+    (2026-11-16 ① LLM 1차 시도: 이 형식을 못 읽어 '설계도에 이 리소스가 없음' 으로 보내 AI 가 ingress 를 통째로 지움 — V6 이 걸러냄)"""
+    sgs = ((d.get("targets") or {}).get("security_groups") or [])
+    rows: List[str] = []
+    for g in d.get("guarded_services") or []:
+        src = g.get("approved_sources") or {}
+        ports = f"{g.get('from_port')}-{g.get('to_port')}" if g.get("from_port") != g.get("to_port") else str(g.get("from_port"))
+        allowed = list(src.get("cidrs_v4") or []) + list(src.get("cidrs_v6") or []) + list(src.get("security_group_refs") or []) + list(src.get("prefix_list_refs") or [])
+        rows.append(f"{g.get('label')} ({g.get('protocol', 'tcp')}/{ports}): " + (", ".join(allowed) if allowed else "허용 출처 없음 — 이 포트 규칙은 있으면 안 된다"))
+    req = [f"{r.get('label')} ({r.get('protocol', 'tcp')}/{r.get('from_port')}) {r.get('source_cidr')}" for r in d.get("required_access") or []]
+    text = "; ".join(rows) or "없음"
+    if req:
+        text += " · 반드시 남아 있어야 하는 접근: " + ", ".join(req)
+    if sgs and resource not in sgs:
+        text += f" (주의: 설계도 대상 목록에 {resource} 없음)"
+    return text
 
 def design_text(task: FixTask) -> str:
     d = task.design or {}
