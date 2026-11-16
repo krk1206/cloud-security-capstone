@@ -21,7 +21,10 @@ on:
         type: choice
         options: [deploy, destroy]
         default: deploy
-
+      allow_regression:
+        description: '시연용: 반영 후 나빠져도 되돌리지 않고 그대로 둔다 (결함 상태 재현 전용)'
+        type: boolean
+        default: false
 permissions:
   id-token: write        # OIDC → AWS 역할 (액세스 키 없음)
   contents: read
@@ -235,7 +238,7 @@ jobs:
 
       # 나빠졌으면(반영 전 PASS → 반영 후 FAIL) 직전 반영본의 sg-baseline 으로 되돌린다. 직전 반영본이 없으면(처음 반영) 되돌릴 곳이 없다.
       - name: 6) 되돌리기 (나빠졌을 때만)
-        if: steps.pre.outputs.skip == '' && env.ACTION == 'deploy' && steps.cmp.outputs.regression == 'true' && steps.cur.outputs.prev_commit != ''
+        if: steps.pre.outputs.skip == '' && env.ACTION == 'deploy' && steps.cmp.outputs.regression == 'true' && steps.cur.outputs.prev_commit != '' && inputs.allow_regression != true
         id: rollback
         timeout-minutes: 20
         run: |
@@ -306,7 +309,12 @@ jobs:
           S="${{ steps.cmp.outputs.status }}"
           case "$S" in
             VERIFIED)   echo "반영 후 V7 · V8 모두 PASS" ;;
-            REGRESSION) echo "::error::반영 후 나빠짐 — 직전 반영본으로 되돌림 (되돌리기 단계 결과 확인)"; exit 1 ;;
+            REGRESSION)
+              if [ "${{ inputs.allow_regression }}" = "true" ]; then
+                echo "::warning::반영 후 나빠짐 — allow_regression 으로 되돌리지 않고 둠 (시연용 결함 상태)"
+              else
+                echo "::error::반영 후 나빠짐 — 직전 반영본으로 되돌림 (되돌리기 단계 결과 확인)"; exit 1
+              fi ;;
             NOT_CLEAN)  echo "::error::나빠진 것은 없지만 FAIL 이 남아 있음 (아직 고쳐지지 않은 설정 오류)"; exit 1 ;;
             *)          echo "::error::반영 후 측정 기록 없음"; exit 1 ;;
           esac
