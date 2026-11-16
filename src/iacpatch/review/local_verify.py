@@ -82,7 +82,9 @@ def run_local_verification(settings: Settings, tf_dir: Path, candidate_files: Di
     base_wd = TerraformAdapter.make_workdir(tf_dir, ws / "baseline")
     cand_wd = TerraformAdapter.make_workdir(tf_dir, ws / "candidate", file_overrides=candidate_files)
     var_file = None
-    if (tf_dir / "terraform.tfvars").exists():
+    if getattr(settings, "tf_var_file", None) and (tf_dir / settings.tf_var_file).exists():
+        var_file = settings.tf_var_file
+    elif (tf_dir / "terraform.tfvars").exists():
         var_file = "terraform.tfvars"
 
     # ---------------------------------------------------------------- 원본(baseline) 캐시 준비
