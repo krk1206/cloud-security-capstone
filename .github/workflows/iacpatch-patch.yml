@@ -146,6 +146,7 @@ jobs:
           INTENT_OVERRIDE: ${{ inputs.intent }}
           PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
         run: |
           set -uo pipefail
           git config user.name  "github-actions[bot]"
