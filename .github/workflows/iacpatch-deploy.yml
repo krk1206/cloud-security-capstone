@@ -125,7 +125,7 @@ jobs:
         id: cur
         run: |
           set -uo pipefail
-          N=$(terraform -chdir="$LIVE_DIR" state list 2>/dev/null | wc -l || echo 0)
+          N=$(terraform -chdir="$LIVE_DIR" state list 2>/dev/null | grep -c . || true); N=${N:-0}
           echo "resources=$N" >> "$GITHUB_OUTPUT"
           if [ "$N" -gt 0 ]; then
             echo "host=$(terraform -chdir="$LIVE_DIR" output -raw target_public_ip 2>/dev/null || true)" >> "$GITHUB_OUTPUT"
