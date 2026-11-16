@@ -12,8 +12,8 @@ from iacpatch.verify.plan_model import build_world
 
 POLICY = json.loads((ROOT / "policy" / "patch_policy.json").read_text(encoding="utf-8"))
 RUBRIC = json.loads((ROOT / "policy" / "risk_rubric.json").read_text(encoding="utf-8"))
-BASE_MAIN = (ROOT / "infrastructure" / "sg-baseline" / "main.tf").read_text(encoding="utf-8")
-BASE_PROVIDER = (ROOT / "infrastructure" / "sg-baseline" / "provider.tf").read_text(encoding="utf-8")
+BASE_MAIN = (ROOT / "scenarios" / "dev" / "sg-baseline-defect" / "main.tf").read_text(encoding="utf-8")
+BASE_PROVIDER = (ROOT / "scenarios" / "dev" / "sg-baseline-defect" / "provider.tf").read_text(encoding="utf-8")
 BASELINE = {"main.tf": BASE_MAIN, "provider.tf": BASE_PROVIDER, "variables.tf": "variable \"vpc_id\" {}\n"}
 
 
@@ -23,7 +23,7 @@ def cand(files, status="PATCH"):
 
 class PolicyValidatorTests(unittest.TestCase):
     def test_ok(self):
-        r = validate_candidate(cand({"main.tf": BASE_MAIN.replace("0.0.0.0/0\"]\n  }\n\n  egress", "10.0.0.0/8\"]\n  }\n\n  egress")}), BASELINE, POLICY, "infrastructure/sg-baseline")
+        r = validate_candidate(cand({"main.tf": BASE_MAIN.replace("0.0.0.0/0\"]\n  }\n\n  egress", "10.0.0.0/8\"]\n  }\n\n  egress")}), BASELINE, POLICY, "scenarios/dev/sg-baseline-defect")
         self.assertTrue(r.ok, r.violations)
         # 통과한 '바뀐 내용 있음' 검사에는 'identical' 메모를 남기지 않는다 (2026-10-23 policy.json 에서 헷갈리게 적혀 있던 것)
         dn = next(c for c in r.checks if c["check"] == "diff_nonempty:main.tf")
@@ -31,9 +31,9 @@ class PolicyValidatorTests(unittest.TestCase):
         self.assertEqual(dn["note"], "")
 
     def test_path_traversal_and_protected(self):
-        r = validate_candidate(cand({"../../policy/patch_policy.json": "{}"}), BASELINE, POLICY, "infrastructure/sg-baseline")
+        r = validate_candidate(cand({"../../policy/patch_policy.json": "{}"}), BASELINE, POLICY, "scenarios/dev/sg-baseline-defect")
         self.assertFalse(r.ok)
-        r = validate_candidate(cand({"provider.tf": BASE_PROVIDER + "\n# x\n"}), BASELINE, POLICY, "infrastructure/sg-baseline")
+        r = validate_candidate(cand({"provider.tf": BASE_PROVIDER + "\n# x\n"}), BASELINE, POLICY, "scenarios/dev/sg-baseline-defect")
         self.assertFalse(r.ok)
         self.assertTrue(any("provider" in v for v in r.violations))
 

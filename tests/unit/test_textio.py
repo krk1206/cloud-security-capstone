@@ -30,7 +30,7 @@ class TextIoTests(unittest.TestCase):
     def test_review_candidate_and_diff_files_have_no_cr(self):
         """검토 기록의 candidate/*.tf·original/*.tf·candidate.diff 는 어느 OS 에서나 LF 바이트여야 한다."""
         out = Path(tempfile.mkdtemp(prefix="iacpatch-textio-"))
-        res = run_review(load_settings(str(ROOT)), ReviewOptions(tf_dir="infrastructure/sg-baseline", trivy_json="infrastructure/sg-baseline/baseline-scan.json",
+        res = run_review(load_settings(str(ROOT)), ReviewOptions(tf_dir="scenarios/dev/sg-baseline-defect", trivy_json="scenarios/dev/sg-baseline-defect/baseline-scan.json",
                                                                  candidate="mock:sg_baseline_ok", scenario="t", rule="AVD-AWS-0107", out_dir=str(out)))
         for rel in ("candidate/main.tf", "original/main.tf", "candidate.diff", "pr_body.md"):
             raw = (res.run_dir / rel).read_bytes()

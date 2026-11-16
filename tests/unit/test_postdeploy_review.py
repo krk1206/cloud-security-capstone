@@ -18,8 +18,8 @@ from iacpatch.models import ReviewLevel, ReviewState
 from iacpatch.postdeploy import run_postdeploy, run_recover
 from iacpatch.review.flow import ReviewOptions, run_review
 
-TF_DIR = "infrastructure/sg-baseline"
-TRIVY = "infrastructure/sg-baseline/baseline-scan.json"
+TF_DIR = "scenarios/dev/sg-baseline-defect"
+TRIVY = "scenarios/dev/sg-baseline-defect/baseline-scan.json"
 EX = ROOT / "examples" / "bc"
 
 

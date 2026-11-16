@@ -107,14 +107,14 @@ class MockProviderTests(unittest.TestCase):
 
 def _bundle_for_sg_baseline():
     scan = load_case_trivy("00-baseline")
-    files = {"main.tf": (ROOT / "infrastructure" / "sg-baseline" / "main.tf").read_text(encoding="utf-8")}
+    files = {"main.tf": (ROOT / "scenarios" / "dev" / "sg-baseline-defect" / "main.tf").read_text(encoding="utf-8")}
     target = next(f for f in scan.findings if f.rule_id == "AVD-AWS-0107")
     # 00-baseline 스캔의 finding 은 main.tf:14 를 가리키지만 sg-baseline/main.tf 에서는 11 행이다 → 위치를 맞춘다
     target.start_line = 11
     target.resource = "aws_security_group.vulnerable_ssh"
     intent = intent_for("aws_security_group.vulnerable_ssh", v4=["203.0.113.0/24"],
                         required=[{"label": "a", "direction": "ingress", "protocol": "tcp", "from_port": 22, "to_port": 22, "source_cidr": "203.0.113.0/24"}])
-    return build_bundle("t", "infrastructure/sg-baseline", target, scan.findings, files, intent.to_dict(), POLICY, {}, {"trivy": "0.74.0"})
+    return build_bundle("t", "scenarios/dev/sg-baseline-defect", target, scan.findings, files, intent.to_dict(), POLICY, {}, {"trivy": "0.74.0"})
 
 
 class RuleBasedTests(unittest.TestCase):
